@@ -6,8 +6,7 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 SilverDay Media"
 SPDX-License-Identifier = "MIT"
 
-# Original Gloamhollow source, kept as the porting reference for M0.
-# TODO(owner): confirm the licence you want on this file before the repo goes public.
+# Original Gloamhollow source, kept as the porting reference for M0. MIT (decisions #6).
 [[annotations]]
 path = ["reference/gloamhollow/**"]
 precedence = "aggregate"

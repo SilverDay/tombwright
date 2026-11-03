@@ -10,6 +10,8 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 3 | 2026-11-03 | **Licence:** MIT for engine and server code. | Owner |
 | 4 | 2026-11-03 | `FOR UPDATE SKIP LOCKED` verified to work on MariaDB 10.11.14 (spec §8.3). | Tested in the dev container |
 | 5 | 2026-11-03 | `Sim.hash` is synchronous in the browser, so the JS core ships its own SHA-256 (tested against `node:crypto`). | Implementation |
+| 6 | 2026-11-03 | **Gloamhollow reference licence:** `reference/gloamhollow/Gloamhollow.html` is MIT. | Owner |
+| 7 | 2026-11-03 | **Copyright holder:** SilverDay Media (`LICENSE`, `REUSE.toml`). | Owner |
 
 ## Still open (spec §17)
 
@@ -19,5 +21,4 @@ Q11 foes and traps · Q12 bestiary tuning.
 
 Raised during M0:
 - Touch-stick speed (see `docs/sim-rules.md`, Movement).
-- Licence of `reference/gloamhollow/Gloamhollow.html` (marked MIT in `REUSE.toml` pending confirmation).
 - The "80-check walkthrough" (M0 exit criterion) isn't in this repo yet.
