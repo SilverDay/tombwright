@@ -1,0 +1,31 @@
+{
+    "name": "silverday/tombwright",
+    "description": "Tombwright: build, prove and challenge killer dungeons (server, verifier, PHP sim core).",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.3",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "ext-zlib": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5"
+    },
+    "autoload": {
+        "psr-4": { "Tombwright\\": "src/" }
+    },
+    "autoload-dev": {
+        "psr-4": { "Tombwright\\Tests\\": "tests/php/" }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "lint": "find src bin config public tests/php -name '*.php' -print0 | xargs -0 -n1 php -l"
+    },
+    "config": {
+        "platform": { "php": "8.3.0" },
+        "sort-packages": true
+    }
+}

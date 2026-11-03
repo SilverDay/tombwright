@@ -1,0 +1,187 @@
+{
+ "name": "0001-walk",
+ "core": "m0.1",
+ "seed": 1,
+ "mode": "delve",
+ "gdf": {
+  "gdf": 1,
+  "meta": {
+   "title": "M0 fixture",
+   "lang": "en",
+   "authorId": 0
+  },
+  "start": {
+   "cell": [
+    34,
+    61
+   ]
+  }
+ },
+ "inputs": [
+  [
+   60,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   120,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   30,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   90,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 2,
+    "target": 0
+   }
+  ],
+  [
+   40,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 2,
+    "target": 0
+   }
+  ],
+  [
+   150,
+   {
+    "move": [
+     127,
+     127
+    ],
+    "yaw": 3000,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   60,
+   {
+    "move": [
+     -127,
+     40
+    ],
+    "yaw": 512,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   348,
+   {
+    "move": [
+     0,
+     -90
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ]
+ ],
+ "ticks": 900,
+ "hashEvery": 300,
+ "hashes": {
+  "0": "1ea7dda6d10bf34506655bcb3df9416b",
+  "300": "19b86d6a489c150f8c78fdd49a6dc926",
+  "600": "05bac7f3fc89fce2f41972812b0a14e3",
+  "900": "3ec2cc93ed3d9be3dd9aed78f420c890"
+ },
+ "final": "3ec2cc93ed3d9be3dd9aed78f420c890",
+ "finalState": {
+  "v": 1,
+  "core": "m0.1",
+  "mode": "delve",
+  "tick": 900,
+  "rng": [
+   2527132011,
+   314344336,
+   2535364964,
+   2041432039
+  ],
+  "player": {
+   "x": 109173,
+   "z": 152319,
+   "vx": 2269,
+   "vz": 2,
+   "rx": 2,
+   "rz": 4,
+   "yaw": 2048,
+   "pitch": 0,
+   "hp": 100,
+   "oil": 2930255,
+   "hooded": false
+  },
+  "prevButtons": 0
+ }
+}

@@ -1,0 +1,8 @@
+# Apache 2.4: serve real files directly, send everything else to the front controller.
+Options -Indexes
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [QSA,L]
+<FilesMatch "\.bin$">
+  ForceType application/octet-stream
+</FilesMatch>

@@ -1,0 +1,10 @@
+/vendor/
+/node_modules/
+/config/local.env
+/.env
+/var/
+/test-results/
+/playwright-report/
+*.log
+.DS_Store
+.claude/settings.local.json

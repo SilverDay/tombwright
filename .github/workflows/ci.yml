@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  js:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      - run: node scripts/check-sim-purity.mjs
+      - run: npm test
+
+  php:
+    runs-on: ubuntu-24.04
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: ci-root-only
+          MARIADB_DATABASE: tombwright_test
+          MARIADB_USER: tw_migrate
+          MARIADB_PASSWORD: ci-migrate-only
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      TW_ENV: ci
+      TW_DB_HOST: 127.0.0.1
+      TW_DB_TEST_NAME: tombwright_test
+      TW_DB_MIGRATE_USER: tw_migrate
+      TW_DB_MIGRATE_PASS: ci-migrate-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, pdo_mysql, zlib
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - run: composer lint
+      - run: vendor/bin/phpunit

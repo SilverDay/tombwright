@@ -1,0 +1,15 @@
+version = 1
+
+[[annotations]]
+path = ["src/**", "public/js/sim/**", "public/index.php", "bin/**", "config/**", "tests/**", "scripts/**", ".claude/**", ".github/**", "migrations/**", "templates/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 SilverDay Media"
+SPDX-License-Identifier = "MIT"
+
+# Original Gloamhollow source, kept as the porting reference for M0.
+# TODO(owner): confirm the licence you want on this file before the repo goes public.
+[[annotations]]
+path = ["reference/gloamhollow/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 SilverDay Media"
+SPDX-License-Identifier = "MIT"
