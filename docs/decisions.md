@@ -10,6 +10,8 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 3 | 2026-11-03 | **Licence:** MIT for engine and server code. | Owner |
 | 4 | 2026-11-03 | `FOR UPDATE SKIP LOCKED` verified to work on MariaDB 10.11.14 (spec §8.3). | Tested in the dev container |
 | 5 | 2026-11-03 | `Sim.hash` is synchronous in the browser, so the JS core ships its own SHA-256 (tested against `node:crypto`). | Implementation |
+| 6 | 2026-11-03 | The original "80-check walkthrough" could not be found. It is replaced by `tests/e2e/gloamhollow-walkthrough.spec.mjs` (94 checks, stair to daylight, one deliberate death). The M0 exit criterion becomes "the Gloamhollow walkthrough passes". | Owner |
+| 7 | 2026-11-03 | `three@0.128.0` is a pinned devDependency, used only by the e2e test to serve the r128 build that `Gloamhollow.html` loads from cdnjs (no network in tests). The client's vendored three.js is a separate decision. | Owner |
 
 ## Still open (spec §17)
 
@@ -20,4 +22,3 @@ Q11 foes and traps · Q12 bestiary tuning.
 Raised during M0:
 - Touch-stick speed (see `docs/sim-rules.md`, Movement).
 - Licence of `reference/gloamhollow/Gloamhollow.html` (marked MIT in `REUSE.toml` pending confirmation).
-- The "80-check walkthrough" (M0 exit criterion) isn't in this repo yet.

@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --test \"tests/js/**/*.test.mjs\"",
     "test:golden": "node --test tests/js/golden.test.mjs",
@@ -13,6 +15,7 @@
     "e2e": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0"
+    "@playwright/test": "1.63.0",
+    "three": "0.128.0"
   }
 }
