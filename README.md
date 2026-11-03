@@ -18,6 +18,7 @@ composer install
 npm install
 npm test
 vendor/bin/phpunit
+npm run e2e        # Gloamhollow walkthrough in headless Chromium
 ```
 
 Database tests need `TW_DB_*` settings (see `config/local.env.example`). In Claude Code cloud sessions the SessionStart hook sets everything up; `scripts/cloud-setup.sh` is the matching environment setup script.

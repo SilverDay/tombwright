@@ -28,7 +28,10 @@ node scripts/check-sim-purity.mjs        # determinism lint for both cores
 npm run golden:regen                     # regenerate vectors after an intentional rules change
 php bin/migrate.php status|up [--test]   # migrations (migrate user, not the app user)
 composer lint                            # php -l over the tree
+npm run e2e                              # Playwright: the Gloamhollow walkthrough (M0 exit criterion)
 ```
+
+The walkthrough (`tests/e2e/gloamhollow-walkthrough.spec.mjs`, driver in `tests/e2e/lib/`) plays `reference/gloamhollow/Gloamhollow.html` through its `window.__gh` hook in fixed 1/30 s ticks with rendering off. When the renderer moves onto the Tombwright sim core, the same route and checks must still pass.
 
 Cloud sessions: `.claude/hooks/session-start.sh` installs and starts MariaDB, creates `tombwright` and `tombwright_test` with random dev credentials in `config/local.env`, and runs composer and npm installs. Playwright's Chromium is pre-installed (`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`). Don't run `playwright install`.
 

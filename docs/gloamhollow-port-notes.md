@@ -35,4 +35,6 @@ the rules themselves go in `docs/sim-rules.md`.
 ## Test hook
 
 `window.__gh` exposes state and `sim(sec)`, which steps `tick(1/30)` with rendering off (`window.__ghNoRender`).
-Keep an equivalent hook for the Playwright walkthroughs (spec §15).
+Keep an equivalent hook for the Playwright walkthroughs (spec §15). `tests/e2e/gloamhollow-walkthrough.spec.mjs` uses `__gh.sim`, `player`, `keys`, `nearestInteract`, `interact`, `probe`, `throwPebble`, `toggleHood`, `pourOil`, `attack`, `rise`, `newGame`, `closePanel`, `ventState`, `G`, `L`, `CP`, `STATS`, `mode`, `mons`, `boss` and `eyeWake`. The ported client must keep all of them, or the driver must be adapted in the same change.
+
+Two real-time timers still sit in game logic and the walkthrough has to wait for them: the 110 ms strike delay (`setTimeout(strike)`) and the death card. Both must become tick-scheduled in the sim core.
