@@ -18,6 +18,7 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 11 | 2026-11-03 | **GDF `grid.cells`:** strict base64 of run-length pairs `[count 1–255, code 0–8]` (spec §7.1 left the RLE scheme open). | Owner |
 | 12 | 2026-11-03 | `start.cell` is the spawn cell and must be floor. Gloamhollow's GDF starts at the Vestibule checkpoint (34, 60); the sealed stair (34, 61) is a wall cell (the spec §7.1 example's `[34,61]` was illustrative). Official tombs live in `dungeons/`. | Implementation |
 | 13 | 2026-11-03 | Work is committed straight to `main` once the tests pass. | Owner |
+| 14 | 2026-11-03 | The Gloamhollow walkthrough adds one deliberate death per trap kind (slab, eyes, pit, vent, needles, chasm) and checks what each death rolls back and what the tomb remembers: 112 checks, 6 deaths. Supersedes the counts in #8. | Owner |
 
 ## Still open (spec §17)
 

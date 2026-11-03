@@ -46,6 +46,16 @@ test('Gloamhollow: full walkthrough, stair to daylight', async ({ page }) => {
   const act = (name) => ev((n) => window.__wt.gh[n](), name);
   const realWait = (ms) => page.waitForTimeout(ms); // for the game's few real-time setTimeouts
   const zoneIs = async (key) => (await snap()).visited.includes(key);
+  // A deliberate death: the death card names the cause, then you rise at the last checkpoint.
+  const deathAndRise = async (cause, deathsNow, cpKey) => {
+    let s = await snap();
+    check(`${cause}: the trap kills`, s.mode === 'dead' && s.deaths === deathsNow);
+    await expect(page.locator('#deathCause')).toContainText(cause);
+    await act('rise');
+    s = await snap();
+    check(`${cause}: you rise at the ${cpKey} checkpoint`, s.mode === 'play' && s.cp === cpKey && s.hp === 100);
+    return s;
+  };
 
   // ---------------------------------------------------------------- Vestibule
   await test.step('Vestibule: start, plaque, oil, door', async () => {
@@ -142,17 +152,45 @@ test('Gloamhollow: full walkthrough, stair to daylight', async ({ page }) => {
     await tick(45);
     check('hooding again lets them close before they burn', (await snap()).eyeWake === 0 && (await snap()).mode === 'play');
 
+    // Deliberately stay lit: the eyes burn you after about a second.
+    await ev(() => window.__wt.gh.toggleHood());
+    await tick(40);
+    let s = await deathAndRise('Waking Eyes', 2, 'mouth');
+    check('a death rolls back what this life took since the checkpoint: the chain is on the floor again', s.treasureValue === 0 && !s.treasure.includes('chain'));
+    // Take the chain again, refill the pouch, hood the lantern.
+    const backToTheGallery = async () => {
+      await walk([[35, 34], [35, 33]]);
+      await use(cx(35), cx(33) - 2, 'Take a silver lamp-chain');
+      await walk([[34, 33], [34, 34], [33, 34], [33, 35]]);
+      await use(cx(33) - 0.3, cx(35) - 0.3, 'Gather pebbles');
+      await walk([[33, 34]]);
+      await ev(() => window.__wt.gh.toggleHood());
+      const t = await snap();
+      return t.treasureValue === 60 && t.pebbles === 12 && t.hooded === true;
+    };
+    check('the chain can be taken again', await backToTheGallery());
+
+    // Deliberately walk onto an untested floor: a hidden pit.
+    await walk([[32, 34], [31, 34], [30, 34], [29, 34], [29, 35], [28, 35], [27, 35], [26, 35], [25, 35], [25, 34], [25, 33],
+      [24, 33], [23, 33], [22, 33], [21, 33], [21, 34], [21, 35]]);
+    await walk([[20, 35]], { allowDeath: true });
+    s = await deathAndRise('false floor', 3, 'mouth');
+    check('the pit you fell into stays open', s.lessons.pits.includes(idx(20, 35)));
+    check('and the chain rolled back once more', s.treasureValue === 0);
+    check('back to the gallery with the chain, a full pouch and a hooded lantern', await backToTheGallery());
+    await walk([[32, 34]]);
+
     await walk([[31, 34]]);
     await ev(() => { const w = window.__wt; w.faceXZ(w.P.x - 5, w.P.z); w.P.pitch = 0.2; w.gh.throwPebble(); w.P.pitch = 0; });
     await tick(30);
-    let s = await snap();
+    s = await snap();
     check('a pebble punches through a hidden pit and reveals it', s.lessons.pits.includes(idx(28, 34)));
 
     await walk([[30, 34], [29, 34], [29, 35], [28, 35], [27, 35], [26, 35], [25, 35], [25, 34], [25, 33],
       [24, 33], [23, 33], [22, 33], [21, 33], [21, 34], [20, 34], [19, 34], [18, 34], [18, 33]]);
     s = await snap();
-    check('the gallery is crossed alive', s.mode === 'play' && s.deaths === 1);
-    check('no other pit was fallen into', s.lessons.pits.length === 1);
+    check('the gallery is crossed alive', s.mode === 'play' && s.deaths === 3);
+    check('the tomb remembers both pits: the one you fell into and the one the pebble found', s.lessons.pits.length === 2);
   });
 
   // ---------------------------------------------------------------- Garden of Bells
@@ -215,11 +253,18 @@ test('Gloamhollow: full walkthrough, stair to daylight', async ({ page }) => {
     await walk([[16, 22], [16, 23], [22, 23], [22, 25], [23, 25], [24, 25], [25, 25], [26, 25], [27, 25], [28, 25]]);
     let s = await snap();
     check('the Breathing Hall is a checkpoint', s.cp === 'breath');
+
+    // Deliberately stand on a vent until it breathes out.
+    await walk([[29, 25]], { allowDeath: true });
+    await ev(() => { const w = window.__wt; for (let t = 0; t < 150 && w.gh.mode === 'play'; t++) w.tick(); });
+    s = await deathAndRise('Breathing Hall', 4, 'breath');
+    check('the bells stay solved after a death here', s.bellsSolved === true && s.doors.bell === true);
+    await walk([[28, 25]]);
     await crossVent(29, 28, 30);
     await walk([[31, 25]]);
     await crossVent(32, 31, 33);
     s = await snap();
-    check('two vents crossed alive', s.mode === 'play' && s.deaths === 1);
+    check('two vents crossed alive', s.mode === 'play' && s.deaths === 4);
     await walk([[33, 25]]);
     await walkTo(cx(33), cx(24) + 1.0);
     await use(cx(33), cx(24), 'Take a gold censer');
@@ -231,7 +276,7 @@ test('Gloamhollow: full walkthrough, stair to daylight', async ({ page }) => {
     await walkTo(cx(38) - 1.0, cx(26));
     await use(cx(38), cx(26), 'Take a flask of lamp oil');
     s = await snap();
-    check('all three vents crossed alive', s.mode === 'play' && s.deaths === 1);
+    check('all three vents crossed alive', s.mode === 'play' && s.deaths === 4);
     check('the hall\'s flask is taken', s.flasks === 3);
   });
 
@@ -274,7 +319,7 @@ test('Gloamhollow: full walkthrough, stair to daylight', async ({ page }) => {
     const r = await fight('crawlers', async () => (await snap()).crawlers === 'dead');
     s = await snap();
     check('both crawlers are killed', r === 'done' && s.crawlers === 'dead');
-    check('you survive the crawlers', s.mode === 'play' && s.deaths === 1);
+    check('you survive the crawlers', s.mode === 'play' && s.deaths === 4);
 
     // A \, B \, C /, D \, E \ : each mirror needs one turn from its starting position.
     const turn = async (x, z, fx, fz) => { await walkTo(x, z); await use(fx, fz, 'Turn the mirror'); await tick(5); };
@@ -317,6 +362,14 @@ test('Gloamhollow: full walkthrough, stair to daylight', async ({ page }) => {
     check('the journal opens', (await snap()).mode === 'paused');
     await closePanel();
 
+    // Deliberately open the gilded chest without testing it first.
+    await walkTo(cx(33), 7.6);
+    await use(cx(33), cx(2) - 0.25, 'Look at the gilded chest');
+    await closePanel();
+    await use(cx(33), cx(2) - 0.25, 'Open the gilded chest');
+    s = await deathAndRise('gilded chest', 5, 'script');
+    check('the gilded chest is as it was: unprobed, unlooted', s.gildedSprung === false && s.gildedLooted === false);
+
     await walkTo(cx(33), 7.6);
     await ev(() => { const w = window.__wt; w.faceXZ((33 + 0.5) * 2.4, (2 + 0.5) * 2.4 - 0.25); w.gh.probe(); });
     check('probing the gilded chest springs its needles harmlessly', (await snap()).gildedSprung === true && (await snap()).mode === 'play');
@@ -325,7 +378,7 @@ test('Gloamhollow: full walkthrough, stair to daylight', async ({ page }) => {
     await use(cx(33), cx(2) - 0.25, 'Open the gilded chest');
     s = await snap();
     check('the gilded chest holds rubies (400)', s.gildedLooted && s.treasure.includes('rubies'));
-    check('opening the disarmed chest does not kill', s.mode === 'play' && s.deaths === 1);
+    check('opening the disarmed chest does not kill', s.mode === 'play' && s.deaths === 5);
 
     await walkTo(cx(38), 7.6);
     await use(cx(38), cx(2) - 0.25, 'Open the plain chest');
@@ -356,6 +409,13 @@ test('Gloamhollow: full walkthrough, stair to daylight', async ({ page }) => {
     await ev(() => { const w = window.__wt; w.faceXZ(w.P.x - 5, w.P.z); w.gh.probe(); });
     check('the pole finds the first cell of the unlit road', (await snap()).lessons.bridge.includes(idx(25, 5)));
 
+    // Deliberately step off the road into the gulf.
+    await walk([[26, 4]]);
+    await walk([[25, 4]], { allowDeath: true });
+    s = await deathAndRise('Unlit Road', 6, 'chasm');
+    check('the road cell you found stays marked', s.lessons.bridge.includes(idx(25, 5)));
+    await walk([[26, 5]]);
+
     await walk([[25, 5], [24, 5], [23, 5], [23, 4], [23, 3], [22, 3], [21, 3], [20, 3], [20, 4], [20, 5], [20, 6], [20, 7],
       [20, 8], [21, 8], [22, 8]]);
     await use(cx(22), cx(8) + 2, 'Take a moonstone ring');
@@ -363,7 +423,7 @@ test('Gloamhollow: full walkthrough, stair to daylight', async ({ page }) => {
     check('the moonstone ring is taken from the bones (250)', s.treasure.includes('ring'));
     await walk([[21, 8], [20, 8], [20, 7], [19, 7], [18, 7], [17, 7], [17, 6], [17, 5], [16, 5], [15, 5]]);
     s = await snap();
-    check('the unlit road is crossed alive', s.mode === 'play' && s.deaths === 1);
+    check('the unlit road is crossed alive', s.mode === 'play' && s.deaths === 6);
   });
 
   // ---------------------------------------------------------------- Antechamber of Masks
@@ -464,7 +524,7 @@ test('Gloamhollow: full walkthrough, stair to daylight', async ({ page }) => {
     check('she was struck while solid in the firelight', strikes >= 6);
     check('her wind-ups were dodged', dodges >= 1);
     check('at half health she snuffs every flame (phase 2)', phase2Seen);
-    check('the boss is beaten without dying', s.deaths === 1);
+    check('the boss is beaten without dying', s.deaths === 6);
     check('killing her makes the sanctum your checkpoint', s.cp === 'sanctum');
   });
 
@@ -479,7 +539,7 @@ test('Gloamhollow: full walkthrough, stair to daylight', async ({ page }) => {
     const r = await ev(([x, z]) => window.__wt.walkTo(x, z, { tol: 0.5 }), [cx(7), cx(27)]);
     s = await snap();
     check('stepping into the shaft of daylight wins', r === 'won' && s.mode === 'won');
-    check('the delve ends with exactly the one deliberate death', s.deaths === 1);
+    check('the delve ends with exactly the six deliberate deaths, one per kind of trap', s.deaths === 6);
   });
 
   expect(errors, 'no page errors').toEqual([]);
