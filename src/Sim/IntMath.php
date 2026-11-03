@@ -12,7 +12,7 @@ final class IntMath
     public static function assertInt(mixed $v, string $what = 'value'): int
     {
         if (!is_int($v) || $v > self::MAX_SAFE || $v < -self::MAX_SAFE) {
-            throw new \RangeError("$what is not a safe integer");
+            throw new \RangeException("$what is not a safe integer");
         }
         return $v;
     }
@@ -23,9 +23,16 @@ final class IntMath
         self::assertInt($a, 'idiv a');
         self::assertInt($b, 'idiv b');
         if ($b === 0) {
-            throw new \RangeError('idiv by zero');
+            throw new \RangeException('idiv by zero');
         }
         return intdiv($a, $b);
+    }
+
+    /** R-INT-5: floor division (rounds toward −∞), for cell indices. */
+    public static function fdiv(int $a, int $b): int
+    {
+        $q = self::idiv($a, $b);
+        return ($a % $b !== 0 && ($a < 0) !== ($b < 0)) ? $q - 1 : $q;
     }
 
     /** R-INT-4: floor(sqrt(n)), exact, for 0 <= n <= 2^53-1. */
@@ -33,7 +40,7 @@ final class IntMath
     {
         self::assertInt($n, 'isqrt n');
         if ($n < 0) {
-            throw new \RangeError('isqrt of negative');
+            throw new \RangeException('isqrt of negative');
         }
         $x = (int) floor(sqrt((float) $n));
         while ($x * $x > $n) {

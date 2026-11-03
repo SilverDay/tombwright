@@ -1,22 +1,9 @@
 {
  "name": "0002-fuzz",
- "core": "m0.1",
+ "core": "m0.2",
  "seed": 12648430,
  "mode": "ironman",
- "gdf": {
-  "gdf": 1,
-  "meta": {
-   "title": "M0 fixture",
-   "lang": "en",
-   "authorId": 0
-  },
-  "start": {
-   "cell": [
-    34,
-    61
-   ]
-  }
- },
+ "gdf": "{\n \"gdf\": 1,\n \"meta\": {\n  \"title\": \"Gloamhollow\",\n  \"lang\": \"en\",\n  \"authorId\": 0\n },\n \"grid\": {\n  \"w\": 44,\n  \"h\": 63,\n  \"cells\": \"OgACAQoFAgEEAAgBEgACAQoFAgEEAAgBEgACAQQFBAYCBQIBBAAIARIAAgEEBQEGAgUBBgIFAgEEAggBEgACAQIGAgUBBgIFAwYCAQQACAESAAIBAQUBBgIFAQYFBQIBBAAIARIAAgEBBQQGBQUCAQQACAESAAIBBAUDBgMFAgEIAAECFQACAQoFAgEIAAECFQABAhUAAQIVAAECFQABAhUAAQISAAkBCAAHAQEAAQISAAkBCAAHAQICEgAJAQgABwEUAAkBCAAHARQACQEIAAcBFAAJAQkAAQIBAAECAQABAhUACQEJAAECAQABCAEAAQgVAAkBCQABAhkACQEJAAECBgAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQCAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJARcACwEBAAkBFwALAQEACQEXAAsBBQABAhsACwEFAAECGwALAQUAAQIqAAMBAQQHAQEEBwEZAAcBAQQDAQEEBwEZAAMBAQQDAQEECwEqAAECKwABAisAAQIpAAIDAQECAycAAgMDAScABAMBAScAAwMCAScAAwMBAQEDJwACAwIBAQMnAAIDAQECAycAAwECAycAAQEEAycAAgEDAycAAQMBAQMDJwABAwIBAgMnAAIDAQECAycABQEpAAECKwABAisAAQIoAAcBJQAHASUABwElAAcBJQAHASUAAwEBAAMBMgA=\"\n },\n \"zones\": [\n  {\n   \"id\": \"vest\",\n   \"name\": \"the Vestibule\",\n   \"rects\": [\n    [\n     31,\n     56,\n     7,\n     6\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     60\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"hall\",\n   \"name\": \"the Hall of the Kneeling Bearers\",\n   \"rects\": [\n    [\n     32,\n     39,\n     5,\n     14\n    ]\n   ],\n   \"ceil\": 4600,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     52\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"mouth\",\n   \"name\": \"the Mouth of the Gallery\",\n   \"rects\": [\n    [\n     33,\n     33,\n     3,\n     3\n    ]\n   ],\n   \"ceil\": 3600,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     34\n    ],\n    \"yaw\": 1024\n   }\n  },\n  {\n   \"id\": \"gallery\",\n   \"name\": \"the Gallery of Waking Eyes\",\n   \"rects\": [\n    [\n     17,\n     33,\n     16,\n     3\n    ]\n   ],\n   \"ceil\": 3600\n  },\n  {\n   \"id\": \"bells\",\n   \"name\": \"the Garden of Bells\",\n   \"rects\": [\n    [\n     14,\n     21,\n     9,\n     9\n    ]\n   ],\n   \"ceil\": 5400,\n   \"checkpoint\": {\n    \"cell\": [\n     18,\n     28\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"breath\",\n   \"name\": \"the Breathing Hall\",\n   \"rects\": [\n    [\n     27,\n     24,\n     12,\n     3\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     27,\n     25\n    ],\n    \"yaw\": 3072\n   }\n  },\n  {\n   \"id\": \"vault\",\n   \"name\": \"the Mirror Vault\",\n   \"rects\": [\n    [\n     33,\n     12,\n     9,\n     9\n    ]\n   ],\n   \"ceil\": 4600,\n   \"checkpoint\": {\n    \"cell\": [\n     37,\n     19\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"script\",\n   \"name\": \"the Scriptorium\",\n   \"rects\": [\n    [\n     32,\n     1,\n     8,\n     7\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     36,\n     6\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"chasm\",\n   \"name\": \"the Chasm of the Unlit Road\",\n   \"rects\": [\n    [\n     14,\n     1,\n     14,\n     9\n    ]\n   ],\n   \"ceil\": 6500,\n   \"checkpoint\": {\n    \"cell\": [\n     26,\n     5\n    ],\n    \"yaw\": 1024\n   }\n  },\n  {\n   \"id\": \"masks\",\n   \"name\": \"the Antechamber of Masks\",\n   \"rects\": [\n    [\n     6,\n     13,\n     7,\n     5\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     10,\n     14\n    ],\n    \"yaw\": 2048\n   }\n  },\n  {\n   \"id\": \"way\",\n   \"name\": \"the Dreamer's Way\",\n   \"rects\": [\n    [\n     7,\n     19,\n     1,\n     3\n    ]\n   ],\n   \"ceil\": 3000,\n   \"checkpoint\": {\n    \"cell\": [\n     7,\n     19\n    ],\n    \"yaw\": 2048\n   }\n  },\n  {\n   \"id\": \"sanctum\",\n   \"name\": \"the Sanctum of the Candle-Eater\",\n   \"rects\": [\n    [\n     2,\n     22,\n     11,\n     11\n    ]\n   ],\n   \"ceil\": 6200,\n   \"checkpoint\": {\n    \"cell\": [\n     7,\n     24\n    ],\n    \"yaw\": 2048\n   }\n  }\n ],\n \"start\": {\n  \"cell\": [\n   34,\n   60\n  ]\n },\n \"exit\": {\n  \"cell\": [\n   7,\n   27\n  ],\n  \"requires\": \"bossDefeated\"\n },\n \"entities\": [],\n \"links\": []\n}\n",
  "inputs": [
   [
    39,
@@ -1946,22 +1933,23 @@
  "ticks": 3011,
  "hashEvery": 300,
  "hashes": {
-  "0": "32af615f6485d510b83552464ecd342d",
-  "300": "4736a53ae3a825dc0ab4c4b4bf5ae528",
-  "600": "fe96ff8027343bcc3e7568585bba444e",
-  "900": "8d6b8cc4c3bab8a7e1379fcecaa92bc5",
-  "1200": "559426c8cc56e406e16a9a224d36c729",
-  "1500": "0dd3177ec5dd8fb4f3002ab3c513a57c",
-  "1800": "77808220ca841966f79b00e1eb2ee29d",
-  "2100": "f6497e08ad74ceba0c6f50c99ebc3818",
-  "2400": "9fec7c7f8c2424a968f2784dbace7c28",
-  "2700": "8adeadc03a33b95def9b1e2f29838ab7",
-  "3000": "d2ce0948a1c0709342a259fce7916357"
+  "0": "3805d826e89f3535235ff1f63d264dc8",
+  "300": "8cfc91cf508cadd2253954c2b4471a46",
+  "600": "98df8f308cb843d4990c10b8a89ffa7e",
+  "900": "6168c540d2e071f73f6909f40480c77a",
+  "1200": "d1eb0bfc3e08fa02ab8dfe3a6b0899e4",
+  "1500": "07de383755874f43bc073c2480293bcc",
+  "1800": "263c9c4e0496bcabd69a75bc12fea34d",
+  "2100": "4f45ab013dd699aededaebea48257536",
+  "2400": "89c0dbfe533a183fb41e527207a5b6f1",
+  "2700": "3233dbb3eb4498ced98fba90f5faf2e9",
+  "3000": "b9fe0583ac9dd642ba2879fd483378f1"
  },
- "final": "70bacd18fa73850c43628ca7e4995873",
+ "final": "1a95692eda07465ba1b8c268aa2d248d",
  "finalState": {
   "v": 1,
-  "core": "m0.1",
+  "core": "m0.2",
+  "world": "6f6e6da0d3cc62503ac6b7000716e596",
   "mode": "ironman",
   "tick": 3011,
   "rng": [
@@ -1971,8 +1959,8 @@
    3498263955
   ],
   "player": {
-   "x": 101232,
-   "z": 117845,
+   "x": 76988,
+   "z": 140310,
    "vx": -3214,
    "vz": 2269,
    "rx": -20,

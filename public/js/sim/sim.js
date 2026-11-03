@@ -1,13 +1,14 @@
 // Tombwright sim core (JS). Contract: docs/spec.md §6.3. Rules: docs/sim-rules.md.
 // Pure module: no DOM, no Math.random, no Date, no floats in state.
 // Mirror: src/Sim/Sim.php. Any change here needs the same change there + golden vectors.
-import { assertInt, idiv, isqrt, clamp } from './int.js';
+import { idiv, fdiv, isqrt, clamp } from './int.js';
 import { isin, icos, TRIG_ONE } from './sine.js';
 import { rngSeed } from './rng.js';
 import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
+import { loadWorld, solidCell, assertWorld } from './world.js';
 
-export const CORE_VERSION = 'm0.1';
+export const CORE_VERSION = 'm0.2';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -18,6 +19,8 @@ export const RUN_MM_S = 5400;
 export const OIL_UNIT = 30000;
 export const OIL_BURN_OPEN = 80;   // 0.08 points/s
 export const OIL_BURN_HOODED = 25; // 0.025 points/s
+// R-MOVE-4: the player is a circle of radius 360 mm (Gloamhollow RAD 0.36 m).
+export const PLAYER_R_MM = 360;
 
 export const BTN = Object.freeze({
   strike: 1 << 0, hood: 1 << 1, probe: 1 << 2, pebble: 1 << 3,
@@ -38,15 +41,18 @@ export function checkInput(input) {
 
 function cellCentre(c) { return c * CELL_MM + CELL_MM / 2; }
 
-/** Sim.init(gdf, seed, mode) -> state. */
-export function init(gdf, seed, mode) {
-  if (!gdf || gdf.gdf !== 1) throw new Error('unsupported GDF');
+/** Sim.load(bytes) -> world: the immutable map, built once per dungeon from the GDF file (R-GDF-0, R-WORLD-*). */
+export const load = loadWorld;
+
+/** Sim.init(world, seed, mode) -> state. */
+export function init(world, seed, mode) {
+  assertWorld(world);
   if (!MODES.includes(mode)) throw new Error('bad mode');
-  const [ci, cj] = gdf.start.cell;
-  assertInt(ci); assertInt(cj);
+  const { i: ci, j: cj } = world.start;
   return {
     v: 1,
     core: CORE_VERSION,
+    world: world.id, // R-WORLD-3
     mode,
     tick: 0,
     rng: rngSeed(seed),
@@ -60,8 +66,10 @@ export function init(gdf, seed, mode) {
   };
 }
 
-/** Sim.step(state, input) -> events. Mutates state; advances exactly one tick. */
-export function step(state, input) {
+/** Sim.step(world, state, input) -> events. Mutates state; advances exactly one tick. */
+export function step(world, state, input) {
+  assertWorld(world);
+  if (state.world !== world.id) throw new Error('state belongs to another world');
   checkInput(input);
   const p = state.player;
   const events = [];
@@ -80,15 +88,16 @@ export function step(state, input) {
   const den = 127 * TRIG_ONE;
   const tx = idiv(speed * (-sy * fw + cy * st), den);
   const tz = idiv(speed * (-cy * fw - sy * st), den);
-  // R-MOVE-4: velocity eases toward target by 2/5 per tick (Gloamhollow's min(1, dt*12) at 30 Hz).
+  // R-MOVE-3: velocity eases toward target by 2/5 per tick (Gloamhollow's min(1, dt*12) at 30 Hz).
   p.vx += idiv((tx - p.vx) * 2, 5);
   p.vz += idiv((tz - p.vz) * 2, 5);
   // R-MOVE-3: integrate with an exact remainder so no distance is lost.
   const ax = p.vx + p.rx, az = p.vz + p.rz;
   const dx = idiv(ax, TICK_HZ), dz = idiv(az, TICK_HZ);
   p.rx = ax - dx * TICK_HZ; p.rz = az - dz * TICK_HZ;
+  const ox = p.x, oz = p.z;
   p.x += dx; p.z += dz;
-  // TODO(M0): collision against cells, doors and props (Gloamhollow pushCircle, RAD 0.36 m).
+  pushOut(world, p, PLAYER_R_MM, ox, oz);
 
   // R-OIL-2: hood toggles on the press; refused with no oil.
   if (pressed & BTN.hood) {
@@ -103,6 +112,27 @@ export function step(state, input) {
   state.prevButtons = input.buttons;
   state.tick += 1;
   return events;
+}
+
+/**
+ * R-MOVE-4: push a circle out of solid cells. Three passes; each looks at the 3x3 cells around the
+ * centre (rows outer, columns inner) and moves the centre to exactly r from the nearest point of
+ * each solid cell it overlaps. A centre inside a solid cell goes back to where it was before the move.
+ * Bounds (R-INT-2): |dx|, |dz| <= 2400 + r, so dx*r and d2 stay below 2^23.
+ */
+function pushOut(world, e, r, ox, oz) {
+  for (let pass = 0; pass < 3; pass++) {
+    const ci = fdiv(e.x, CELL_MM), cj = fdiv(e.z, CELL_MM);
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      const gi = ci + di, gj = cj + dj;
+      if (!solidCell(world, gi, gj)) continue;
+      const minx = gi * CELL_MM, minz = gj * CELL_MM;
+      const qx = clamp(e.x, minx, minx + CELL_MM), qz = clamp(e.z, minz, minz + CELL_MM);
+      const dx = e.x - qx, dz = e.z - qz, d2 = dx * dx + dz * dz;
+      if (d2 === 0) { e.x = ox; e.z = oz; }
+      else if (d2 < r * r) { const d = isqrt(d2); e.x = qx + idiv(dx * r, d); e.z = qz + idiv(dz * r, d); }
+    }
+  }
 }
 
 /** Sim.hash(state) -> 32 hex chars: SHA-256 of the canonical form, first 16 bytes (R-HASH-1). */

@@ -26,6 +26,7 @@ npm test                                 # JS: primitives (vs BigInt / node:cryp
 vendor/bin/phpunit                       # PHP: same golden vectors, config, migrator (needs DB), headers
 node scripts/check-sim-purity.mjs        # determinism lint for both cores
 npm run golden:regen                     # regenerate vectors after an intentional rules change
+node bin/build-gloamhollow-gdf.mjs       # rebuild dungeons/gloamhollow.gdf.json from the original's map data
 php bin/migrate.php status|up [--test]   # migrations (migrate user, not the app user)
 composer lint                            # php -l over the tree
 npm run e2e                              # Playwright: the Gloamhollow walkthrough (M0 exit criterion)
@@ -46,7 +47,7 @@ Cloud sessions: `.claude/hooks/session-start.sh` installs and starts MariaDB, cr
 
 ## Layout (spec §5.3)
 
-`public/` web root (`index.php` front controller, `js/sim` JS core + `data/sine4096.bin`) · `src/` PHP (`Sim`, `Db`, `Http`, …) · `bin/` CLI tools · `migrations/` numbered SQL (`db-migration` skill) · `tests/{js,php,golden,e2e}` · `config/` · `docs/` · `reference/` original game.
+`public/` web root (`index.php` front controller, `js/sim` JS core + `data/sine4096.bin`) · `src/` PHP (`Sim`, `Db`, `Http`, …) · `bin/` CLI tools · `migrations/` numbered SQL (`db-migration` skill) · `tests/{js,php,golden,e2e}` · `config/` · `docs/` · `dungeons/` official tombs as GDF · `reference/` original game.
 
 ## Git
 

@@ -4,7 +4,8 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { loadCore, ROOT } from '../js/lib/load.mjs';
 import * as Sim from '../../public/js/sim/sim.js';
-import { idiv, isqrt } from '../../public/js/sim/int.js';
+import { idiv, fdiv, isqrt } from '../../public/js/sim/int.js';
+import { b64encode, b64decode as b64decodeBytes, rleEncode } from '../../public/js/sim/world.js';
 import { rngSeed, rngNext, rngBelow, fmix32 } from '../../public/js/sim/rng.js';
 import { canonical } from '../../public/js/sim/canon.js';
 import { sha256Hex } from '../../public/js/sim/sha256.js';
@@ -42,16 +43,27 @@ function fuzz(seed, ticks) {
   return rle;
 }
 
-const FIXTURE_GDF = { gdf: 1, meta: { title: 'M0 fixture', lang: 'en', authorId: 0 }, start: { cell: [34, 61] } };
+// Wall contact (R-MOVE-4): run into the Vestibule's east wall, rub along it, wedge into the
+// north-east corner, then back out west at a slant and scrape the south wall by the stair.
+const walls = [
+  [90, I([127, 0], 3072, B.run)], [60, I([127, 60], 3584)], [90, I([127, 0], 0, B.run)],
+  [45, I([127, 127], 3800, B.run)], [120, I([127, 0], 1024, B.run)], [90, I([127, -50], 2048)],
+  [60, I([0, 127], 2048, B.run)], [45, I([-127, 0], 0)],
+];
+
+// Vectors carry the GDF as its exact text: Sim.load takes bytes (R-GDF-0).
+export const GLOAMHOLLOW = readFileSync(ROOT + 'dungeons/gloamhollow.gdf.json', 'utf8');
+const utf8 = (s) => new TextEncoder().encode(s);
 const VECTORS = {
-  '0001-walk': { gdf: FIXTURE_GDF, seed: 1, mode: 'delve', inputs: walk },
-  '0002-fuzz': { gdf: FIXTURE_GDF, seed: 0xC0FFEE, mode: 'ironman', inputs: fuzz(0xBADC0DE, 3000) },
+  '0001-walk': { gdf: GLOAMHOLLOW, seed: 1, mode: 'delve', inputs: walk },
+  '0002-fuzz': { gdf: GLOAMHOLLOW, seed: 0xC0FFEE, mode: 'ironman', inputs: fuzz(0xBADC0DE, 3000) },
+  '0003-walls': { gdf: GLOAMHOLLOW, seed: 7, mode: 'practice', inputs: walls },
 };
 
-export function replay(gdf, seed, mode, rle) {
-  const st = Sim.init(gdf, seed, mode), hashes = { 0: Sim.hash(st) };
+export function replay(gdf, seed, mode, rle, each) {
+  const world = Sim.load(utf8(gdf)), st = Sim.init(world, seed, mode), hashes = { 0: Sim.hash(st) };
   const inputs = expand(rle);
-  inputs.forEach((inp, t) => { Sim.step(st, inp); if ((t + 1) % HASH_EVERY === 0) hashes[t + 1] = Sim.hash(st); });
+  inputs.forEach((inp, t) => { Sim.step(world, st, inp); if (each) each(world, st); if ((t + 1) % HASH_EVERY === 0) hashes[t + 1] = Sim.hash(st); });
   return { ticks: inputs.length, hashes, final: Sim.hash(st), state: st };
 }
 
@@ -63,6 +75,41 @@ function writeVectors() {
     writeFileSync(DIR + name + '.json', JSON.stringify(out, null, 1) + '\n');
     console.log(name, r.ticks, 'ticks', r.final);
   }
+}
+
+// World loading (R-GDF-*, R-WORLD-*): both cores must accept and reject the same GDFs, with the same id.
+// Cases are raw bytes (base64) so they can hold BOMs, bad UTF-8 and number spellings JSON.stringify never writes.
+function gdfCases() {
+  const room = (w, h, extra = {}) => { const c = new Uint8Array(w * h); for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) c[j * w + i] = 1; return { cells: c, w, h, ...extra }; };
+  const text = ({ w, h, cells, b64, start = [1, 1] }) => JSON.stringify({ gdf: 1, grid: { w, h, cells: b64 ?? b64encode(rleEncode(cells)) }, start: { cell: start } });
+  const raw = (name, bytes) => ({ name, bytes: b64encode(bytes) });
+  const mk = (name, o) => raw(name, utf8(text(o)));
+  const edit = (name, from, to) => { const t = text(room(5, 4)); if (!t.includes(from)) throw new Error(name); return raw(name, utf8(t.replace(from, to))); };
+  const r = room(5, 4), pairs = (bytes) => b64encode(Uint8Array.from(bytes));
+  const open = Uint8Array.from(r.cells); open[1] = 1;
+  const cases = [
+    mk('ok 5x4', r), mk('ok 3x3', room(3, 3)), mk('ok 64x64', room(64, 64, { start: [62, 62] })),
+    mk('start on wall', { ...r, start: [0, 0] }), mk('start outside', { ...r, start: [5, 1] }),
+    mk('open border', { ...r, cells: open }), mk('too wide', room(65, 3)), mk('too small', room(2, 3)),
+    mk('odd base64 length', { ...r, b64: 'AAA' }), mk('bad base64 char', { ...r, b64: 'AA*A' }),
+    mk('non-canonical padding', { ...r, b64: 'BQB=' }), mk('zero-length run', { ...r, b64: pairs([0, 0, 20, 0]) }),
+    mk('unknown code', { ...r, b64: pairs([20, 9]) }), mk('runs overflow', { ...r, b64: pairs([21, 0]) }),
+    mk('runs short', { ...r, b64: pairs([19, 0]) }), mk('odd rle length', { ...r, b64: pairs([20, 0, 1]) }),
+    mk('empty cells', { ...r, b64: '' }), mk('padding with bits', { ...r, b64: 'AB==' }), mk('all padding', { ...r, b64: '====' }),
+    edit('version 1.0', '"gdf":1', '"gdf":1.0'), edit('width 5e0', '"w":5', '"w":5e0'), edit('cell -0', '"cell":[1,1]', '"cell":[1,-0]'),
+    edit('extra float', '"gdf":1', '"gdf":1,"x":0.5'), edit('huge int', '"gdf":1', '"gdf":1,"x":9007199254740993'),
+    edit('safe max int', '"gdf":1', '"gdf":1,"x":9007199254740991'), edit('empty object', '"gdf":1', '"gdf":1,"meta":{}'),
+    edit('numeric keys', '"gdf":1', '"gdf":1,"meta":{"0":"a","1":"b"}'), edit('cell as object', '"cell":[1,1]', '"cell":{"0":1,"1":1}'),
+    edit('list meta ok', '"gdf":1', '"gdf":1,"meta":["a","b"]'), edit('empty list ok', '"gdf":1', '"gdf":1,"links":[]'),
+    edit('depth 12 ok', '"gdf":1', '"gdf":1,"x":' + '['.repeat(11) + ']'.repeat(11)),
+    edit('depth 13', '"gdf":1', '"gdf":1,"x":' + '['.repeat(12) + ']'.repeat(12)),
+    edit('unicode ok', '"gdf":1', '"gdf":1,"t":"Grabkammer \u00e4 \u{1F702}"'),
+    raw('bom', Uint8Array.from([0xEF, 0xBB, 0xBF, ...utf8(text(r))])),
+    raw('bad utf-8', Uint8Array.from([...utf8(text(r)).slice(0, -1), 0xFF, 0x7D])),
+    raw('not an object', utf8('[1,2]')), raw('null', utf8('null')), raw('trailing garbage', utf8(text(r) + 'x')),
+    raw('too large', utf8(text(r).replace('"gdf":1', '"gdf":1,"pad":"' + 'a'.repeat(262144) + '"'))),
+  ];
+  return cases.map((c) => { try { return { ...c, ok: true, id: Sim.load(b64decodeBytes(c.bytes)).id }; } catch { return { ...c, ok: false }; } });
 }
 
 // Primitive vectors: PHP must reproduce every one of these exactly.
@@ -83,6 +130,8 @@ function writePrimitives() {
     rng: rngSeq, below,
     canon: canonCases.map((v) => ({ value: v, text: canonical(v), sha256: sha256Hex(new TextEncoder().encode(canonical(v))) })),
     sine: [0, 1, 512, 1023, 1024, 1025, 2048, 3072, 4095, -1, 4096, 5000].map((a) => [a, isin(a)]),
+    fdiv: [[7, 2], [-7, 2], [7, -2], [-7, -2], [0, 3], [-1, 2400], [-2400, 2400], [-2401, 2400], [2399, 2400], [2400, 2400]].map(([a, b]) => [a, b, fdiv(a, b)]),
+    gdf: gdfCases(),
   };
   writeFileSync(DIR + 'primitives.json', JSON.stringify(prim, null, 1) + '\n');
   console.log('primitives.json written');

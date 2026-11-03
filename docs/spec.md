@@ -401,8 +401,9 @@ One HTML file: three.js r128 from a CDN; a hand-written map in code; game logic 
 ### 6.3 The sim core contract
 
 ```
-state  = Sim.init(gdf, seed, mode)            // canonical, integer-only, JSON-serialisable
-events = Sim.step(state, input)               // advances exactly one tick, mutates state, returns events
+world  = Sim.load(gdf)                        // immutable map, never hashed (decision #10)
+state  = Sim.init(world, seed, mode)          // canonical, integer-only, JSON-serialisable; names its world
+events = Sim.step(world, state, input)        // advances exactly one tick, mutates state, returns events
 hash   = Sim.hash(state)                      // SHA-256 over the canonical serialisation, truncated to 16 bytes
 ```
 

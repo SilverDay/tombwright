@@ -40,7 +40,7 @@ final class Rng
     public static function seed(int $seed): array
     {
         if ($seed < 0 || $seed > self::M32) {
-            throw new \RangeError('seed must be uint32');
+            throw new \RangeException('seed must be uint32');
         }
         $s = [];
         $z = $seed;
@@ -72,7 +72,7 @@ final class Rng
     public static function below(array &$s, int $n): int
     {
         if ($n < 1 || $n > 65536) {
-            throw new \RangeError('below: n out of range');
+            throw new \RangeException('below: n out of range');
         }
         return (self::next($s) * $n) >> 32;
     }

@@ -24,6 +24,12 @@ export function idiv(a, b) {
   return q === 0 ? 0 : q; // never -0
 }
 
+/** R-INT-5: floor division (rounds toward −∞), for cell indices. */
+export function fdiv(a, b) {
+  const q = idiv(a, b);
+  return (a % b !== 0 && (a < 0) !== (b < 0)) ? q - 1 : q;
+}
+
 /** R-INT-4: floor(sqrt(n)) for 0 <= n <= 2^53-1, exact. */
 export function isqrt(n) {
   assertInt(n, 'isqrt n');

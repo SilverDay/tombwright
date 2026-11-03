@@ -1,0 +1,148 @@
+{
+ "name": "0003-walls",
+ "core": "m0.2",
+ "seed": 7,
+ "mode": "practice",
+ "gdf": "{\n \"gdf\": 1,\n \"meta\": {\n  \"title\": \"Gloamhollow\",\n  \"lang\": \"en\",\n  \"authorId\": 0\n },\n \"grid\": {\n  \"w\": 44,\n  \"h\": 63,\n  \"cells\": \"OgACAQoFAgEEAAgBEgACAQoFAgEEAAgBEgACAQQFBAYCBQIBBAAIARIAAgEEBQEGAgUBBgIFAgEEAggBEgACAQIGAgUBBgIFAwYCAQQACAESAAIBAQUBBgIFAQYFBQIBBAAIARIAAgEBBQQGBQUCAQQACAESAAIBBAUDBgMFAgEIAAECFQACAQoFAgEIAAECFQABAhUAAQIVAAECFQABAhUAAQISAAkBCAAHAQEAAQISAAkBCAAHAQICEgAJAQgABwEUAAkBCAAHARQACQEIAAcBFAAJAQkAAQIBAAECAQABAhUACQEJAAECAQABCAEAAQgVAAkBCQABAhkACQEJAAECBgAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQCAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJARcACwEBAAkBFwALAQEACQEXAAsBBQABAhsACwEFAAECGwALAQUAAQIqAAMBAQQHAQEEBwEZAAcBAQQDAQEEBwEZAAMBAQQDAQEECwEqAAECKwABAisAAQIpAAIDAQECAycAAgMDAScABAMBAScAAwMCAScAAwMBAQEDJwACAwIBAQMnAAIDAQECAycAAwECAycAAQEEAycAAgEDAycAAQMBAQMDJwABAwIBAgMnAAIDAQECAycABQEpAAECKwABAisAAQIoAAcBJQAHASUABwElAAcBJQAHASUAAwEBAAMBMgA=\"\n },\n \"zones\": [\n  {\n   \"id\": \"vest\",\n   \"name\": \"the Vestibule\",\n   \"rects\": [\n    [\n     31,\n     56,\n     7,\n     6\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     60\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"hall\",\n   \"name\": \"the Hall of the Kneeling Bearers\",\n   \"rects\": [\n    [\n     32,\n     39,\n     5,\n     14\n    ]\n   ],\n   \"ceil\": 4600,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     52\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"mouth\",\n   \"name\": \"the Mouth of the Gallery\",\n   \"rects\": [\n    [\n     33,\n     33,\n     3,\n     3\n    ]\n   ],\n   \"ceil\": 3600,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     34\n    ],\n    \"yaw\": 1024\n   }\n  },\n  {\n   \"id\": \"gallery\",\n   \"name\": \"the Gallery of Waking Eyes\",\n   \"rects\": [\n    [\n     17,\n     33,\n     16,\n     3\n    ]\n   ],\n   \"ceil\": 3600\n  },\n  {\n   \"id\": \"bells\",\n   \"name\": \"the Garden of Bells\",\n   \"rects\": [\n    [\n     14,\n     21,\n     9,\n     9\n    ]\n   ],\n   \"ceil\": 5400,\n   \"checkpoint\": {\n    \"cell\": [\n     18,\n     28\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"breath\",\n   \"name\": \"the Breathing Hall\",\n   \"rects\": [\n    [\n     27,\n     24,\n     12,\n     3\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     27,\n     25\n    ],\n    \"yaw\": 3072\n   }\n  },\n  {\n   \"id\": \"vault\",\n   \"name\": \"the Mirror Vault\",\n   \"rects\": [\n    [\n     33,\n     12,\n     9,\n     9\n    ]\n   ],\n   \"ceil\": 4600,\n   \"checkpoint\": {\n    \"cell\": [\n     37,\n     19\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"script\",\n   \"name\": \"the Scriptorium\",\n   \"rects\": [\n    [\n     32,\n     1,\n     8,\n     7\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     36,\n     6\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"chasm\",\n   \"name\": \"the Chasm of the Unlit Road\",\n   \"rects\": [\n    [\n     14,\n     1,\n     14,\n     9\n    ]\n   ],\n   \"ceil\": 6500,\n   \"checkpoint\": {\n    \"cell\": [\n     26,\n     5\n    ],\n    \"yaw\": 1024\n   }\n  },\n  {\n   \"id\": \"masks\",\n   \"name\": \"the Antechamber of Masks\",\n   \"rects\": [\n    [\n     6,\n     13,\n     7,\n     5\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     10,\n     14\n    ],\n    \"yaw\": 2048\n   }\n  },\n  {\n   \"id\": \"way\",\n   \"name\": \"the Dreamer's Way\",\n   \"rects\": [\n    [\n     7,\n     19,\n     1,\n     3\n    ]\n   ],\n   \"ceil\": 3000,\n   \"checkpoint\": {\n    \"cell\": [\n     7,\n     19\n    ],\n    \"yaw\": 2048\n   }\n  },\n  {\n   \"id\": \"sanctum\",\n   \"name\": \"the Sanctum of the Candle-Eater\",\n   \"rects\": [\n    [\n     2,\n     22,\n     11,\n     11\n    ]\n   ],\n   \"ceil\": 6200,\n   \"checkpoint\": {\n    \"cell\": [\n     7,\n     24\n    ],\n    \"yaw\": 2048\n   }\n  }\n ],\n \"start\": {\n  \"cell\": [\n   34,\n   60\n  ]\n },\n \"exit\": {\n  \"cell\": [\n   7,\n   27\n  ],\n  \"requires\": \"bossDefeated\"\n },\n \"entities\": [],\n \"links\": []\n}\n",
+ "inputs": [
+  [
+   90,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   60,
+   {
+    "move": [
+     127,
+     60
+    ],
+    "yaw": 3584,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   90,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   45,
+   {
+    "move": [
+     127,
+     127
+    ],
+    "yaw": 3800,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   120,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   90,
+   {
+    "move": [
+     127,
+     -50
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   60,
+   {
+    "move": [
+     0,
+     127
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   45,
+   {
+    "move": [
+     -127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ]
+ ],
+ "ticks": 600,
+ "hashEvery": 300,
+ "hashes": {
+  "0": "c621f7678dc8d4556a03316c80438fb5",
+  "300": "51da714c70c40051d087c1c95379df37",
+  "600": "8bb14c8bd985d61ad269a430aedf18b0"
+ },
+ "final": "8bb14c8bd985d61ad269a430aedf18b0",
+ "finalState": {
+  "v": 1,
+  "core": "m0.2",
+  "world": "6f6e6da0d3cc62503ac6b7000716e596",
+  "mode": "practice",
+  "tick": 600,
+  "rng": [
+   588686121,
+   1937383562,
+   4286812467,
+   2372217166
+  ],
+  "player": {
+   "x": 74760,
+   "z": 148315,
+   "vx": -2,
+   "vz": 3198,
+   "rx": -17,
+   "rz": 2,
+   "yaw": 0,
+   "pitch": 0,
+   "hp": 100,
+   "oil": 2952000,
+   "hooded": false
+  },
+  "prevButtons": 0
+ }
+}

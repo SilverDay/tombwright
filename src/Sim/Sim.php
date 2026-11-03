@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.1';
+    public const CORE_VERSION = 'm0.2';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -18,6 +18,7 @@ final class Sim
     public const OIL_UNIT = 30000;
     public const OIL_BURN_OPEN = 80;
     public const OIL_BURN_HOODED = 25;
+    public const PLAYER_R_MM = 360;
 
     public const BTN_STRIKE = 1 << 0;
     public const BTN_HOOD = 1 << 1;
@@ -35,17 +36,17 @@ final class Sim
     {
         $move = $input['move'] ?? null;
         if (!is_array($move) || !array_is_list($move) || count($move) !== 2) {
-            throw new \RangeError('input.move');
+            throw new \RangeException('input.move');
         }
         foreach ($move as $v) {
             if (!is_int($v) || $v < -127 || $v > 127) {
-                throw new \RangeError('input.move range');
+                throw new \RangeException('input.move range');
             }
         }
         $chk = static function (string $k, int $lo, int $hi) use ($input): void {
             $v = $input[$k] ?? null;
             if (!is_int($v) || $v < $lo || $v > $hi) {
-                throw new \RangeError("input.$k");
+                throw new \RangeException("input.$k");
             }
         };
         $chk('yaw', 0, 4095);
@@ -59,24 +60,24 @@ final class Sim
         return $c * self::CELL_MM + intdiv(self::CELL_MM, 2);
     }
 
-    /**
-     * @param array<string,mixed> $gdf
-     * @return array<string,mixed>
-     */
-    public static function init(array $gdf, int $seed, string $mode): array
+    /** Sim::load(bytes) -> world: the immutable map, built once from the GDF file (R-GDF-0, R-WORLD-*). */
+    public static function load(string $bytes): World
     {
-        if (($gdf['gdf'] ?? null) !== 1) {
-            throw new \InvalidArgumentException('unsupported GDF');
-        }
+        return World::load($bytes);
+    }
+
+    /** @return array<string,mixed> */
+    public static function init(World $world, int $seed, string $mode): array
+    {
         if (!in_array($mode, self::MODES, true)) {
             throw new \InvalidArgumentException('bad mode');
         }
-        [$ci, $cj] = $gdf['start']['cell'];
-        IntMath::assertInt($ci);
-        IntMath::assertInt($cj);
+        $ci = $world->startI;
+        $cj = $world->startJ;
         return [
             'v' => 1,
             'core' => self::CORE_VERSION,
+            'world' => $world->id,
             'mode' => $mode,
             'tick' => 0,
             'rng' => Rng::seed($seed),
@@ -95,8 +96,11 @@ final class Sim
      * @param array<string,mixed> $input
      * @return list<array<string,mixed>>
      */
-    public static function step(array &$state, array $input): array
+    public static function step(World $world, array &$state, array $input): array
     {
+        if ($state['world'] !== $world->id) {
+            throw new \InvalidArgumentException('state belongs to another world');
+        }
         self::checkInput($input);
         $p = &$state['player'];
         $events = [];
@@ -126,9 +130,11 @@ final class Sim
         $dz = IntMath::idiv($az, self::TICK_HZ);
         $p['rx'] = $ax - $dx * self::TICK_HZ;
         $p['rz'] = $az - $dz * self::TICK_HZ;
+        $ox = $p['x'];
+        $oz = $p['z'];
         $p['x'] += $dx;
         $p['z'] += $dz;
-        // TODO(M0): collision against cells, doors and props (Gloamhollow pushCircle, RAD 0.36 m).
+        self::pushOut($world, $p, self::PLAYER_R_MM, $ox, $oz);
 
         if ($pressed & self::BTN_HOOD) {
             if ($p['oil'] > 0) {
@@ -150,6 +156,44 @@ final class Sim
         $state['prevButtons'] = $input['buttons'];
         $state['tick'] += 1;
         return $events;
+    }
+
+    /**
+     * R-MOVE-4: push a circle out of solid cells (mirrors pushOut in sim.js).
+     * Bounds (R-INT-2): |dx|, |dz| <= 2400 + r, so dx*r and d2 stay below 2^23.
+     *
+     * @param array<string,mixed> $e
+     */
+    private static function pushOut(World $world, array &$e, int $r, int $ox, int $oz): void
+    {
+        for ($pass = 0; $pass < 3; $pass++) {
+            $ci = IntMath::fdiv($e['x'], self::CELL_MM);
+            $cj = IntMath::fdiv($e['z'], self::CELL_MM);
+            for ($dj = -1; $dj <= 1; $dj++) {
+                for ($di = -1; $di <= 1; $di++) {
+                    $gi = $ci + $di;
+                    $gj = $cj + $dj;
+                    if (!$world->solidCell($gi, $gj)) {
+                        continue;
+                    }
+                    $minx = $gi * self::CELL_MM;
+                    $minz = $gj * self::CELL_MM;
+                    $qx = IntMath::clamp($e['x'], $minx, $minx + self::CELL_MM);
+                    $qz = IntMath::clamp($e['z'], $minz, $minz + self::CELL_MM);
+                    $dx = $e['x'] - $qx;
+                    $dz = $e['z'] - $qz;
+                    $d2 = $dx * $dx + $dz * $dz;
+                    if ($d2 === 0) {
+                        $e['x'] = $ox;
+                        $e['z'] = $oz;
+                    } elseif ($d2 < $r * $r) {
+                        $d = IntMath::isqrt($d2);
+                        $e['x'] = $qx + IntMath::idiv($dx * $r, $d);
+                        $e['z'] = $qz + IntMath::idiv($dz * $r, $d);
+                    }
+                }
+            }
+        }
     }
 
     /** @param array<string,mixed> $state */

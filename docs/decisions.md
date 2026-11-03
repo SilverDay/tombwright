@@ -14,6 +14,10 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 7 | 2026-11-03 | **Copyright holder:** SilverDay Media (`LICENSE`, `REUSE.toml`). | Owner |
 | 8 | 2026-11-03 | The original "80-check walkthrough" could not be found. It is replaced by `tests/e2e/gloamhollow-walkthrough.spec.mjs` (94 checks, stair to daylight, one deliberate death). The M0 exit criterion becomes "the Gloamhollow walkthrough passes". | Owner |
 | 9 | 2026-11-03 | `three@0.128.0` is a pinned devDependency, used only by the e2e test to serve the r128 build that `Gloamhollow.html` loads from cdnjs (no network in tests). The client's vendored three.js is a separate decision. | Owner |
+| 10 | 2026-11-03 | **Sim contract:** the static map is a separate immutable world: `Sim.load(gdf)`, `init(world, seed, mode)`, `step(world, state, input)`. State holds only what changes plus the world id (SHA-256 of the canonical GDF), so hashes stay small and a state can't be replayed against another tomb. Amends spec §6.3. | Owner |
+| 11 | 2026-11-03 | **GDF `grid.cells`:** strict base64 of run-length pairs `[count 1–255, code 0–8]` (spec §7.1 left the RLE scheme open). | Owner |
+| 12 | 2026-11-03 | `start.cell` is the spawn cell and must be floor. Gloamhollow's GDF starts at the Vestibule checkpoint (34, 60); the sealed stair (34, 61) is a wall cell (the spec §7.1 example's `[34,61]` was illustrative). Official tombs live in `dungeons/`. | Implementation |
+| 13 | 2026-11-03 | Work is committed straight to `main` once the tests pass. | Owner |
 
 ## Still open (spec §17)
 
