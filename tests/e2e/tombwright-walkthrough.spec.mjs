@@ -28,7 +28,7 @@ test('Tombwright: Gloamhollow on the sim core, stair to daylight', async ({ page
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.route(/^https?:\/\/(?!127\.0\.0\.1:8765)/, (r) => r.abort()); // no third-party requests
   await page.addInitScript(() => { window.__twTest = true; window.__twNoRender = true; });
-  await page.goto('http://127.0.0.1:8765/');
+  await page.goto('http://127.0.0.1:8765/play/gloamhollow');
   await page.waitForFunction(() => !!window.__tw);
   // The page's CSP refuses injected <script> tags (as it should), so the driver goes in through evaluate.
   await page.evaluate(readFileSync(ROOT + 'tests/e2e/lib/tombwright-driver.js', 'utf8'));

@@ -9,6 +9,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 use Tombwright\Http\SecurityHeaders;
 
 const OFFICIAL_TOMBS = ['/tombs/gloamhollow.gdf.json' => 'gloamhollow.gdf.json'];
+const PAGES = ['/' => 'home.php', '/play/gloamhollow' => 'game.php'];
 
 $https = ($_SERVER['HTTPS'] ?? '') === 'on';
 foreach (SecurityHeaders::all($https) as $name => $value) {
@@ -29,13 +30,15 @@ if ($read && $path === '/healthz') {
     return;
 }
 
-// M0 step 6: the game page and the official tombs it plays. Fixed routes only; nothing from the path
-// reaches the file system. HEAD is answered like GET (headers only).
-if ($read && $path === '/') {
+// The landing page, the game pages and the official tombs they play. Fixed routes only (the PAGES and
+// OFFICIAL_TOMBS allow-lists); nothing from the path reaches the file system. HEAD is answered like GET
+// (headers only).
+if ($read && isset(PAGES[$path])) {
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: no-cache');
     if ($method === 'GET') {
-        require dirname(__DIR__) . '/templates/game.php';
+        $siteUrl = 'https://tombwright.silverday.de'; // the canonical URL (open question Q9: the final name and domain)
+        require dirname(__DIR__) . '/templates/' . PAGES[$path];
     }
     return;
 }
@@ -58,7 +61,7 @@ if ($read && isset(OFFICIAL_TOMBS[$path])) {
 }
 
 // Known paths with another method: 405 (RFC 9110).
-if ($path === '/' || $path === '/healthz' || isset(OFFICIAL_TOMBS[$path])) {
+if ($path === '/healthz' || isset(PAGES[$path]) || isset(OFFICIAL_TOMBS[$path])) {
     http_response_code(405);
     header('Allow: GET, HEAD');
     header('Content-Type: application/json');

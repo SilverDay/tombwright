@@ -46,3 +46,11 @@ path = ["public/legal/rogue-licence.txt"]
 precedence = "override"
 SPDX-FileCopyrightText = "1980-1983, 1985, 1999 Michael Toy, Ken Arnold and Glenn Wichman"
 SPDX-License-Identifier = "LicenseRef-Rogue"
+
+# The banner and the social-preview crop show the Tombwright wordmark, which spec §13 excludes from CC BY-SA:
+# all rights reserved (LICENSES/LicenseRef-SilverDay-AllRightsReserved.txt).
+[[annotations]]
+path = ["public/assets/images/tombwright-banner-1600.jpg", "public/assets/images/tombwright-banner-1600.webp", "public/assets/images/tombwright-og-1200x630.jpg"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 SilverDay Media"
+SPDX-License-Identifier = "LicenseRef-SilverDay-AllRightsReserved"

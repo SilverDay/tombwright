@@ -1,5 +1,7 @@
 # Tombwright
 
+![Tombwright: a hooded builder draws a tomb plan whose lines rise into stone halls, where an adventurer fights a skeleton](public/assets/images/tombwright-banner-1600.jpg)
+
 Build, prove, and challenge killer dungeons. The successor to *Gloamhollow* (SilverDay Media).
 
 Status: **M0, engine split.** The deterministic sim core exists in JS and PHP with shared golden vectors. The game rules are being ported from Gloamhollow.

@@ -530,7 +530,11 @@ async function boot() {
   $('introKeys').open = !coarse;
   $('goBtn').disabled = true;
   let T;
-  try { T = await loadTomb('gloamhollow'); } catch (e) { showError('The tomb could not be loaded. Reload the page to try again.'); console.error(e); return; }
+  // The tomb comes from the path (/play/<name>), allow-listed: the name never reaches the file system by itself.
+  const played = /^\/play\/([a-z0-9-]{1,64})$/.exec(location.pathname);
+  const name = played !== null && ['gloamhollow'].includes(played[1]) ? played[1] : null;
+  if (name === null) { showError('There is no tomb of that name.'); return; }
+  try { T = await loadTomb(name); } catch (e) { showError('The tomb could not be loaded. Reload the page to try again.'); console.error(e); return; }
   let game;
   try { game = new Game(T); } catch (e) { showError('This page needs WebGL to draw the tomb, and it is turned off or unavailable in this browser.'); console.error(e); return; }
   { const b = T.gdf.entities.find((e) => e.type === 'boss'); T.bestiaryBoss = b ? bossKind(b.kind) : null; }

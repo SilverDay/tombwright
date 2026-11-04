@@ -1,0 +1,10 @@
+All rights reserved
+
+Copyright SilverDay Media.
+
+This work shows the Tombwright wordmark, which the project's licensing
+(docs/spec.md §13) excludes from the CC BY-SA grant that covers the game's
+other non-code assets. It is published here so the site, the README and the
+social preview can show it, but no licence is granted: it may not be copied,
+modified or redistributed outside this repository without written permission
+from SilverDay Media.
