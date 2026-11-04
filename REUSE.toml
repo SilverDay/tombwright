@@ -6,9 +6,9 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 SilverDay Media"
 SPDX-License-Identifier = "MIT"
 
-# Original Gloamhollow source, kept as the porting reference for M0. MIT (decisions #6).
+# Original Gloamhollow and Lantern Delve sources, kept as porting references. MIT (decisions #6, #60).
 [[annotations]]
-path = ["reference/gloamhollow/**"]
+path = ["reference/gloamhollow/**", "reference/lantern-delve/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 SilverDay Media"
 SPDX-License-Identifier = "MIT"

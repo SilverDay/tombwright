@@ -64,6 +64,7 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 57 | 2026-11-04 | **Foes and traps (Q11):** foes never set off traps. Walking foes treat lethal cells as walls (R-FOE-5); traps stay predictable. | Owner |
 | 58 | 2026-11-04 | **Bestiary tuning (Q12):** `bestiary.v1.json` ships with the §4.9.1 conversion as it stands; any retuning goes into `bestiary.v2` (old dungeons keep the version they were proven with). | Owner |
 | 59 | 2026-11-04 | **Lantern Delve source:** the owner adds Lantern Delve's source under `reference/lantern-delve/`; its foes' sprites, sounds and timings are ported from it, as Gloamhollow's were. | Owner |
+| 60 | 2026-11-04 | **Lantern Delve reference licence:** `reference/lantern-delve/LanternDelve.html` is MIT, © 2026 SilverDay Media. Its foe names and base stats come from Rogue 5.4 (BSD); Rogue's notice ships with the foes that use them (spec §4.9.5). | Owner |
 
 ## Still open (spec §17)
 
