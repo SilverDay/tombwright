@@ -66,6 +66,12 @@ const sfx = {
   step() { tone(90, 0.06, 'sine', 0.05, 60); },
   win() { [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, 0.45, 'triangle', 0.2, null, i * 0.13)); },
   die() { tone(220, 1.2, 'sawtooth', 0.2, 50); },
+  // Lantern Delve's (reference/lantern-delve/LanternDelve.html), for its foes' powers and the Warden.
+  fire() { hiss(0.35, 0.28, 1800, 'lowpass', 300); },
+  frost() { tone(1800, 0.45, 'sine', 0.1, 2600); hiss(0.45, 0.12, 5000, 'highpass'); },
+  blink() { tone(380, 0.22, 'sine', 0.18, 1600); },
+  steal() { tone(1400, 0.08, 'triangle', 0.12, 2400); tone(700, 0.2, 'sine', 0.1, 300, 0.08); },
+  boss() { tone(65, 0.9, 'sawtooth', 0.26, 42); tone(98, 0.9, 'sawtooth', 0.14, 60); },
 };
 
 export { AUD, audioInit, sfx };

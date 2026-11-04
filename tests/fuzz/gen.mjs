@@ -6,7 +6,7 @@ import * as Sim from '../../public/js/sim/sim.js';
 import { rngSeed, rngBelow } from '../../public/js/sim/rng.js';
 import { b64encode, rleEncode, CELL } from '../../public/js/sim/world.js';
 import {
-  GLOAMHOLLOW, trapRoom, toolRoom, bellRoom, linkRoom, mirrorRoom, maskRoom, foeRoom, propRoom, crowdRoom, delveRoom,
+  GLOAMHOLLOW, trapRoom, toolRoom, bellRoom, linkRoom, mirrorRoom, maskRoom, foeRoom, propRoom, crowdRoom, delveRoom, powerRoom,
 } from '../golden/generate.mjs';
 
 const utf8 = (s) => new TextEncoder().encode(s);
@@ -197,7 +197,7 @@ const BASES = [
   (r) => randomTomb(r), (r) => randomTomb(r), (r) => randomTomb(r), (r) => randomTomb(r),
   (r) => gloamhollowFrom(r), (r) => gloamhollowFrom(r), (r) => linkRoom(1 + rngBelow(r, 65536) * 16384 + rngBelow(r, 16384)),
   () => trapRoom(), () => toolRoom([2, 4]), () => toolRoom([10, 4], false), () => bellRoom(), () => mirrorRoom(),
-  () => maskRoom(), () => maskRoom([6, 5], true), () => foeRoom(), () => crowdRoom(), () => propRoom(), () => delveRoom(), () => delveRoom([12, 4]),
+  () => maskRoom(), () => maskRoom([6, 5], true), () => foeRoom(), () => crowdRoom(), () => propRoom(), () => delveRoom(), () => delveRoom([12, 4]), () => powerRoom(), () => powerRoom([11, 4]),
 ];
 
 /** Case n: { n, gdf (exact text, R-GDF-0), seed, mode, ticks, driver } — the driver picks inputs while it plays. */

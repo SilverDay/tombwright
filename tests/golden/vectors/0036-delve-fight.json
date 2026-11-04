@@ -1,6 +1,6 @@
 {
  "name": "0036-delve-fight",
- "core": "m0.12",
+ "core": "m0.13",
  "seed": 36,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAOAQIACgEBAwMBAgAOAQIADgECAAUBBAUFAQIADgECAAsBAQQCAQIADgERAA==\"},\"start\":{\"cell\":[3,4]},\"zones\":[{\"id\":\"d\",\"name\":\"D\",\"rects\":[[1,1,14,8]],\"ceil\":5000}],\"entities\":[{\"id\":\"bat\",\"type\":\"foe\",\"kind\":\"bat\",\"cell\":[8,2],\"start\":\"hunting\"},{\"id\":\"kes\",\"type\":\"foe\",\"kind\":\"kestrel\",\"cell\":[12,4],\"start\":\"idle\"},{\"id\":\"tro\",\"type\":\"foe\",\"kind\":\"troll\",\"cell\":[13,2],\"start\":\"asleep\"},{\"id\":\"gri\",\"type\":\"foe\",\"kind\":\"griffin\",\"cell\":[13,7],\"start\":\"idle\"},{\"id\":\"fly\",\"type\":\"foe\",\"kind\":\"flytrap\",\"cell\":[4,4],\"start\":\"idle\"},{\"id\":\"sna\",\"type\":\"foe\",\"kind\":\"snake\",\"cell\":[2,7],\"start\":\"asleep\"},{\"id\":\"zom\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,8],\"start\":\"dormant\",\"group\":\"dead\"},{\"id\":\"emu\",\"type\":\"foe\",\"kind\":\"emu\",\"cell\":[2,2],\"start\":\"idle\"}],\"links\":[{\"id\":1,\"when\":{\"foesDefeated\":\"fly\"},\"do\":[{\"spawnFoes\":\"dead\"},{\"message\":\"the flytrap falls\"}]}]}",
@@ -87,17 +87,17 @@
  "ticks": 1601,
  "hashEvery": 300,
  "hashes": {
-  "0": "8263442047b8929dedc2af4eaaae14f8",
-  "300": "92f392780ad7a2ac24624db906ccfed3",
-  "600": "8137b6a4086b3d7cba890bc87c730569",
-  "900": "8f35db87956096bde24cbeef09e2cc8c",
-  "1200": "bca992ea9a152f949de7435759455ee5",
-  "1500": "18fe6b724ab91e801d819c376ca68a21"
+  "0": "f69c02d952ca8d8d620591437899f9fa",
+  "300": "ff26f366bda2a13b644682d235a56d13",
+  "600": "9444be72de849f0392746605bd5d3213",
+  "900": "c0ce8f081ae13c3f8314bd09ffc91046",
+  "1200": "0488ef7ff55a72c9ed498fd1b6720585",
+  "1500": "611531664f208353d976e2ac83b8021f"
  },
- "final": "9f09dbe35d5b7bf769bcb50cf5bd25ee",
+ "final": "1f1cdf407541e113e08bd0254516c2a0",
  "finalState": {
   "v": 1,
-  "core": "m0.12",
+  "core": "m0.13",
   "world": "fe93e81c67a5a6ec091b917b8c05f3f0",
   "mode": "practice",
   "tick": 1601,
@@ -127,7 +127,16 @@
    "pebbleCd": 0,
    "strikeCd": 2,
    "busy": 0,
-   "busyOn": -1
+   "busyOn": -1,
+   "doused": false,
+   "frozen": 0,
+   "freezeImm": 0,
+   "held": -1,
+   "heldT": 0,
+   "holdImm": 0,
+   "confused": 0,
+   "poison": 0,
+   "maxHp": 3000
   },
   "doors": [],
   "deaths": 2,

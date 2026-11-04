@@ -513,6 +513,27 @@ export function delveRoom(start = [3, 4]) {
   });
 }
 
+// Touch powers (R-POW-*, step 7b): one of each power foe around the start, all hunting but the flytrap (idle, still),
+// an eyes zone to test the doused lantern, braziers for relighting rules; budget 4+1+16+16+4+9 = 50.
+export function powerRoom(start = [4, 4], only = null) {
+  const w = 14, h = 9, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  return JSON.stringify({
+    gdf: 1, bestiary: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: start },
+    zones: [{ id: 'p', name: 'P', rects: [[1, 1, 8, 7]], ceil: 4200, checkpoint: { cell: [2, 2], yaw: 0 } }, { id: 'q', name: 'Q', rects: [[9, 1, 4, 7]], ceil: 4200, checkpoint: { cell: [11, 4], yaw: 0 } }],
+    entities: [
+      { id: 'aqu', type: 'foe', kind: 'aquator', cell: [6, 4], start: 'hunting' },
+      { id: 'ice', type: 'foe', kind: 'ice', cell: [4, 6], start: 'hunting' },
+      { id: 'fly', type: 'foe', kind: 'flytrap', cell: [5, 3], start: 'idle' },
+      { id: 'med', type: 'foe', kind: 'medusa', cell: [2, 6], start: 'hunting' },
+      { id: 'rat', type: 'foe', kind: 'rattlesnake', cell: [7, 2], start: 'hunting' },
+      { id: 'vam', type: 'foe', kind: 'vampire', cell: [11, 6], start: 'asleep' },
+      { id: 'br', type: 'brazier', cell: [3, 2], lit: false },
+      { id: 'eye', type: 'eyes', zone: 'q', wake: 60 },
+    ].filter((e) => only === null || e.type !== 'foe' || only.includes(e.id)),
+  });
+}
+
 // The awake cap, the wake queue and a mixed group (R-FOE-4, R-FOE-8): the foe room with ten dormant crawlers in group
 // all, spawned on tick 0 (two must wait), and group mix (an asleep warden and a dormant crawler, never spawned).
 export function crowdRoom() {
@@ -635,6 +656,13 @@ const VECTORS = {
   '0036-delve-fight': { gdf: delveRoom(), seed: 36, mode: 'practice', inputs: [[400, I([0, 0], 3072, B.strike)], [200, I([0, 0], 1024, B.strike)], [300, I([127, 0], 0, B.strike)], [300, I([127, 30], 2048, B.run)], [1, I([0, 0], 0, B.rise)], [400, I([0, 0], 3072, B.strike)]] },
   '0037-delve-fuzz': { gdf: delveRoom(), seed: 37, mode: 'delve', inputs: fuzz(0xDE17E, 9000, 11) },
   '0038-delve-practice-fuzz': { gdf: delveRoom([12, 4]), seed: 38, mode: 'practice', inputs: fuzz(0xDE17F, 9000, 11, 60) },
+  // Stand among the touch foes and take what comes, try to move and strike, relight, then run east into the vampire.
+  '0039-powers': { gdf: powerRoom(), seed: 39, mode: 'practice', inputs: [[240, I([0, 0], 0)], [60, I([127, 0], 1024, B.strike)], [1, I([0, 0], 0, B.hood)], [40, I()],
+    [1, I([0, 0], 0, B.hood)], [60, I([127, 40], 3072, B.run)], [200, I([0, 0], 2048, B.strike)], [1, I([0, 0], 0, B.rise)], [300, I([127, 0], 3072, B.strike | B.run)], [400, I([0, 0], 1024, B.strike)]] },
+  '0040-powers-fuzz': { gdf: powerRoom(), seed: 40, mode: 'delve', inputs: fuzz(0x90E5, 9000, 10) },
+  '0041-powers-practice-fuzz': { gdf: powerRoom([11, 4]), seed: 41, mode: 'practice', inputs: fuzz(0x90E6, 9000, 10, 60) },
+  // Seized by the flytrap alone (R-POW-4): held 150 ticks, freed, immune 90, struck down; then rise and kill it while held.
+  '0042-seize': { gdf: powerRoom([4, 3], ['fly']), seed: 42, mode: 'practice', inputs: [[8, I([127, 0], 3072)], [340, I([0, 0], 3072)], [1, I([0, 0], 3072, B.rise)], [8, I([127, 0], 3072)], [400, I([0, 0], 3072, B.strike)]] },
   '0022-mirrors-practice-fuzz': { gdf: mirrorRoom([1, 3]), seed: 22, mode: 'practice', inputs: fuzz(0x3171, 9000, 4, 30) }, // slow, near the hook
 };
 

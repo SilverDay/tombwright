@@ -1,6 +1,6 @@
 {
  "name": "0027-foes-fight",
- "core": "m0.12",
+ "core": "m0.13",
  "seed": 27,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAHAQEABgECAAcBAQAGAQIABwEBAAIBAQMDAQIABwEBAAYBAgAEAQIEAQEBAAYBAgAHAQEABgECAA4BAgAOAREA\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"w\",\"name\":\"W\",\"rects\":[[1,1,7,8]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[8,7,1,2]],\"ceil\":3000},{\"id\":\"e\",\"name\":\"E\",\"rects\":[[9,1,6,8]],\"ceil\":4200,\"checkpoint\":{\"cell\":[10,6],\"yaw\":1024}}],\"entities\":[{\"id\":\"f1\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[12,2],\"start\":\"hunting\",\"group\":\"east\"},{\"id\":\"f2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[13,7],\"start\":\"idle\",\"group\":\"east\"},{\"id\":\"f3\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[3,7],\"start\":\"asleep\",\"group\":\"sleepy\"},{\"id\":\"f4\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[2,2],\"start\":\"dormant\",\"group\":\"late\"}],\"links\":[{\"id\":1,\"when\":{\"enterZone\":\"e\"},\"do\":[{\"spawnFoes\":\"late\"},{\"message\":\"late\"}]},{\"id\":2,\"when\":{\"foesDefeated\":\"east\"},\"do\":[{\"message\":\"east clear\"}]},{\"id\":3,\"when\":{\"not\":{\"foesAlive\":\"sleepy\"}},\"repeat\":true,\"do\":[{\"message\":\"sleepy gone\"}]}]}",
@@ -48,17 +48,17 @@
  "ticks": 1500,
  "hashEvery": 300,
  "hashes": {
-  "0": "899bae41c7205523ab4dd79d9a66b182",
-  "300": "e99c0f4012f761e219baeae9fe140991",
-  "600": "0ef5e8142a5a5037f42606fa24a84e3d",
-  "900": "5efe8878f8acb81e6a1a23f5ca743222",
-  "1200": "082abefadf2af5a1e138920fa86362a3",
-  "1500": "c2dd611b6d9118a20b3399706b298b0e"
+  "0": "c4760ef82040505a64314cede4fa0c57",
+  "300": "c46ca62b6379e2ff1ae6d6294f0bf2f2",
+  "600": "f9e021a3ef0548c87332850cc9d7286c",
+  "900": "94f2f87383ae5de3ec0496589f0b3bf3",
+  "1200": "bfd9558b04055f38ff5ac12c9cab1e02",
+  "1500": "50d689f3939a1293440d994806bdb721"
  },
- "final": "c2dd611b6d9118a20b3399706b298b0e",
+ "final": "50d689f3939a1293440d994806bdb721",
  "finalState": {
   "v": 1,
-  "core": "m0.12",
+  "core": "m0.13",
   "world": "048035ae47f4729f40c65d9e91cfaca9",
   "mode": "delve",
   "tick": 1500,
@@ -88,7 +88,16 @@
    "pebbleCd": 0,
    "strikeCd": 8,
    "busy": 0,
-   "busyOn": -1
+   "busyOn": -1,
+   "doused": false,
+   "frozen": 0,
+   "freezeImm": 0,
+   "held": -1,
+   "heldT": 0,
+   "holdImm": 0,
+   "confused": 0,
+   "poison": 0,
+   "maxHp": 3000
   },
   "doors": [],
   "deaths": 0,

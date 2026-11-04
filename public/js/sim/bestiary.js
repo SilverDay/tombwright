@@ -3,9 +3,11 @@
 import { sha256Hex } from './sha256.js';
 
 export const BESTIARY_VERSION = 1;
-export const BESTIARY_SHA256 = '4ec12a4f269299c5af032dce0196373f8dd729bd372bb692a1ffcb8ed439b04e';
+export const BESTIARY_SHA256 = '9b0a23db005c50ec0d6a7f1e4955fd6a1f4495d32a3c28b2dcf5aaba43d790f9';
 const FIELDS = ['tier', 'strikes', 'damage', 'speed', 'radius', 'reach', 'wind', 'cooldown', 'rise', 'firstAttack', 'regen', 'flit'];
 
+// R-FOE-1, R-POW-*: the powers the cores know.
+export const POWERS = ['', 'douse', 'freeze', 'seize', 'confuse', 'poison', 'drain'];
 const BOSS_FIELDS = ['strikes', 'damage', 'oilHit', 'radius', 'speed', 'speed2', 'wakeAtk', 'wind', 'hitRange', 'windRange', 'seekWindRange',
   'stop', 'reel', 'feed', 'feed2', 'feedReach', 'feedCd', 'phase2Atk', 'phase2FeedCd', 'atk', 'atk2', 'tearWind', 'solidRange', 'drainRange', 'drain', 'drain2'];
 
@@ -20,6 +22,7 @@ export function loadBestiary(bytes) {
   const m = new Map();
   for (const [kind, f] of Object.entries(b.foes)) {
     for (const k of FIELDS) if (!Number.isSafeInteger(f[k])) throw new Error('bestiary: ' + kind + '.' + k);
+    if (!POWERS.includes(f.power)) throw new Error('bestiary: ' + kind + '.power'); // R-FOE-1
     m.set(kind, Object.freeze({ ...f, fly: f.mover === 'fly' }));
   }
   kinds = m;

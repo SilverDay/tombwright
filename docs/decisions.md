@@ -67,6 +67,8 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 60 | 2026-11-04 | **Lantern Delve reference licence:** `reference/lantern-delve/LanternDelve.html` is MIT, © 2026 SilverDay Media. Its foe names and base stats come from Rogue 5.4 (BSD); Rogue's notice ships with the foes that use them (spec §4.9.5). | Owner |
 | 61 | 2026-11-04 | **Step 7 split (M1, Lantern Delve's foes):** 7a all 26 foes in `bestiary.v1` with the plain fighters, fliers, flitting and regeneration; 7b touch powers (aquator, ice monster, flytrap, medusa, rattlesnake, vampire); 7c thieves and tricks (leprechaun, nymph, orc, wraith, phantom, xeroc); 7d projectiles (dragon) and the Warden. Each with the rules, both cores, vectors, parity review and the client's sprites and sounds. One commit and core version each. | Owner |
 | 62 | 2026-11-04 | **Mixed groups** (spec §4.9.5, picked at publish time) come with publishing in M3; M1 has only explicitly placed foes. | Owner |
+| 63 | 2026-11-04 | **Vampire drain heal:** a draining bite heals the vampire 1 strike (Lantern Delve's average bite of 7 hp on 55 hp, converted by §4.9.1), never above its strikes. | Owner |
+| 64 | 2026-11-04 | **Vampire drain stacking:** each draining bite takes 5 more off the player's maximum health, down to 50 hp; health above the new maximum is cut to it; a rise or a newly reached checkpoint restores 100. | Owner |
 
 ## Still open (spec §17)
 

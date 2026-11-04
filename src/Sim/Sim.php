@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.12';
+    public const CORE_VERSION = 'm0.13';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -119,7 +119,7 @@ final class Sim
                 'yaw' => 0, 'pitch' => 0,
                 'hp' => self::HP_FULL, 'calm' => self::CALM_MAX, 'oil' => 100 * self::OIL_UNIT, 'hooded' => false, 'hung' => -1, // R-HP-1, R-HOOK-1
                 'flasks' => 1, 'pebbles' => 10, 'probeCd' => 0, 'pebbleCd' => 0, 'strikeCd' => 0, 'busy' => 0, 'busyOn' => -1, // R-OIL-3, R-PEB-1, R-TOOL-2, R-STRIKE-1, R-BRAZIER-2
-            ],
+            ] + self::freshFx(), // R-POW-*
             'doors' => array_map(static fn (): array => ['open' => false, 't' => 0], $world->doors), // R-DOOR-2
             'deaths' => 0,
             'dead' => null,       // R-DEATH-1
@@ -207,7 +207,8 @@ final class Sim
             self::landPebbles($world, $state, $events);
         } else {
             $batch = [];                                  // R-LINK-5: batch 0
-            $wasBusy = $state['player']['busy'] > 0;      // R-FOE-7: no running noise while busy
+            $p0 = $state['player']; // R-FOE-7: no running noise while busy or rooted (R-POW-8)
+            $wasBusy = $p0['busy'] > 0 || $p0['frozen'] > 0 || $p0['held'] >= 0;
             self::live($world, $state, $input, $pressed, $events, $batch);
             if ($state['dead'] === null && $state['won'] === null) {
                 self::updateFoes($world, $state, $input, $events, $batch, $wasBusy); // R-FOE-6
@@ -221,8 +222,9 @@ final class Sim
             }
             if ($state['dead'] === null && $state['won'] === null) {
                 // R-HP-1: regeneration once calm, then calm counts on (after the links, so a hurt tick doesn't heal).
-                if ($state['player']['hp'] < self::HP_FULL && $state['player']['calm'] > 150) {
-                    $state['player']['hp'] = min(self::HP_FULL, $state['player']['hp'] + self::HP_REGEN);
+                $pl = $state['player']; // R-POW-6, R-POW-7: no regeneration while poisoned, and only up to maxHp
+                if ($pl['hp'] < $pl['maxHp'] && $pl['calm'] > 150 && $pl['poison'] === 0) {
+                    $state['player']['hp'] = min($pl['maxHp'], $pl['hp'] + self::HP_REGEN);
                 }
                 $state['player']['calm'] = min(self::CALM_MAX, $state['player']['calm'] + 1);
             }
@@ -441,6 +443,17 @@ final class Sim
         $p = &$state['player'];
         $p['yaw'] = $input['yaw'];
         $p['pitch'] = $input['pitch'];
+        // R-POW-4: a seizing foe lets go when it dies, after 5 s, or once it is out of reach.
+        if ($p['held'] >= 0) {
+            $hf = $state['foes'][$p['held']];
+            $hx = $hf['x'] - $p['x'];
+            $hz = $hf['z'] - $p['z'];
+            if ($hf['st'] === 'dead' || $p['heldT'] === 0 || $hx * $hx + $hz * $hz > 2600 * 2600) {
+                $p['held'] = -1;
+                $p['holdImm'] = 90;
+                $events[] = ['e' => 'free'];
+            }
+        }
         unset($p);
         // R-ALCOVE-2: sprung alcoves' doors close after their delay.
         if ($state['sealing'] !== []) {
@@ -460,14 +473,18 @@ final class Sim
         }
         $p = &$state['player'];
         // R-TOOL-1: tool presses, in button order, from where the player stood before moving (none while busy, R-BRAZIER-2).
-        $busy = $p['busy'] > 0;
+        $busy = $p['busy'] > 0 || $p['frozen'] > 0; // R-POW-8: frozen counts as busy
         if ($busy) {
             $pressed = 0;
         }
         if ($pressed & self::BTN_HOOD) {
             if ($p['hung'] >= 0) { // R-HOOK-2
                 $events[] = ['e' => 'msg', 'k' => 'lanternHung'];
-            } elseif ($p['oil'] > 0) { // R-OIL-2
+            } elseif ($p['doused'] && $p['oil'] > 0) { // R-POW-2: relight
+                $p['busy'] = 30;
+                $p['busyOn'] = -2;
+                $events[] = ['e' => 'busy', 'id' => null];
+            } elseif ($p['oil'] > 0 && !$p['doused']) { // R-OIL-2
                 $p['hooded'] = !$p['hooded'];
                 $events[] = ['e' => 'hood', 'on' => $p['hooded']];
             } else {
@@ -496,12 +513,19 @@ final class Sim
         }
         $p = &$state['player'];
 
-        [$fw, $st] = $busy ? [0, 0] : $input['move'];
+        [$fw, $st] = $busy || $p['held'] >= 0 ? [0, 0] : $input['move']; // R-POW-8: frozen or held
         $m2 = $fw * $fw + $st * $st;
         if ($m2 > 127 * 127) {
             $len = IntMath::isqrt($m2);
             $fw = IntMath::idiv($fw * 127, $len);
             $st = IntMath::idiv($st * 127, $len);
+        }
+        if ($p['confused'] > 0) { // R-POW-8: the move is turned; |fw·cos| < 2^7·2^14
+            $tn = $state['tick'];
+            $a = IntMath::idiv(587 * SineTable::sin(50 * $tn) + 293 * SineTable::sin(111 * $tn), SineTable::TRIG_ONE);
+            $ca = SineTable::cos($a);
+            $sa = SineTable::sin($a);
+            [$fw, $st] = [IntMath::idiv($fw * $ca - $st * $sa, SineTable::TRIG_ONE), IntMath::idiv($fw * $sa + $st * $ca, SineTable::TRIG_ONE)];
         }
         $speed = ($input['buttons'] & self::BTN_RUN) ? self::RUN_MM_S : self::WALK_MM_S;
         $sy = SineTable::sin($p['yaw']);
@@ -511,6 +535,10 @@ final class Sim
         $tz = IntMath::idiv($speed * (-$cy * $fw - $sy * $st), $den);
         $p['vx'] += IntMath::idiv(($tx - $p['vx']) * 2, 5);
         $p['vz'] += IntMath::idiv(($tz - $p['vz']) * 2, 5);
+        if ($p['frozen'] > 0 || $p['held'] >= 0) { // R-POW-8: rooted
+            $p['vx'] = IntMath::idiv($p['vx'], 2);
+            $p['vz'] = IntMath::idiv($p['vz'], 2);
+        }
         $ax = $p['vx'] + $p['rx'];
         $az = $p['vz'] + $p['rz'];
         $dx = IntMath::idiv($ax, self::TICK_HZ);
@@ -569,7 +597,7 @@ final class Sim
         }
         $p = &$state['player'];
         // R-OIL-1/2: the lantern burns; at 0 it goes out and un-hoods.
-        if ($p['oil'] > 0) {
+        if ($p['oil'] > 0 && !$p['doused']) { // R-POW-2: a doused lantern doesn't burn
             $p['oil'] = max(0, $p['oil'] - ($p['hooded'] ? self::OIL_BURN_HOODED : self::OIL_BURN_OPEN));
             if ($p['oil'] === 0) {
                 $p['hooded'] = false;
@@ -586,9 +614,18 @@ final class Sim
         if ($p['strikeCd'] > 0) {
             $p['strikeCd'] -= 1;
         }
-        if ($p['busy'] > 0) { // R-BRAZIER-2: the brazier catches
+        foreach (['frozen', 'freezeImm', 'heldT', 'holdImm', 'confused', 'poison'] as $k) { // R-POW-*
+            if ($p[$k] > 0) {
+                $p[$k] -= 1;
+            }
+        }
+        if ($p['busy'] > 0) { // R-BRAZIER-2: the brazier catches (R-POW-2: or the lantern)
             $p['busy'] -= 1;
-            if ($p['busy'] === 0) {
+            if ($p['busy'] === 0 && $p['busyOn'] === -2) {
+                $p['doused'] = false;
+                $p['busyOn'] = -1;
+                $events[] = ['e' => 'relit'];
+            } elseif ($p['busy'] === 0) {
                 $state['braziers'][$p['busyOn']] = true;
                 $events[] = ['e' => 'brazier', 'id' => $world->braziers[$p['busyOn']]['id'], 'lit' => true];
                 $p['busyOn'] = -1;
@@ -859,7 +896,7 @@ final class Sim
         }
         $p = $state['player'];
         $z = $world->zoneAt(IntMath::fdiv($p['z'], self::CELL_MM) * $world->w + IntMath::fdiv($p['x'], self::CELL_MM));
-        $lit = $p['oil'] > 0 && !$p['hooded'] && $p['hung'] < 0;
+        $lit = $p['oil'] > 0 && !$p['hooded'] && $p['hung'] < 0 && !$p['doused']; // R-POW-1
         foreach ($world->eyes as $n => $ey) {
             if ($z === $ey['zone'] && $lit) {
                 if ($state['eyes'][$n] === 0) {
@@ -995,6 +1032,7 @@ final class Sim
             $state['checkpoints'][$n] = $entry;
         }
         $state['cp'] = $n;
+        $state['player']['maxHp'] = self::HP_FULL; // R-POW-7: a checkpoint ends the drain
         $events[] = ['e' => 'checkpoint', 'zone' => $world->zones[$z]['id']];
     }
 
@@ -1225,6 +1263,7 @@ final class Sim
         }
         $state['player']['busy'] = 0;
         $state['player']['busyOn'] = -1;
+        $state['player'] = self::freshFx() + $state['player']; // R-POW-*: a rise clears the powers' marks
         // R-FOE-8: defeated groups stay dead; others come back as they started; spawned dormant ones hunt, capped.
         $state['foes'] = [];
         foreach ($world->foes as $def) {
@@ -1325,7 +1364,7 @@ final class Sim
         } elseif ($p['hung'] >= 0) {
             unset($p);
             return;
-        } elseif ($p['oil'] > 0) {
+        } elseif ($p['oil'] > 0 && !$p['doused']) { // R-POW-2
             $p['hung'] = $h;
             $p['hooded'] = false;
         } else {
@@ -1696,7 +1735,7 @@ final class Sim
             return;
         }
         $batch[] = ['interact', $n];
-        if ($state['player']['oil'] > 0 && $state['player']['hung'] < 0) {
+        if ($state['player']['oil'] > 0 && $state['player']['hung'] < 0 && !$state['player']['doused']) { // R-POW-2
             $state['player']['busy'] = 30;
             $state['player']['busyOn'] = $bi;
             $events[] = ['e' => 'busy', 'id' => $b['id']];
@@ -1929,6 +1968,11 @@ final class Sim
         $state['foes'][$n]['st'] = 'dead';
         $state['foes'][$n]['wake'] = false;
         $events[] = ['e' => 'foeDead', 'id' => $def['id']];
+        if ($state['player']['held'] === $n) { // R-POW-4
+            $state['player']['held'] = -1;
+            $state['player']['holdImm'] = 60;
+            $events[] = ['e' => 'free'];
+        }
         $g = $def['group'];
         foreach ($world->groups[$g]['foes'] as $m) {
             if ($state['foes'][$m]['st'] !== 'dead') {
@@ -2026,8 +2070,78 @@ final class Sim
         return $dist;
     }
 
-    /** @param array<string,mixed> $f */
-    /** @param array<string,mixed> $f @param array{int,int}|null $flit */
+    /** R-POW-*: the touch powers' marks on the player, as at the start and after every rise. @return array<string,mixed> */
+    private static function freshFx(): array
+    {
+        return ['doused' => false, 'frozen' => 0, 'freezeImm' => 0, 'held' => -1, 'heldT' => 0, 'holdImm' => 0, 'confused' => 0, 'poison' => 0, 'maxHp' => self::HP_FULL];
+    }
+
+    /**
+     * R-POW-2..7: the power of foe n's landed blow.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function touch(World $world, array &$state, int $n, array &$events): void
+    {
+        $def = $world->foes[$n];
+        $kind = $def['kind'];
+        $p = &$state['player'];
+        $took = false;
+        switch ($kind['power']) {
+            case 'douse':
+                if ($p['hung'] < 0) {
+                    $p['doused'] = true;
+                    $p['hooded'] = false;
+                    $took = true;
+                    if ($p['busyOn'] >= 0) { // R-POW-2: no flame, no brazier
+                        $p['busy'] = 0;
+                        $p['busyOn'] = -1;
+                    }
+                }
+                break;
+            case 'freeze':
+                if ($p['freezeImm'] === 0) {
+                    $p['frozen'] = 45 + Rng::below($state['rng'], 31);
+                    $p['freezeImm'] = 135;
+                    $took = true;
+                }
+                break;
+            case 'seize':
+                if ($p['held'] === -1 && $p['holdImm'] === 0) {
+                    $p['held'] = $n;
+                    $p['heldT'] = 150;
+                    $took = true;
+                }
+                break;
+            case 'confuse':
+                if (Rng::below($state['rng'], 100) < 50) {
+                    $p['confused'] = max($p['confused'], 90);
+                    $took = true;
+                }
+                break;
+            case 'poison':
+                if (Rng::below($state['rng'], 100) < 40) {
+                    $p['poison'] = 600;
+                    $took = true;
+                }
+                break;
+            case 'drain':
+                if (Rng::below($state['rng'], 100) < 35) {
+                    $p['maxHp'] = max(1500, $p['maxHp'] - 150);
+                    $p['hp'] = min($p['hp'], $p['maxHp']);
+                    $state['foes'][$n]['hp'] = min($kind['strikes'], $state['foes'][$n]['hp'] + 1);
+                    $took = true;
+                }
+                break;
+        }
+        unset($p);
+        if ($took) {
+            $events[] = ['e' => 'power', 'k' => $kind['power'], 'id' => $def['id']];
+        }
+    }
+
+    /** R-FOE-6, R-FOE-10. @param array<string,mixed> $f @param array{int,int}|null $flit */
     private static function walkTo(array &$f, int $speed, int $gx, int $gz, ?array $flit = null): void
     {
         $ex = $gx - $f['x'];
@@ -2104,7 +2218,7 @@ final class Sim
                 $state['foes'][$n]['rg'] = 0;
             }
         }
-        $lit = $p['oil'] > 0 && !$p['hooded'] && $p['hung'] < 0;
+        $lit = $p['oil'] > 0 && !$p['hooded'] && $p['hung'] < 0 && !$p['doused']; // R-POW-1
         $sight = $lit ? self::SIGHT_LIT : self::SIGHT_DARK;
         $fields = ['walk' => null, 'fly' => null];
         $pi = IntMath::fdiv($p['x'], self::CELL_MM);
@@ -2135,10 +2249,14 @@ final class Sim
                     $state['foes'][$n] = $f;
                     $r = $kind['reach'] + 450;
                     if ($dx * $dx + $dz * $dz < $r * $r) {
-                        self::hurt($state, $kind['damage'], $events, 'beast');
-                        if ($state['dead'] !== null) {
-                            return;
+                        if ($kind['damage'] > 0) {
+                            self::hurt($state, $kind['damage'], $events, 'beast');
+                            if ($state['dead'] !== null) {
+                                return;
+                            }
                         }
+                        self::touch($world, $state, $n, $events); // R-POW-*
+                        $f = $state['foes'][$n]; // the drain may have healed it
                     }
                     $f['atk'] = $kind['cooldown'];
                 }

@@ -8,9 +8,11 @@ namespace Tombwright\Sim;
 final class Bestiary
 {
     public const VERSION = 1;
-    public const BESTIARY_SHA256 = '4ec12a4f269299c5af032dce0196373f8dd729bd372bb692a1ffcb8ed439b04e';
+    public const BESTIARY_SHA256 = '9b0a23db005c50ec0d6a7f1e4955fd6a1f4495d32a3c28b2dcf5aaba43d790f9';
     private const FIELDS = ['tier', 'strikes', 'damage', 'speed', 'radius', 'reach', 'wind', 'cooldown', 'rise', 'firstAttack', 'regen', 'flit'];
 
+    /** R-FOE-1, R-POW-*: the powers the cores know. */
+    public const POWERS = ['', 'douse', 'freeze', 'seize', 'confuse', 'poison', 'drain'];
     private const BOSS_FIELDS = ['strikes', 'damage', 'oilHit', 'radius', 'speed', 'speed2', 'wakeAtk', 'wind', 'hitRange', 'windRange', 'seekWindRange',
         'stop', 'reel', 'feed', 'feed2', 'feedReach', 'feedCd', 'phase2Atk', 'phase2FeedCd', 'atk', 'atk2', 'tearWind', 'solidRange', 'drainRange', 'drain', 'drain2'];
 
@@ -37,6 +39,9 @@ final class Bestiary
                 if (!is_int($f[$k] ?? null)) {
                     throw new \RuntimeException("bestiary: $kind.$k");
                 }
+            }
+            if (!in_array($f['power'] ?? null, self::POWERS, true)) {
+                throw new \RuntimeException("bestiary: $kind.power"); // R-FOE-1
             }
             $m[(string) $kind] = $f + ['fly' => $f['mover'] === 'fly'];
         }

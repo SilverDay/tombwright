@@ -13,7 +13,7 @@ import {
 } from './world.js';
 import { runLinks, initLinkState, copyLinkState } from './links.js';
 
-export const CORE_VERSION = 'm0.12';
+export const CORE_VERSION = 'm0.13';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -82,6 +82,7 @@ export function init(world, seed, mode) {
       yaw: 0, pitch: 0,
       hp: HP_FULL, calm: CALM_MAX, oil: 100 * OIL_UNIT, hooded: false, hung: -1, // R-HP-1, R-HOOK-1
       flasks: 1, pebbles: 10, probeCd: 0, pebbleCd: 0, strikeCd: 0, busy: 0, busyOn: -1, // R-OIL-3, R-PEB-1, R-TOOL-2, R-STRIKE-1, R-BRAZIER-2
+      ...freshFx(),                                   // R-POW-*
     },
     doors: worldDoors(world).map(() => ({ open: false, t: 0 })), // R-DOOR-2
     deaths: 0,
@@ -114,6 +115,11 @@ export function init(world, seed, mode) {
   };
   st.checkpoints.push({ zone: startZone(world), x: st.player.x, z: st.player.z, yaw: 0, life: lifeOf(st) });
   return st;
+}
+
+/** R-POW-*: the touch powers' marks on the player, as at the start and after every rise. */
+function freshFx() {
+  return { doused: false, frozen: 0, freezeImm: 0, held: -1, heldT: 0, holdImm: 0, confused: 0, poison: 0, maxHp: HP_FULL };
 }
 
 /** R-CP-3: what a death rolls back. */
@@ -159,7 +165,7 @@ export function step(world, state, input) {
     landPebbles(world, state, events);
   } else {
     const batch = [];                                 // R-LINK-5: batch 0
-    const wasBusy = state.player.busy > 0;            // R-FOE-7: no running noise while busy
+    const P0 = state.player, wasBusy = P0.busy > 0 || P0.frozen > 0 || P0.held >= 0; // R-FOE-7: no running noise while busy or rooted (R-POW-8)
     live(world, state, input, pressed, events, batch);
     const on = () => state.dead === null && state.won === null;
     if (on()) updateFoes(world, state, input, events, batch, wasBusy); // R-FOE-6
@@ -247,7 +253,7 @@ function links(world, state, batch, events) {
 
 /** R-HP-1: regeneration once calm, then calm counts on (after the links, so a hurt tick doesn't heal). */
 function regenerate(p) {
-  if (p.hp < HP_FULL && p.calm > 150) p.hp = Math.min(HP_FULL, p.hp + HP_REGEN);
+  if (p.hp < p.maxHp && p.calm > 150 && p.poison === 0) p.hp = Math.min(p.maxHp, p.hp + HP_REGEN); // R-POW-6, R-POW-7
   p.calm = Math.min(CALM_MAX, p.calm + 1);
 }
 
@@ -266,6 +272,12 @@ function live(world, state, input, pressed, events, batch) {
   p.yaw = input.yaw;
   p.pitch = input.pitch;
 
+  // R-POW-4: a seizing foe lets go when it dies, after 5 s, or once it is out of reach.
+  if (p.held >= 0) {
+    const f = state.foes[p.held], hx = f.x - p.x, hz = f.z - p.z; // squares < 2^36
+    if (f.st === 'dead' || p.heldT === 0 || hx * hx + hz * hz > 2600 * 2600) { p.held = -1; p.holdImm = 90; events.push({ e: 'free' }); }
+  }
+
   // R-ALCOVE-2: sprung alcoves' doors close after their delay.
   if (state.sealing.length > 0) {
     const keep = [];
@@ -279,11 +291,12 @@ function live(world, state, input, pressed, events, batch) {
   }
 
   // R-TOOL-1: tool presses, in button order, from where the player stood before moving (none while busy, R-BRAZIER-2).
-  const busy = p.busy > 0;
+  const busy = p.busy > 0 || p.frozen > 0;            // R-POW-8: frozen counts as busy
   if (busy) pressed = 0;
   if (pressed & BTN.hood) {
     if (p.hung >= 0) events.push({ e: 'msg', k: 'lanternHung' });                     // R-HOOK-2
-    else if (p.oil > 0) { p.hooded = !p.hooded; events.push({ e: 'hood', on: p.hooded }); } // R-OIL-2
+    else if (p.doused && p.oil > 0) { p.busy = 30; p.busyOn = -2; events.push({ e: 'busy', id: null }); } // R-POW-2: relight
+    else if (p.oil > 0 && !p.doused) { p.hooded = !p.hooded; events.push({ e: 'hood', on: p.hooded }); } // R-OIL-2
     else events.push({ e: 'msg', k: 'lanternOut' });
   }
   if (pressed & BTN.probe) probe(world, state, events);
@@ -294,9 +307,13 @@ function live(world, state, input, pressed, events, batch) {
   if (!busy && (input.buttons & BTN.strike) && p.strikeCd === 0) swing(world, state, events); // R-STRIKE-1: held, not pressed
 
   // R-MOVE-2: normalise the move vector to length <= 127.
-  let [fw, st] = busy ? [0, 0] : input.move;
+  let [fw, st] = busy || p.held >= 0 ? [0, 0] : input.move; // R-POW-8: frozen or held
   const m2 = fw * fw + st * st;
   if (m2 > 127 * 127) { const len = isqrt(m2); fw = idiv(fw * 127, len); st = idiv(st * 127, len); }
+  if (p.confused > 0) {                                 // R-POW-8: the move is turned; |fw·cos| < 2^7·2^14
+    const n = state.tick, a = idiv(587 * isin(50 * n) + 293 * isin(111 * n), TRIG_ONE), ca = icos(a), sa = isin(a);
+    [fw, st] = [idiv(fw * ca - st * sa, TRIG_ONE), idiv(fw * sa + st * ca, TRIG_ONE)];
+  }
   const speed = (input.buttons & BTN.run) ? RUN_MM_S : WALK_MM_S;
   const sy = isin(p.yaw), cy = icos(p.yaw);
   // Gloamhollow: forward = (-sin yaw, -cos yaw), right = (cos yaw, -sin yaw).
@@ -306,6 +323,7 @@ function live(world, state, input, pressed, events, batch) {
   // R-MOVE-3: velocity eases toward target by 2/5 per tick (Gloamhollow's min(1, dt*12) at 30 Hz).
   p.vx += idiv((tx - p.vx) * 2, 5);
   p.vz += idiv((tz - p.vz) * 2, 5);
+  if (p.frozen > 0 || p.held >= 0) { p.vx = idiv(p.vx, 2); p.vz = idiv(p.vz, 2); } // R-POW-8: rooted
   // R-MOVE-3: integrate with an exact remainder so no distance is lost.
   const ax = p.vx + p.rx, az = p.vz + p.rz;
   const dx = idiv(ax, TICK_HZ), dz = idiv(az, TICK_HZ);
@@ -339,7 +357,7 @@ function live(world, state, input, pressed, events, batch) {
   }
 
   // R-OIL-1/2: the lantern burns; at 0 it goes out and un-hoods.
-  if (p.oil > 0) {
+  if (p.oil > 0 && !p.doused) {                         // R-POW-2: a doused lantern doesn't burn
     p.oil = Math.max(0, p.oil - (p.hooded ? OIL_BURN_HOODED : OIL_BURN_OPEN));
     if (p.oil === 0) { p.hooded = false; events.push({ e: 'msg', k: 'lanternOut' }); }
   }
@@ -347,9 +365,11 @@ function live(world, state, input, pressed, events, batch) {
   if (p.probeCd > 0) p.probeCd -= 1;
   if (p.pebbleCd > 0) p.pebbleCd -= 1;
   if (p.strikeCd > 0) p.strikeCd -= 1;
-  if (p.busy > 0) {                                     // R-BRAZIER-2: the brazier catches
+  for (const k of ['frozen', 'freezeImm', 'heldT', 'holdImm', 'confused', 'poison']) if (p[k] > 0) p[k] -= 1; // R-POW-*
+  if (p.busy > 0) {                                     // R-BRAZIER-2: the brazier catches (R-POW-2: or the lantern)
     p.busy -= 1;
-    if (p.busy === 0) { state.braziers[p.busyOn] = true; events.push({ e: 'brazier', id: worldBraziers(world)[p.busyOn].id, lit: true }); p.busyOn = -1; }
+    if (p.busy === 0 && p.busyOn === -2) { p.doused = false; p.busyOn = -1; events.push({ e: 'relit' }); }
+    else if (p.busy === 0) { state.braziers[p.busyOn] = true; events.push({ e: 'brazier', id: worldBraziers(world)[p.busyOn].id, lit: true }); p.busyOn = -1; }
   }
 }
 
@@ -466,7 +486,7 @@ function wakeEyes(world, state, events) {
   const eyes = worldEyes(world);
   if (eyes.length === 0) return false;
   const p = state.player, z = zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM));
-  const lit = p.oil > 0 && !p.hooded && p.hung < 0;
+  const lit = p.oil > 0 && !p.hooded && p.hung < 0 && !p.doused; // R-POW-1
   let woke = false;
   eyes.forEach((ey, n) => {
     if (z === ey.zone && lit) {
@@ -560,6 +580,7 @@ function landBlow(world, state, n, events, batch) {
   if (f.hp > 0) return;
   f.st = 'dead'; f.wake = false;
   events.push({ e: 'foeDead', id: def.id });
+  if (p.held === n) { p.held = -1; p.holdImm = 60; events.push({ e: 'free' }); } // R-POW-4
   const g = def.group;
   if (worldGroups(world)[g].foes.every((m) => state.foes[m].st === 'dead')) { state.groups[g] = 'defeated'; batch.push(['foesDefeated', g]); }
 }
@@ -623,7 +644,7 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
     if (kind.regen === 0 || f.st === 'dormant' || f.st === 'dead') return;
     if (f.hp < kind.strikes) { f.rg += 1; if (f.rg === kind.regen) { f.hp += 1; f.rg = 0; } } else f.rg = 0;
   });
-  const lit = p.oil > 0 && !p.hooded && p.hung < 0, sight = lit ? SIGHT_LIT : SIGHT_DARK;
+  const lit = p.oil > 0 && !p.hooded && p.hung < 0 && !p.doused, sight = lit ? SIGHT_LIT : SIGHT_DARK; // R-POW-1
   const fields = { walk: null, fly: null };
   const pi = fdiv(p.x, CELL_MM), pj = fdiv(p.z, CELL_MM);
   for (let n = 0; n < defs.length; n++) {
@@ -636,7 +657,10 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
       f.t -= 1;
       if (f.t === 0) {
         const r = kind.reach + 450;
-        if (dx * dx + dz * dz < r * r) { hurt(state, kind.damage, events, 'beast'); if (state.dead !== null) return; }
+        if (dx * dx + dz * dz < r * r) {
+          if (kind.damage > 0) { hurt(state, kind.damage, events, 'beast'); if (state.dead !== null) return; }
+          touch(world, state, n, events);               // R-POW-*
+        }
         f.atk = kind.cooldown;
       }
       continue;
@@ -703,6 +727,27 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
   }
 }
 
+/** R-POW-2..7: the power of foe n's landed blow. */
+function touch(world, state, n, events) {
+  const p = state.player, def = worldFoes(world)[n], f = state.foes[n], kind = def.kind;
+  const roll = (pct) => rngBelow(state.rng, 100) < pct;
+  let took = false;
+  switch (kind.power) {
+    case 'douse':
+      if (p.hung < 0) { p.doused = true; p.hooded = false; took = true; if (p.busyOn >= 0) { p.busy = 0; p.busyOn = -1; } } // R-POW-2: no flame, no brazier
+      break;
+    case 'freeze': if (p.freezeImm === 0) { p.frozen = 45 + rngBelow(state.rng, 31); p.freezeImm = 135; took = true; } break;
+    case 'seize': if (p.held === -1 && p.holdImm === 0) { p.held = n; p.heldT = 150; took = true; } break;
+    case 'confuse': if (roll(50)) { p.confused = Math.max(p.confused, 90); took = true; } break;
+    case 'poison': if (roll(40)) { p.poison = 600; took = true; } break;
+    case 'drain':
+      if (roll(35)) { p.maxHp = Math.max(1500, p.maxHp - 150); p.hp = Math.min(p.hp, p.maxHp); f.hp = Math.min(kind.strikes, f.hp + 1); took = true; }
+      break;
+    default: break;
+  }
+  if (took) events.push({ e: 'power', k: kind.power, id: def.id });
+}
+
 /** R-ITEM-2 */
 function takeItem(world, state, n, it, events, batch) {
   const p = state.player;
@@ -734,6 +779,7 @@ function reachCheckpoint(world, state, z, events) {
   let n = state.checkpoints.findIndex((c) => c.zone === z);
   if (n < 0) { n = state.checkpoints.length; state.checkpoints.push(entry); } else state.checkpoints[n] = entry;
   state.cp = n;
+  state.player.maxHp = HP_FULL;                         // R-POW-7: a checkpoint ends the drain
   events.push({ e: 'checkpoint', zone: worldZones(world)[z].id });
 }
 
@@ -805,6 +851,7 @@ function rise(world, state, target, events) {
   if (state.boss !== null && life.boss !== 'dead') state.boss = freshBoss(worldBoss(world)); // R-BOSS-6
   else if (state.boss !== null) state.boss.st = 'dead';
   p.busy = 0; p.busyOn = -1;
+  Object.assign(p, freshFx());                          // R-POW-*: a rise clears the powers' marks
   // R-FOE-8: defeated groups stay dead; foes starting awake or asleep come back as they started; foes of spawned
   // groups that started dormant come back hunting, in entity order, while fewer than 8 are awake (else they wait).
   state.foes = worldFoes(world).map((def) => {
@@ -851,7 +898,7 @@ function useBrazier(world, state, n, bi, events, batch) {
   if (state.braziers[bi] || (state.boss !== null && state.boss.st === 'dead')) return;
   if (dx * dx + dz * dz > b.reach * b.reach || !lineOfSight(world, state, b.x, b.z)) return;
   batch.push(['interact', n]);
-  if (p.oil > 0 && p.hung < 0) { p.busy = 30; p.busyOn = bi; events.push({ e: 'busy', id: b.id }); }
+  if (p.oil > 0 && p.hung < 0 && !p.doused) { p.busy = 30; p.busyOn = bi; events.push({ e: 'busy', id: b.id }); } // R-POW-2
   else events.push({ e: 'msg', k: 'needLight' });
 }
 
@@ -990,7 +1037,7 @@ function useHook(world, state, n, h, events, batch) {
   batch.push(['interact', n]);
   if (p.hung === h) p.hung = -1;
   else if (p.hung >= 0) return;
-  else if (p.oil > 0) { p.hung = h; p.hooded = false; }
+  else if (p.oil > 0 && !p.doused) { p.hung = h; p.hooded = false; } // R-POW-2
   else { events.push({ e: 'msg', k: 'lanternOut' }); return; }
   events.push({ e: 'hook', id: hook.id, hung: p.hung === h });
 }

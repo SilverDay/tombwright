@@ -74,6 +74,9 @@ export class UI {
         case 'death': this.onDeath(ev.cause); break;
         case 'rise': $('death').hidden = true; this.vig(false); this.save(); break;
         case 'won': this.onWin(); break;
+        case 'power': ({ douse: () => sfx.smoke(), freeze: () => sfx.frost(), seize: () => sfx.thud(), confuse: () => sfx.blink(), poison: () => sfx.dart(), drain: () => sfx.steal() })[ev.k]?.(); break;
+        case 'relit': sfx.ignite(); break;
+        case 'free': sfx.hood(); break;
         default: break;
       }
     }

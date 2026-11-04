@@ -10,6 +10,7 @@ import { audioInit } from './audio.js';
 import { TombView, yawRad } from './render.js';
 import { UI } from './ui.js';
 import { SAY, DEATHS, TOMB_TEXT, FOE_NAMES, FLASK_NAME, READ_LABEL, FACE_NAME, cap } from './text.js';
+import { DELVE_NAMES } from './delve-art.js';
 
 const $ = (id) => document.getElementById(id);
 const DT = 1 / Sim.TICK_HZ, S = 2400, TAU = Math.PI * 2;
@@ -247,6 +248,8 @@ class Game {
     for (const ev of events) { this.view.onEvent(ev, st); this.onEvent(ev, events); }
     this.ui.afterTick(events, input, before);
     this.watchLantern();
+    if (this.prev.player.frozen > 0 && st.player.frozen === 0 && st.dead === null) this.say(SAY.thawed);
+    if (this.prev.player.confused > 0 && st.player.confused === 0 && st.dead === null) this.say(SAY.unconfused);
     // Gloamhollow says "You enter …" the first time you reach a chamber (not a one-cell-wide way).
     const z = this.zoneAt(), Z = this.T.gdf.zones?.[z];
     if (Z && !this.visited.has(z) && st.dead === null) { this.visited.add(z); if (Z.rects.some(([, , rw, rh]) => rw > 1 && rh > 1)) this.say(SAY.enter(Z.name)); }
@@ -291,6 +294,13 @@ class Game {
         else if (ev.phase === 2) this.say(SAY.bossPhase2);
         else if (ev.st === 'feed') this.say(SAY.bossFeed);
         break;
+      case 'power': {                                   // R-POW-*
+        const kind = T.gdf.entities.find((e) => e.id === ev.id)?.kind, f = SAY.power[ev.k];
+        if (f) this.say(f(DELVE_NAMES[kind] ?? 'creature'));
+        break;
+      }
+      case 'free': this.say(SAY.free); break;
+      case 'relit': this.say(SAY.relit); break;
       case 'death': this.onDeath(ev.cause); break;
       case 'rise': this.say(SAY.rise(this.zoneName(this.zoneAt()) ?? 'the dark')); this.look = { yaw: yawRad(P.yaw), pitch: 0 }; this.fresh = true; this.lowOilWarned = false; break;
       case 'won': this.onWin(); break;
@@ -345,13 +355,16 @@ class Game {
     const inv = [['Pebbles', P.pebbles], ['Flasks', P.flasks]];
     inv.forEach(([k, v], n) => { const i = document.createElement('i'); i.textContent = k; status.append(n ? '  ' : '', i, ` ${v}`); });
     for (const num of st.taken) { const it = ents[num - 1]; if (it.kind === 'key') { const u = document.createElement('u'); u.textContent = T.text.items?.[it.id]?.hud ?? 'A key'; status.append('  ', u); } }
+    // R-POW-*: what the foes' touch has done to you.
+    const fx = [[P.frozen > 0, 'Frozen'], [P.held >= 0, 'Seized'], [P.confused > 0, 'Confused'], [P.poison > 0, 'Poisoned']].filter(([on]) => on).map(([, n]) => n);
     status.append(`\nDeaths ${st.deaths}`);
+    if (fx.length) { const u = document.createElement('u'); u.textContent = fx.join(' · '); status.append('  ', u); }
     const hp = P.hp / Sim.HP_UNIT, oil = P.oil / Sim.OIL_UNIT;
     $('hpBar').style.setProperty('--v', String(clamp(hp / 100, 0, 1)));
-    $('hpTxt').textContent = `${Math.ceil(hp)} / 100`;
+    $('hpTxt').textContent = `${Math.ceil(hp)} / ${Math.round(P.maxHp / Sim.HP_UNIT)}`; // R-POW-7
     $('oilBar').style.setProperty('--v', String(clamp(oil / 100, 0, 1)));
     $('oilBarBox').classList.toggle('low', oil < 20);
-    $('oilTxt').textContent = P.oil <= 0 ? 'Lantern out' : P.hung >= 0 ? `Oil ${Math.ceil(oil)} · on the hook` : P.hooded ? `Oil ${Math.ceil(oil)} · hooded` : `Oil ${Math.ceil(oil)}`;
+    $('oilTxt').textContent = P.oil <= 0 ? 'Lantern out' : P.doused ? `Oil ${Math.ceil(oil)} · doused` : P.hung >= 0 ? `Oil ${Math.ceil(oil)} · on the hook` : P.hooded ? `Oil ${Math.ceil(oil)} · hooded` : `Oil ${Math.ceil(oil)}`;
     const treasure = st.taken.reduce((a, num) => a + (ents[num - 1].value ?? 0), 0);
     $('pfTre').textContent = `Treasure ${treasure}`;
     $('pebCt').textContent = String(P.pebbles); $('oilCt').textContent = String(P.flasks);
@@ -374,7 +387,7 @@ class Game {
     const el = $('prompt'), st = this.st;
     let txt = '', key = true;
     if (st && this.mode === 'play' && st.dead === null) {
-      if (st.player.busy > 0) { txt = 'Lighting the brazier…'; key = false; }
+      if (st.player.busy > 0) { txt = st.player.busyOn === -2 ? 'Relighting your lantern…' : 'Lighting the brazier…'; key = false; }
       else { const o = this.nearest(); if (o) txt = o.label(st); }
     } else if (st && st.dead !== null && this.mode === 'play') { txt = st.tick >= st.dead.at + Sim.RISE_TICKS ? 'Rise again' : ''; key = false; }
     if (txt === this.promptKey) return;
@@ -401,7 +414,7 @@ class Game {
     const alcoves = ents.filter((e) => e.type === 'alcove'), doors = ents.filter((e) => e.type === 'door');
     const sealedAlcoves = new Set(alcoves.filter((a) => st.sealed.includes(doors.findIndex((d) => d.id === a.door))).map((a) => a.id));
     const vent = (v) => { const u = (st.tick + v.phase) % v.period; return u < v.warn ? { s: 'warn', f: u / Math.max(1, v.warn) } : u < v.warn + v.fire ? { s: 'fire', f: (u - v.warn) / v.fire } : { s: 'idle', f: 0 }; }; // R-VENT-2
-    return { beam, beamSolved: beam?.hits != null, bossSolid, bossNear, exitOpen, sealedAlcoves, vent, lit: P.oil > 0 && !P.hooded && P.hung < 0, fresh: this.fresh, won: this.mode === 'won' };
+    return { beam, beamSolved: beam?.hits != null, bossSolid, bossNear, exitOpen, sealedAlcoves, vent, lit: P.oil > 0 && !P.hooded && P.hung < 0 && !P.doused, fresh: this.fresh, won: this.mode === 'won' };
   }
 
   frame(dt) {

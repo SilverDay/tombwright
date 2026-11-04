@@ -1,6 +1,6 @@
 {
  "name": "0023-masks",
- "core": "m0.12",
+ "core": "m0.13",
  "seed": 23,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":10,\"cells\":\"DwAMAQIADAECAAwBAgAMAQIADAEDAAECAwABAgMAAQIFAAEBAwABCAMAAQgFAAEBGQA=\"},\"start\":{\"cell\":[6,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,12,5]],\"ceil\":4200},{\"id\":\"b\",\"name\":\"B\",\"rects\":[[2,7,1,2]],\"ceil\":3000,\"checkpoint\":{\"cell\":[2,8],\"yaw\":0}}],\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[2,6],\"style\":\"mask\",\"opens\":\"key\",\"key\":\"k1\",\"face\":\"sleep\"},{\"id\":\"d2\",\"type\":\"door\",\"cell\":[6,6],\"style\":\"mask\",\"opens\":\"interact\",\"face\":\"weep\"},{\"id\":\"d3\",\"type\":\"door\",\"cell\":[10,6],\"style\":\"mask\",\"opens\":\"interact\",\"face\":\"laugh\"},{\"id\":\"c1\",\"type\":\"chest\",\"cell\":[3,1],\"wall\":\"n\",\"style\":\"gilded\",\"trap\":\"needles\"},{\"id\":\"c2\",\"type\":\"chest\",\"cell\":[9,1],\"wall\":\"n\",\"style\":\"plain\",\"trap\":\"none\"},{\"id\":\"t1\",\"type\":\"item\",\"kind\":\"treasure\",\"in\":\"c1\",\"value\":400},{\"id\":\"k1\",\"type\":\"item\",\"kind\":\"key\",\"in\":\"c2\"},{\"id\":\"f1\",\"type\":\"item\",\"kind\":\"flask\",\"in\":\"c2\"},{\"id\":\"al1\",\"type\":\"alcove\",\"cell\":[6,7],\"kind\":\"drown\",\"door\":\"d2\"},{\"id\":\"al2\",\"type\":\"alcove\",\"cell\":[10,7],\"kind\":\"tip\",\"door\":\"d3\"}],\"links\":[{\"id\":1,\"when\":{\"all\":[{\"interact\":\"d1\"},{\"not\":{\"hasItem\":\"k1\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"keyhole\"}]},{\"id\":2,\"when\":{\"all\":[{\"interact\":\"d2\"},{\"not\":{\"doorOpen\":\"d2\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"sealed\"}]},{\"id\":3,\"when\":{\"all\":[{\"interact\":\"d3\"},{\"not\":{\"doorOpen\":\"d3\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"sealed\"}]},{\"id\":4,\"when\":{\"itemTaken\":\"k1\"},\"do\":[{\"message\":\"a key\"}]}]}",
@@ -672,17 +672,17 @@
  "ticks": 1610,
  "hashEvery": 300,
  "hashes": {
-  "0": "bfce006816e50fb605f0d6cf298c9f6a",
-  "300": "01f93fa937b3af97f41f94c40ee0f7e0",
-  "600": "80c9fdff9e96444c53975d74d40fc666",
-  "900": "61e15b333c0bcc404cfa4c691ad605d9",
-  "1200": "64c31f6026da04e5f9e774569eda9fea",
-  "1500": "fd9d795364e90c981a0a68dd298c9523"
+  "0": "d487257b23b5f9e41024911b88920df1",
+  "300": "c544d666f17744a64809b71a3062e3da",
+  "600": "037b0de7adbc22b03586437173274d95",
+  "900": "b27eb544b5099c50fa5a3a64426e8598",
+  "1200": "a4b66d24b53da7f1143a0a33c76a41c8",
+  "1500": "420632bf8de449bdba7867a7fedef7da"
  },
- "final": "47d267dd829e1745ba56daa52409b14e",
+ "final": "655d36ce07219661079e8705f8db2e51",
  "finalState": {
   "v": 1,
-  "core": "m0.12",
+  "core": "m0.13",
   "world": "6b3819309858490d89288aa34afa326f",
   "mode": "delve",
   "tick": 1610,
@@ -712,7 +712,16 @@
    "pebbleCd": 0,
    "strikeCd": 0,
    "busy": 0,
-   "busyOn": -1
+   "busyOn": -1,
+   "doused": false,
+   "frozen": 0,
+   "freezeImm": 0,
+   "held": -1,
+   "heldT": 0,
+   "holdImm": 0,
+   "confused": 0,
+   "poison": 0,
+   "maxHp": 3000
   },
   "doors": [
    {

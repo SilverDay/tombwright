@@ -592,7 +592,7 @@ export class TombView {
     if (P.hung >= 0) {
       const hk = E.hooks[P.hung]; L.position.set(hk.x + 0.15, 1.7, hk.z); L.intensity = 1.0 * fl * PI_L; L.distance = 8; this.ambient.intensity = 0.2 * PI_L;
     } else {
-      const sy = Math.sin(look.yaw), cy = Math.cos(look.yaw), lit = P.oil > 0 ? 1 : 0, dimmed = 1 - 0.84 * this.hoodMix;
+      const sy = Math.sin(look.yaw), cy = Math.cos(look.yaw), lit = P.oil > 0 && !P.doused ? 1 : 0, dimmed = 1 - 0.84 * this.hoodMix;
       L.position.set(px - sy * 0.35 - cy * 0.25, EYE - 0.3 - this.sink, pz - cy * 0.35 + sy * 0.25);
       L.intensity = (dead ? Math.max(0, 1.35 - this.sink) : 1.35) * fl * lit * (P.hooded || this.hoodMix > 0.01 ? dimmed : 1) * (1 - this.starve * 0.55) * PI_L;
       L.distance = 14 - 9 * (P.hooded ? this.hoodMix : 0) - 4 * this.starve;
@@ -756,7 +756,7 @@ export class TombView {
     V.sword.position.set(px, py - this.sink * 0.6, pz); V.sword.rotation.set(rx, ry, rz);
     V.lamp.visible = P.hung < 0;
     V.lamp.position.set(lx, ly - this.sink * 0.6, lz); V.lamp.rotation.set(0.05, 0.3 + (red ? 0 : Math.sin(this.time * 1.7) * 0.03), red ? 0 : Math.sin(V.bob) * 0.04 * moving);
-    const lit = P.oil > 0 ? 1 : 0;
+    const lit = P.oil > 0 && !P.doused ? 1 : 0; // R-POW-2: a doused lantern is dark
     V.sh[0].rotation.y = this.hoodMix * 1.45; V.sh[1].rotation.y = -this.hoodMix * 1.45;
     V.core.material.opacity = lit * (1 - 0.78 * this.hoodMix) * (0.92 + 0.08 * Math.sin(this.time * 9.7)) * (1 - this.starve * 0.6);
   }
