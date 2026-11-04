@@ -1,6 +1,6 @@
 {
  "name": "0020-mirrors",
- "core": "m0.7",
+ "core": "m0.8",
  "seed": 20,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":12,\"h\":8,\"cells\":\"DQAKAQIACgECAAoBAgAKAQIACgECAAoBDQA=\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"v\",\"name\":\"V\",\"rects\":[[1,1,6,6]],\"ceil\":4600},{\"id\":\"o\",\"name\":\"O\",\"rects\":[[7,1,4,6]],\"ceil\":4200}],\"entities\":[{\"id\":\"hook\",\"type\":\"lampHook\",\"cell\":[1,3],\"dir\":\"e\"},{\"id\":\"m1\",\"type\":\"mirror\",\"cell\":[4,3],\"start\":\"\\\\\"},{\"id\":\"m2\",\"type\":\"mirror\",\"cell\":[4,5],\"start\":\"/\"},{\"id\":\"cr\",\"type\":\"crystal\",\"cell\":[4,1],\"wall\":\"n\"},{\"id\":\"gem\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[6,1],\"value\":50,\"hidden\":true}],\"links\":[{\"id\":1,\"when\":{\"beamHits\":\"cr\"},\"do\":[{\"reveal\":\"gem\"},{\"message\":\"lit\"}]},{\"id\":2,\"when\":{\"beamHits\":\"cr\"},\"repeat\":true,\"do\":[{\"message\":\"on\"}],\"undo\":[{\"message\":\"off\"}]}]}",
@@ -256,13 +256,13 @@
  "ticks": 497,
  "hashEvery": 300,
  "hashes": {
-  "0": "e7d8ed8a3940a6621ad6107f950215f2",
-  "300": "3fc7b940fa4947d5eb5b273b500d777f"
+  "0": "e00fc27b7107819e67b3530acbc5da19",
+  "300": "8cf7b27dbd465b41b2d986b6e1afb5c5"
  },
- "final": "7bc79b1857d8edc1501a281ed67a63cd",
+ "final": "3614e41510b8d560cffa4571f820ed7a",
  "finalState": {
   "v": 1,
-  "core": "m0.7",
+  "core": "m0.8",
   "world": "057039bb08a087d1af806b6103e7c583",
   "mode": "delve",
   "tick": 497,
@@ -313,6 +313,8 @@
    0,
    0
   ],
+  "chests": [],
+  "sealing": [],
   "bellSets": [],
   "links": [
    {
@@ -348,6 +350,7 @@
       1,
       0
      ],
+     "chests": [],
      "doors": [],
      "floor": [],
      "taken": [],

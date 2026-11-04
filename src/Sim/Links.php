@@ -169,7 +169,7 @@ final class Links
         $takeable = static fn (array $r): bool => $r['type'] === 'item' && $r['kind'] !== 'rubble';
         switch ($kind) {
             case 'interact':
-                return self::entity($v, $c['ctx'], static fn (array $r): bool => in_array($r['type'], ['door', 'item', 'bell', 'lampHook', 'mirror'], true))['n'];
+                return self::entity($v, $c['ctx'], static fn (array $r): bool => in_array($r['type'], ['door', 'item', 'bell', 'lampHook', 'mirror', 'chest'], true))['n'];
             case 'itemTaken':
             case 'hasItem':
                 return self::entity($v, $c['ctx'], $takeable)['n'];

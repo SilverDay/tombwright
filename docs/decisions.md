@@ -39,6 +39,10 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 32 | 2026-11-04 | **Mirror puzzle entities:** `lampHook` (cell, beam direction), `mirror` (cell, start `/` or `\`) and `crystal` (cell, wall side), with no set entity: any hook's beam can turn on any mirror and hit any crystal. New condition `beamHits(crystal)`. Mirrors and hooks are targeted by entity number. | Owner |
 | 33 | 2026-11-04 | **Hidden items:** an item may be `hidden: true`; `reveal` / `hide` effects add it to or remove it from `state.revealed`, which is part of the life (a death can hide it again). Hidden, unrevealed items can't be taken. | Owner |
 | 34 | 2026-11-04 | **Hung lantern:** while the lantern hangs on a hook, the player can't leave the hook cell's zone (the move is undone), the lantern counts as unlit, the hood can't be used, and it burns at the open rate. Interacting with the hook takes it back. | Owner |
+| 35 | 2026-11-04 | **Chest contents** are ordinary item entities with `in: "<chest id>"` in place of `cell`; opening the chest takes them all (itemTaken, hasItem work as usual). | Owner |
+| 36 | 2026-11-04 | **Keys:** a new item kind `key`; a door with `opens: "key"` names its key item and opens on interact while the key is held (it isn't used up). | Owner |
+| 37 | 2026-11-04 | **Alcove traps** port Gloamhollow: an `alcove` entity (kind `drown` or `tip`, the door that seals it); stepping in kills, a pebble sets off either kind, the probe only `tip`; the door seals at once (a lesson) and closes after 45 ticks (you inside) or 78 / 66 ticks. Differs from spec §4.2 ("pebble or probe sets it off"). | Owner |
+| 38 | 2026-11-04 | **Trapped chests look first:** a chest with `trap: "needles"` needs one interact that only looks (the warning), and a second that opens it; the needles kill unless the probe sprang them (within 2.6 m, in front of you). | Owner |
 
 ## Still open (spec §17)
 

@@ -46,9 +46,9 @@ const DOORS = [
   { id: 'bell', cell: [23, 25], style: 'grate', opens: 'trigger' },
   { id: 'vault', cell: [36, 11], style: 'stone', opens: 'trigger' },
   { id: 'script', cell: [31, 4], style: 'stone', opens: 'interact' },
-  { id: 'mSleep', cell: [7, 18], style: 'mask', opens: 'trigger', face: 'sleep' },
-  { id: 'mWeep', cell: [9, 18], style: 'mask', opens: 'trigger', face: 'weep' },
-  { id: 'mLaugh', cell: [11, 18], style: 'mask', opens: 'trigger', face: 'laugh' },
+  { id: 'mSleep', cell: [7, 18], style: 'mask', opens: 'key', key: 'crescent', face: 'sleep' },  // the true door (R-DOOR-1)
+  { id: 'mWeep', cell: [9, 18], style: 'mask', opens: 'interact', face: 'weep' },               // touch a lying face: it opens
+  { id: 'mLaugh', cell: [11, 18], style: 'mask', opens: 'interact', face: 'laugh' },
 ];
 const PRE_SLABS = [[32, 51], [35, 47]];  // plates sprung long ago, a skeleton under each
 // Vents (Gloamhollow VENTS, VENT_T 3.6 s, VENT_WARN 0.9 s, VENT_FIRE 1.1 s, phases 0 / 1.2 / 2.4 s), in ticks (R-VENT-*).
@@ -69,6 +69,22 @@ const BELLS = [
   { id: 'brown', cell: [19, 25], size: 2, patina: 1, note: 196 },
 ];
 const BELL_ORDER = ['green', 'brown', 'great'];
+// The Scriptorium's chests (Gloamhollow openGilded / openPlain; R-CHEST-*): both against the north wall. The gilded one
+// is trapped (needles) and holds the rubies; the plain one the crescent key and a flask. The alcoves behind the
+// weeping and laughing doors (K_WEEP / K_LAUGH; R-ALCOVE-*).
+const CHESTS = [
+  { id: 'gilded', cell: [33, 2], wall: 'n', style: 'gilded', trap: 'needles' },
+  { id: 'plain', cell: [38, 2], wall: 'n', style: 'plain', trap: 'none' },
+];
+const IN_CHESTS = [
+  { id: 'rubies', type: 'item', kind: 'treasure', in: 'gilded', value: 400 },
+  { id: 'crescent', type: 'item', kind: 'key', in: 'plain' },
+  { id: 'f6', type: 'item', kind: 'flask', in: 'plain' },
+];
+const ALCOVES_E = [
+  { id: 'weep', type: 'alcove', cell: [9, 19], kind: 'drown', door: 'mWeep' },
+  { id: 'laugh', type: 'alcove', cell: [11, 19], kind: 'tip', door: 'mLaugh' },
+];
 // The Mirror Vault (Gloamhollow HOOK, MIRRORS, CRYSTAL; R-HOOK-*, R-MIRROR-*, R-BEAM-*). The beam leaves the hook
 // going east. Solution: A \, B \, C /, D \, E \.
 const HOOK = { id: 'hook', cell: [33, 14], dir: 'e' };
@@ -85,6 +101,17 @@ const LINKS = [
   { id: 5, when: { interact: 'script' }, do: [{ message: 'The door sinks into the floor. Cold air rises from somewhere far below.' }] },
   { id: 6, when: { interact: 'bell' }, repeat: true, do: [{ message: 'The bronze grate will not move. Something in this garden must raise it.' }] },
   { id: 7, when: { interact: 'vault' }, repeat: true, do: [{ message: 'The door has no handle and no keyhole. It does not move.' }] },
+  { id: 9, when: { doorOpen: 'mWeep' }, do: [{ message: '“Weep with me, traveller, and pass,” the weeping face sighs, and its door sinks into the floor.' }] },
+  { id: 10, when: { doorOpen: 'mLaugh' }, do: [{ message: '“Ha! Come through, come through, the way is short!” the laughing face cackles, and its door sinks into the floor.' }] },
+  { id: 11, when: { doorOpen: 'mSleep' }, do: [{ message: 'The crescent key turns. The sleeping face does not wake, but its door sinks into the floor.' }] },
+  { id: 12, when: { all: [{ interact: 'mSleep' }, { not: { hasItem: 'crescent' } }], within: 1 }, repeat: true,
+    do: [{ message: 'The sleeping face says nothing. Beneath its chin is a keyhole shaped like a crescent moon.' }] },
+  { id: 13, when: { all: [{ interact: 'mWeep' }, { not: { doorOpen: 'mWeep' } }], within: 1 }, repeat: true,
+    do: [{ message: 'This door is sealed. The face above it looks satisfied.' }] },
+  { id: 14, when: { all: [{ interact: 'mLaugh' }, { not: { doorOpen: 'mLaugh' } }], within: 1 }, repeat: true,
+    do: [{ message: 'This door is sealed. The face above it looks satisfied.' }] },
+  { id: 15, when: { itemTaken: 'crescent' }, do: [{ message: 'Inside the plain chest: a crescent-shaped key of black iron, and a flask of lamp oil.' }] },
+  { id: 16, when: { itemTaken: 'rubies' }, do: [{ message: 'You lift the gilded lid. Inside, on rotten velvet: a fistful of rubies.' }] },
   { id: 8, when: { beamHits: 'crystal' },
     do: [{ openDoor: 'vault' }, { reveal: 'opal' }, { message: 'The beam strikes the crystal, which blazes like a small sun. With a deep grinding, the north door sinks into the floor, and in the glare something glints in a crack of the east wall.' }] },
 ];
@@ -125,7 +152,7 @@ const gdf = {
   start: { cell: [34, 60] },
   exit: { cell: [7, 27], requires: 'bossDefeated' },
   entities: [
-    ...DOORS.map((d) => ({ id: d.id, type: 'door', cell: d.cell, style: d.style, opens: d.opens, ...(d.face ? { face: d.face } : {}) })),
+    ...DOORS.map((d) => ({ id: d.id, type: 'door', cell: d.cell, style: d.style, opens: d.opens, ...(d.key ? { key: d.key } : {}), ...(d.face ? { face: d.face } : {}) })),
     ...PRE_SLABS.map(([i, j], n) => ({ id: `slab${n + 1}`, type: 'slab', cell: [i, j] })),
     ...ITEMS.map(([id, kind, i, j, value, hidden]) => ({ id, type: 'item', kind, cell: [i, j], ...(kind === 'treasure' ? { value } : {}), ...(hidden ? { hidden } : {}) })),
     { id: 'eyes', type: 'eyes', zone: 'gallery', wake: 30 },  // the Waking Eyes: 1.0 s (R-EYES-*)
@@ -136,9 +163,11 @@ const gdf = {
       if (kind === 'plinth') return [...BELLS.map((b) => ({ type: 'bell', ...b })), prop];
       // The mirrors stand between the plinth and the lectern in Gloamhollow's obstacle list.
       if (kind === 'lectern') return [...MIRRORS.map(([id, i, j, start]) => ({ id, type: 'mirror', cell: [i, j], start })), prop];
+      // The chests stand between the lectern and the braziers / sarcophagus in Gloamhollow's obstacle list.
+      if (kind === 'sarcophagus') return [...CHESTS.map((c) => ({ type: 'chest', ...c })), prop];
       return [prop];
     }),
-    { type: 'lampHook', ...HOOK }, { type: 'crystal', ...CRYSTAL },
+    { type: 'lampHook', ...HOOK }, { type: 'crystal', ...CRYSTAL }, ...IN_CHESTS, ...ALCOVES_E,
     { id: 'bells', type: 'bellSet', bells: BELLS.map((b) => b.id), order: BELL_ORDER.map((id) => BELLS.findIndex((b) => b.id === id)) },
   ],
   links: LINKS,

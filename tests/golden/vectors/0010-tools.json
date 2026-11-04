@@ -1,6 +1,6 @@
 {
  "name": "0010-tools",
- "core": "m0.7",
+ "core": "m0.8",
  "seed": 10,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAFAQEABgECAAMBAQMBAQEAAQEBBgEFAQECAwIABQEBAAYBAgAFAQECBgECAAUBAQAGAQIAAwEBBAEBAQABAQEEAQEBBwEBAQgCAAUBAQAGAQ8A\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,5,7]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[7,1,6,7]],\"ceil\":3600,\"checkpoint\":{\"cell\":[7,4],\"yaw\":3072}}],\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[6,4],\"style\":\"stone\",\"opens\":\"interact\"},{\"id\":\"f1\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[3,3]},{\"id\":\"r1\",\"type\":\"item\",\"kind\":\"rubble\",\"cell\":[2,6]},{\"id\":\"t1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[1,1],\"value\":100},{\"id\":\"t2\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[12,4],\"value\":250},{\"id\":\"b1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[8,2],\"value\":7},{\"id\":\"e1\",\"type\":\"eyes\",\"zone\":\"g\",\"wake\":18},{\"id\":\"v1\",\"type\":\"vent\",\"cells\":[[10,6]],\"period\":90,\"phase\":0,\"warn\":20,\"fire\":30},{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[12,2]}]}",
@@ -399,13 +399,13 @@
  "ticks": 529,
  "hashEvery": 300,
  "hashes": {
-  "0": "07ded213df2872fd5adab676e921b516",
-  "300": "9c6d99cd40cbe21f9f835566d72fee29"
+  "0": "2c7f1a6eeaf47f67005b9287670d9ff2",
+  "300": "ea388367e39000551738712f4eb34d15"
  },
- "final": "9cb7c29351b25bf486a948e913918c93",
+ "final": "6f6644efdd2a7b43e590c806265864f0",
  "finalState": {
   "v": 1,
-  "core": "m0.7",
+  "core": "m0.8",
   "world": "ed07117ae227eea674dbae0f20b67882",
   "mode": "delve",
   "tick": 529,
@@ -460,6 +460,8 @@
   "sealed": [],
   "revealed": [],
   "mirrors": [],
+  "chests": [],
+  "sealing": [],
   "bellSets": [],
   "links": [],
   "checkpoints": [
@@ -477,6 +479,7 @@
      "pebbles": 10,
      "revealed": [],
      "mirrors": [],
+     "chests": [],
      "doors": [
       false
      ],
@@ -500,6 +503,7 @@
      "pebbles": 10,
      "revealed": [],
      "mirrors": [],
+     "chests": [],
      "doors": [
       true
      ],

@@ -29,6 +29,7 @@ const PROP_KINDS = new Map([
 ]);
 const KEYS = {
   door: ['id', 'type', 'cell', 'style', 'opens'], doorMask: ['id', 'type', 'cell', 'style', 'opens', 'face'],
+  chest: ['id', 'type', 'cell', 'wall', 'style', 'trap'], alcove: ['id', 'type', 'cell', 'kind', 'door'],
   slab: ['id', 'type', 'cell'], prop: ['id', 'type', 'kind', 'pos', 'yaw'],
   vent: ['id', 'type', 'cells', 'period', 'phase', 'warn', 'fire'],
   item: ['id', 'type', 'kind', 'cell'], treasure: ['id', 'type', 'kind', 'cell', 'value'],
@@ -38,13 +39,13 @@ const KEYS = {
   zone: ['id', 'name', 'rects', 'ceil'], zoneCp: ['id', 'name', 'rects', 'ceil', 'checkpoint'],
   cp: ['cell', 'yaw'], cpReach: ['cell', 'yaw', 'reach'],
 };
-const ITEM_KINDS = ['flask', 'rubble', 'treasure'];
+const ITEM_KINDS = ['flask', 'rubble', 'treasure', 'key'];
 // R-BELL-1, R-BELL-3: by size 1..3, the footprint radius and the extra reach (Gloamhollow r + 0.05 m and 2 m + r).
 const BELL_R = [470, 650, 830], BELL_REACH = [2420, 2600, 2780];
 // R-BEAM-1: directions n, e, s, w as (di, dj).
 export const DIRS = Object.freeze({ n: Object.freeze([0, -1]), e: Object.freeze([1, 0]), s: Object.freeze([0, 1]), w: Object.freeze([-1, 0]) });
 const dirOf = (v) => (typeof v === 'string' && Object.hasOwn(DIRS, v) ? DIRS[v] : undefined);
-const DOOR_STYLES = ['stone', 'grate', 'mask'], DOOR_OPENS = ['interact', 'trigger'], MASK_FACES = ['weep', 'laugh', 'sleep', 'blank'];
+const DOOR_STYLES = ['stone', 'grate', 'mask'], DOOR_OPENS = ['interact', 'trigger', 'key'], MASK_FACES = ['weep', 'laugh', 'sleep', 'blank'];
 
 // The decoded grid and entity tables of each genuine world. Kept out of the frozen world object so
 // nothing can edit them after load; doors, slabs and the like change state, never the world (R-WORLD-4).
@@ -239,12 +240,14 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
   const ids = new Set(), doorAt = new Int16Array(w * h).fill(-1), slab = new Uint8Array(w * h);
   const doors = [], props = [], refs = [], vents = [], ventAt = new Int16Array(w * h).fill(-1), items = [], eyes = [];
   const bells = [], bellSets = [], byId = new Map(), hooks = [], mirrors = [], crystals = [];
+  const chests = [], alcoves = [], alcoveAt = new Int16Array(w * h).fill(-1);
   for (const e of list) {
     if (!isObj(e) || typeof e.id !== 'string' || !ID_RE.test(e.id)) throw new RangeError('entity id');
     if (ids.has(e.id)) throw new RangeError('duplicate entity id');
     ids.add(e.id);
     if (e.type === 'door') {
-      if (!hasExactKeys(e, e.style === 'mask' ? KEYS.doorMask : KEYS.door)) throw new RangeError('door keys');
+      const dk = (e.style === 'mask' ? KEYS.doorMask : KEYS.door).concat(e.opens === 'key' ? ['key'] : []);
+      if (!hasExactKeys(e, dk)) throw new RangeError('door keys');
       if (!DOOR_STYLES.includes(e.style) || !DOOR_OPENS.includes(e.opens)) throw new RangeError('door style/opens');
       if (e.style === 'mask' && !MASK_FACES.includes(e.face)) throw new RangeError('door face');
       const k = cellIndex(e.cell, w, h);
@@ -253,7 +256,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       doorAt[k] = doors.length;
       refs.push({ type: 'door', door: doors.length });
       const [ci, cj] = e.cell;
-      doors.push(Object.freeze({ id: e.id, k, cx: ci * CELL_MM + CELL_MM / 2, cz: cj * CELL_MM + CELL_MM / 2, interact: e.opens === 'interact' }));
+      doors.push({ id: e.id, k, cx: ci * CELL_MM + CELL_MM / 2, cz: cj * CELL_MM + CELL_MM / 2, interact: e.opens === 'interact', keyName: e.opens === 'key' ? e.key : null, key: -1 });
     } else if (e.type === 'slab') {
       if (!hasExactKeys(e, KEYS.slab)) throw new RangeError('slab keys');
       const k = cellIndex(e.cell, w, h);
@@ -293,17 +296,23 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       vents.push(Object.freeze({ period, phase, warn, fire }));
       refs.push({ type: 'vent' });
     } else if (e.type === 'item') {
-      const hidden = Object.hasOwn(e, 'hidden');
-      const keys = (e.kind === 'treasure' ? KEYS.treasure : KEYS.item).concat(hidden ? ['hidden'] : []);
+      const hidden = Object.hasOwn(e, 'hidden'), inChest = Object.hasOwn(e, 'in');
+      const keys = (e.kind === 'treasure' ? KEYS.treasure : KEYS.item).filter((x) => !inChest || x !== 'cell')
+        .concat(hidden ? ['hidden'] : [], inChest ? ['in'] : []);
       if (!hasExactKeys(e, keys)) throw new RangeError('item keys');
       if (!ITEM_KINDS.includes(e.kind)) throw new RangeError('item kind');
-      if (hidden && (e.hidden !== true || e.kind === 'rubble')) throw new RangeError('item hidden');
+      if (hidden && (e.hidden !== true || e.kind === 'rubble' || inChest)) throw new RangeError('item hidden');
+      if (inChest && (typeof e.in !== 'string' || e.kind === 'rubble')) throw new RangeError('item in');
       if (e.kind === 'treasure' && (!isInt(e.value) || e.value < 1 || e.value > 100000)) throw new RangeError('item value');
-      const k = cellIndex(e.cell, w, h);
-      if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR && grid[k] !== CELL.BRIDGE) throw new RangeError('item cell');
-      const [ci, cj] = e.cell, off = e.kind === 'rubble' ? 300 : 0;
+      let k = -1, x = 0, z = 0;
+      if (!inChest) {
+        k = cellIndex(e.cell, w, h);
+        if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR && grid[k] !== CELL.BRIDGE) throw new RangeError('item cell');
+        const [ci, cj] = e.cell, off = e.kind === 'rubble' ? 300 : 0;
+        x = ci * CELL_MM + CELL_MM / 2 - off; z = cj * CELL_MM + CELL_MM / 2 - off;
+      }
       refs.push({ type: 'item', item: items.length });
-      items.push(Object.freeze({ id: e.id, kind: e.kind, hidden, k, x: ci * CELL_MM + CELL_MM / 2 - off, z: cj * CELL_MM + CELL_MM / 2 - off, reach: e.kind === 'rubble' ? 1600 : 1700 }));
+      items.push({ id: e.id, n: refs.length, kind: e.kind, hidden, k, x, z, reach: e.kind === 'rubble' ? 1600 : 1700, chestName: inChest ? e.in : null });
     } else if (e.type === 'eyes') {
       if (!hasExactKeys(e, KEYS.eyes)) throw new RangeError('eyes keys');
       const zi = typeof e.zone === 'string' ? zoneIds.indexOf(e.zone) : -1;
@@ -322,6 +331,27 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       props.push(Object.freeze({ circle: true, x, z, r, x0: x - r, x1: x + r, z0: z - r, z1: z + r }));
       refs.push({ type: 'bell', bell: bells.length });
       bells.push({ id: e.id, k, x, z, reach: BELL_REACH[e.size - 1], set: -1, index: -1 });
+    } else if (e.type === 'chest') {
+      if (!hasExactKeys(e, KEYS.chest)) throw new RangeError('chest keys');
+      const d = dirOf(e.wall);
+      if (d === undefined || (e.style !== 'plain' && e.style !== 'gilded') || (e.trap !== 'none' && e.trap !== 'needles')) throw new RangeError('chest wall/style/trap');
+      const k = cellIndex(e.cell, w, h);
+      if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR) throw new RangeError('chest cell');
+      const [ci, cj] = e.cell, x = ci * CELL_MM + CELL_MM / 2, z = cj * CELL_MM + CELL_MM / 2, [di, dj] = d;
+      // R-CHEST-1: 600 along the wall, 650 towards it, 150 away from it.
+      const x0 = di === 0 ? x - 600 : di > 0 ? x - 150 : x - 650, x1 = di === 0 ? x + 600 : di > 0 ? x + 650 : x + 150;
+      const z0 = dj === 0 ? z - 600 : dj > 0 ? z - 150 : z - 650, z1 = dj === 0 ? z + 600 : dj > 0 ? z + 650 : z + 150;
+      props.push(Object.freeze({ circle: false, x, z, r: 0, x0, x1, z0, z1 }));
+      refs.push({ type: 'chest', chest: chests.length });
+      chests.push({ id: e.id, k, x: x + 250 * di, z: z + 250 * dj, reach: 2200, needles: e.trap === 'needles', contents: [] });
+    } else if (e.type === 'alcove') {
+      if (!hasExactKeys(e, KEYS.alcove)) throw new RangeError('alcove keys');
+      if (e.kind !== 'drown' && e.kind !== 'tip') throw new RangeError('alcove kind');
+      const k = cellIndex(e.cell, w, h);
+      if (grid[k] !== CELL.ALCOVE || alcoveAt[k] >= 0) throw new RangeError('alcove cell');
+      alcoveAt[k] = alcoves.length;
+      refs.push({ type: 'alcove', alcove: alcoves.length });
+      alcoves.push({ id: e.id, k, drown: e.kind === 'drown', doorName: e.door, door: -1 });
     } else if (e.type === 'lampHook' || e.type === 'mirror' || e.type === 'crystal') {
       if (!hasExactKeys(e, KEYS[e.type])) throw new RangeError(e.type + ' keys');
       const k = cellIndex(e.cell, w, h);
@@ -368,8 +398,25 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
     });
   });
   if (bells.some((b) => b.set < 0)) throw new RangeError('bell without a set');
-  // R-ITEM-1: no item on a door or slab cell (checked after the loop, whatever the order).
-  for (const it of items) if (doorAt[it.k] >= 0 || slab[it.k]) throw new RangeError('item cell taken');
+  // R-ITEM-1: no item on a door or slab cell (checked after the loop, whatever the order); `in` names a chest.
+  items.forEach((it, n) => {
+    if (it.chestName === null) { if (doorAt[it.k] >= 0 || slab[it.k]) throw new RangeError('item cell taken'); return; }
+    const r = byId.get(it.chestName);
+    if (r === undefined || r.type !== 'chest') throw new RangeError('item in: not a chest');
+    chests[r.chest].contents.push(n);
+  });
+  // R-DOOR-1: a key door names a key item. R-ALCOVE-1: an alcove names a door. R-CHEST-1: chests on free cells.
+  for (const d of doors) if (d.keyName !== null) {
+    const r = typeof d.keyName === 'string' ? byId.get(d.keyName) : undefined;
+    if (r === undefined || r.type !== 'item' || r.kind !== 'key') throw new RangeError('door key');
+    d.key = r.n;
+  }
+  for (const a of alcoves) {
+    const r = typeof a.doorName === 'string' ? byId.get(a.doorName) : undefined;
+    if (r === undefined || r.type !== 'door') throw new RangeError('alcove door');
+    a.door = r.door;
+  }
+  for (const c of chests) if (doorAt[c.k] >= 0 || slab[c.k]) throw new RangeError('chest cell taken');
   // R-VENT-1: every vent cell belongs to a vent.
   for (let k = 0; k < w * h; k++) if (grid[k] === CELL.VENT && ventAt[k] < 0) throw new RangeError('vent cell without a vent');
   // R-PROP-2: every cell under the footprint's bounds is inside the grid and free floor.
@@ -385,8 +432,10 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
   return {
     byId, bells: Object.freeze(bells.map(Object.freeze)),
     hooks: Object.freeze(hooks), mirrors: Object.freeze(mirrors), crystals: Object.freeze(crystals),
+    chests: Object.freeze(chests.map((c) => Object.freeze({ ...c, contents: Object.freeze(c.contents) }))),
+    alcoves: Object.freeze(alcoves.map((a) => Object.freeze({ id: a.id, k: a.k, drown: a.drown, door: a.door }))), alcoveAt,
     bellSets: Object.freeze(bellSets.map((b) => Object.freeze({ id: b.id, bells: Object.freeze(b.bells), order: b.order }))),
-    doorAt, slab, ventAt, vents: Object.freeze(vents), items: Object.freeze(items), eyes: Object.freeze(eyes), doors: Object.freeze(doors), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
+    doorAt, slab, ventAt, vents: Object.freeze(vents), items: Object.freeze(items.map(Object.freeze)), eyes: Object.freeze(eyes), doors: Object.freeze(doors.map((d) => Object.freeze({ id: d.id, k: d.k, cx: d.cx, cz: d.cz, interact: d.interact, key: d.key }))), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
 }
 
 /** Throws unless world came from loadWorld (not a look-alike object). */
@@ -426,6 +475,11 @@ export function ventAt(world, k) { const W = GRIDS.get(world), v = W.ventAt[k]; 
 export function zoneAt(world, k) { return GRIDS.get(world).zoneOf[k]; }
 export function worldZones(world) { return GRIDS.get(world).zones; }
 export function startZone(world) { return GRIDS.get(world).startZone; }
+
+/** R-CHEST-*, R-ALCOVE-*: chests and alcoves (frozen); the alcove on cell k, or undefined. */
+export function worldChests(world) { return GRIDS.get(world).chests; }
+export function worldAlcoves(world) { return GRIDS.get(world).alcoves; }
+export function alcoveAt(world, k) { const W = GRIDS.get(world), a = W.alcoveAt[k]; return a >= 0 ? W.alcoves[a] : undefined; }
 
 /** R-HOOK-*, R-MIRROR-*, R-CRYSTAL-1: lamp hooks, mirrors and crystals, in entity order (frozen). */
 export function worldHooks(world) { return GRIDS.get(world).hooks; }

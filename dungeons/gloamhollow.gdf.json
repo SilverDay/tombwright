@@ -308,7 +308,8 @@
     18
    ],
    "style": "mask",
-   "opens": "trigger",
+   "opens": "key",
+   "key": "crescent",
    "face": "sleep"
   },
   {
@@ -319,7 +320,7 @@
     18
    ],
    "style": "mask",
-   "opens": "trigger",
+   "opens": "interact",
    "face": "weep"
   },
   {
@@ -330,7 +331,7 @@
     18
    ],
    "style": "mask",
-   "opens": "trigger",
+   "opens": "interact",
    "face": "laugh"
   },
   {
@@ -784,6 +785,28 @@
    "yaw": 0
   },
   {
+   "type": "chest",
+   "id": "gilded",
+   "cell": [
+    33,
+    2
+   ],
+   "wall": "n",
+   "style": "gilded",
+   "trap": "needles"
+  },
+  {
+   "type": "chest",
+   "id": "plain",
+   "cell": [
+    38,
+    2
+   ],
+   "wall": "n",
+   "style": "plain",
+   "trap": "none"
+  },
+  {
    "id": "sarcophagus1",
    "type": "prop",
    "kind": "sarcophagus",
@@ -810,6 +833,45 @@
     12
    ],
    "wall": "n"
+  },
+  {
+   "id": "rubies",
+   "type": "item",
+   "kind": "treasure",
+   "in": "gilded",
+   "value": 400
+  },
+  {
+   "id": "crescent",
+   "type": "item",
+   "kind": "key",
+   "in": "plain"
+  },
+  {
+   "id": "f6",
+   "type": "item",
+   "kind": "flask",
+   "in": "plain"
+  },
+  {
+   "id": "weep",
+   "type": "alcove",
+   "cell": [
+    9,
+    19
+   ],
+   "kind": "drown",
+   "door": "mWeep"
+  },
+  {
+   "id": "laugh",
+   "type": "alcove",
+   "cell": [
+    11,
+    19
+   ],
+   "kind": "tip",
+   "door": "mLaugh"
   },
   {
    "id": "bells",
@@ -901,6 +963,127 @@
    "do": [
     {
      "message": "The door has no handle and no keyhole. It does not move."
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "when": {
+    "doorOpen": "mWeep"
+   },
+   "do": [
+    {
+     "message": "“Weep with me, traveller, and pass,” the weeping face sighs, and its door sinks into the floor."
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "when": {
+    "doorOpen": "mLaugh"
+   },
+   "do": [
+    {
+     "message": "“Ha! Come through, come through, the way is short!” the laughing face cackles, and its door sinks into the floor."
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "when": {
+    "doorOpen": "mSleep"
+   },
+   "do": [
+    {
+     "message": "The crescent key turns. The sleeping face does not wake, but its door sinks into the floor."
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "when": {
+    "all": [
+     {
+      "interact": "mSleep"
+     },
+     {
+      "not": {
+       "hasItem": "crescent"
+      }
+     }
+    ],
+    "within": 1
+   },
+   "repeat": true,
+   "do": [
+    {
+     "message": "The sleeping face says nothing. Beneath its chin is a keyhole shaped like a crescent moon."
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "when": {
+    "all": [
+     {
+      "interact": "mWeep"
+     },
+     {
+      "not": {
+       "doorOpen": "mWeep"
+      }
+     }
+    ],
+    "within": 1
+   },
+   "repeat": true,
+   "do": [
+    {
+     "message": "This door is sealed. The face above it looks satisfied."
+    }
+   ]
+  },
+  {
+   "id": 14,
+   "when": {
+    "all": [
+     {
+      "interact": "mLaugh"
+     },
+     {
+      "not": {
+       "doorOpen": "mLaugh"
+      }
+     }
+    ],
+    "within": 1
+   },
+   "repeat": true,
+   "do": [
+    {
+     "message": "This door is sealed. The face above it looks satisfied."
+    }
+   ]
+  },
+  {
+   "id": 15,
+   "when": {
+    "itemTaken": "crescent"
+   },
+   "do": [
+    {
+     "message": "Inside the plain chest: a crescent-shaped key of black iron, and a flask of lamp oil."
+    }
+   ]
+  },
+  {
+   "id": 16,
+   "when": {
+    "itemTaken": "rubies"
+   },
+   "do": [
+    {
+     "message": "You lift the gilded lid. Inside, on rotten velvet: a fistful of rubies."
     }
    ]
   },

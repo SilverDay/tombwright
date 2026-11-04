@@ -8,12 +8,12 @@ import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
 import {
   loadWorld, solidCell, assertWorld, worldProps, worldDoors, entityRef, cellCode, slabAt, ventAt, zoneAt, worldZones, startZone,
-  worldItems, worldEyes, sightBlocked, worldBells, worldBellSets, worldLinks, worldHooks, worldMirrors, worldCrystals,
+  worldItems, worldEyes, sightBlocked, worldBells, worldBellSets, worldLinks, worldHooks, worldMirrors, worldCrystals, worldChests, alcoveAt,
   CELL, DOOR_FULL, DOOR_STEP, DOOR_CLOSE_STEP,
 } from './world.js';
 import { runLinks, initLinkState, copyLinkState } from './links.js';
 
-export const CORE_VERSION = 'm0.7';
+export const CORE_VERSION = 'm0.8';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -95,6 +95,8 @@ export function init(world, seed, mode) {
     sealed: [],              // R-DOOR-5 (a lesson)
     revealed: [],            // R-LINK-8: hidden items revealed, by entity number
     mirrors: worldMirrors(world).map((m) => m.start), // R-MIRROR-1
+    chests: worldChests(world).map(() => ({ look: false, sprung: false, open: false })), // R-CHEST-1
+    sealing: [],             // R-ALCOVE-2: doors about to close, { door, left }
     bellSets: worldBellSets(world).map(() => ({ seq: [], solved: false })), // R-BELL-2
     links: initLinkState(worldLinks(world)),                               // R-LINK-4
     checkpoints: [],        // R-CP-1
@@ -111,6 +113,7 @@ function lifeOf(state) {
   return {
     hp: p.hp, oil: p.oil, hooded: p.hooded, hung: p.hung, flasks: p.flasks, pebbles: p.pebbles,
     revealed: state.revealed.slice(), mirrors: state.mirrors.slice(),
+    chests: state.chests.map((c) => ({ look: c.look, sprung: c.sprung, open: c.open })),
     doors: state.doors.map((d) => d.open), floor: state.floor.map((f) => ({ x: f.x, z: f.z })), taken: state.taken.slice(),
     bellSets: copyBellSets(state.bellSets), links: copyLinkState(state.links),
   };
@@ -217,6 +220,18 @@ function live(world, state, input, pressed, events, batch) {
   p.yaw = input.yaw;
   p.pitch = input.pitch;
 
+  // R-ALCOVE-2: sprung alcoves' doors close after their delay.
+  if (state.sealing.length > 0) {
+    const keep = [];
+    for (const sl of state.sealing) {
+      sl.left -= 1;
+      if (sl.left > 0) { keep.push(sl); continue; }
+      const d = state.doors[sl.door];
+      if (d.open) { d.open = false; events.push({ e: 'door', id: worldDoors(world)[sl.door].id, open: false, sealed: true }); }
+    }
+    state.sealing = keep;
+  }
+
   // R-TOOL-1: tool presses, in button order, from where the player stood before moving.
   if (pressed & BTN.hood) {
     if (p.hung >= 0) events.push({ e: 'msg', k: 'lanternHung' });                     // R-HOOK-2
@@ -227,6 +242,7 @@ function live(world, state, input, pressed, events, batch) {
   if (pressed & BTN.pebble) throwPebble(world, state, events);
   if (pressed & BTN.oil) pourOil(p, events);
   if ((pressed & BTN.interact) && input.target !== 0) interact(world, state, input.target, events, batch); // R-ACT-1
+  if (state.dead !== null) { moveDoors(state); return; } // R-CHEST-2: the needles (doors still move, R-DEATH-2)
 
   // R-MOVE-2: normalise the move vector to length <= 127.
   let [fw, st] = input.move;
@@ -263,7 +279,7 @@ function live(world, state, input, pressed, events, batch) {
     if (zNow >= 0) batch.push(['enterZone', zNow]);
     state.zone = zNow;
   }
-  const cause = trap(world, state);
+  const cause = trap(world, state, events);
   if (cause !== null) { die(state, cause, events); return; }
   if (wakeEyes(world, state, events)) { die(state, 'eyes', events); return; }
   pickPebbles(state);
@@ -295,6 +311,7 @@ function probe(world, state, events) {
   const p = state.player;
   if (p.probeCd > 0) return;
   p.probeCd = PROBE_CD;
+  if (probeChest(world, state, events)) return;
   const sy = isin(p.yaw), cy = icos(p.yaw), pi = fdiv(p.x, CELL_MM), pj = fdiv(p.z, CELL_MM);
   let r = 2050, [tx, tz] = ahead(p, sy, cy, r);
   if (fdiv(tx, CELL_MM) === pi && fdiv(tz, CELL_MM) === pj) { r = 2600; [tx, tz] = ahead(p, sy, cy, r); }
@@ -314,7 +331,10 @@ function probe(world, state, events) {
   } else if (code === CELL.VOID) what = 'void';
   else if (code === CELL.BRIDGE) { if (!state.bridge.includes(k)) state.bridge.push(k); what = 'bridge'; }
   else if (code === CELL.VENT) what = 'vent';
-  else if (code === CELL.ALCOVE) what = 'alcove';
+  else if (code === CELL.ALCOVE) {
+    const a = alcoveAt(world, k);
+    if (a !== undefined && !a.drown && !state.sealed.includes(a.door)) { springAlcove(state, a, false, events); what = 'tip'; } else what = 'alcove';
+  }
   events.push({ e: 'probe', k: what });
 }
 
@@ -347,7 +367,9 @@ function landPebbles(world, state, events) {
     if (f.at !== state.tick) { keep.push(f); continue; }
     const i = fdiv(f.x, CELL_MM), j = fdiv(f.z, CELL_MM), k = j * world.w + i, code = cellCode(world, i, j);
     let what = 'floor', rests = true;
+    const al = code === CELL.ALCOVE ? alcoveAt(world, k) : undefined;
     if (slabOrSprung(world, state, i, j)) what = 'slab';
+    else if (al !== undefined && !state.sealed.includes(al.door) && state.doors[al.door].open) { springAlcove(state, al, false, events); what = 'alcove'; rests = false; }
     else if (code === CELL.PLATE) { state.sprung.push(k); what = 'plate'; rests = false; }
     else if (code === CELL.HPIT) { if (!state.pits.includes(k)) state.pits.push(k); what = 'pit'; rests = false; }
     else if (code === CELL.VOID) { what = 'void'; rests = false; }
@@ -413,6 +435,7 @@ function takeItem(world, state, n, it, events, batch) {
   const p = state.player;
   if (it.kind === 'rubble' ? p.pebbles >= PEBBLE_MAX : state.taken.includes(n)) return;
   if (it.hidden && !state.revealed.includes(n)) return; // R-ITEM-1
+  if (it.k < 0) return;                                 // in a chest: R-CHEST-2
   const dx = p.x - it.x, dz = p.z - it.z; // squares < 2^36
   if (dx * dx + dz * dz > it.reach * it.reach || !lineOfSight(world, state, it.x, it.z)) return;
   batch.push(['interact', n]);
@@ -436,7 +459,7 @@ function checkpoint(world, state, events) {
 }
 
 /** R-TRAP-1: the trap under the player, if armed: returns the cause of death or null. Records lessons. */
-function trap(world, state) {
+function trap(world, state, events) {
   const p = state.player, i = fdiv(p.x, CELL_MM), j = fdiv(p.z, CELL_MM);
   const lx = p.x - i * CELL_MM, lz = p.z - j * CELL_MM;
   if (lx <= TRAP_LO || lx >= TRAP_HI || lz <= TRAP_LO || lz >= TRAP_HI) return null;
@@ -449,6 +472,10 @@ function trap(world, state) {
   if (code === CELL.HPIT) { if (!state.pits.includes(k)) state.pits.push(k); return 'pit'; }
   if (code === CELL.VOID) return 'chasm';
   if (code === CELL.VENT && ventFiring(ventAt(world, k), state.tick)) return 'vent';
+  if (code === CELL.ALCOVE) {
+    const a = alcoveAt(world, k);
+    if (a !== undefined && !state.sealed.includes(a.door)) { springAlcove(state, a, true, events); return a.drown ? 'drown' : 'tip'; }
+  }
   return null;
 }
 
@@ -486,6 +513,8 @@ function rise(world, state, target, events) {
   p.hung = life.hung;
   state.revealed = life.revealed.slice();
   state.mirrors = life.mirrors.slice();
+  state.chests = life.chests.map((c) => ({ look: c.look, sprung: c.sprung, open: c.open }));
+  state.sealing = [];
   p.flasks = life.flasks;
   p.pebbles = life.pebbles;
   state.floor = life.floor.map((f) => ({ x: f.x, z: f.z }));
@@ -506,15 +535,59 @@ function interact(world, state, n, events, batch) {
   if (ref && ref.type === 'bell') { ringBell(world, state, n, worldBells(world)[ref.bell], events, batch); return; }
   if (ref && ref.type === 'lampHook') { useHook(world, state, n, ref.hook, events, batch); return; }
   if (ref && ref.type === 'mirror') { turnMirror(world, state, n, ref.mirror, events, batch); return; }
+  if (ref && ref.type === 'chest') { openChest(world, state, n, ref.chest, events, batch); return; }
   if (!ref || ref.type !== 'door') return;
   const def = worldDoors(world)[ref.door], d = state.doors[ref.door], p = state.player;
   if (d.open) return;
   const dx = p.x - def.cx, dz = p.z - def.cz; // |dx|, |dz| <= 64*2400, so the squares stay below 2^36
   if (dx * dx + dz * dz > REACH_MM * REACH_MM) return;
   batch.push(['interact', n]);
-  if (!def.interact || state.sealed.includes(ref.door)) return;
+  if (state.sealed.includes(ref.door)) return;
+  if (!def.interact && !(def.key > 0 && state.taken.includes(def.key))) return; // R-DOOR-1: interact or key
   d.open = true;
   events.push({ e: 'door', id: def.id, open: true });
+}
+
+/** R-CHEST-2 */
+function openChest(world, state, n, ci, events, batch) {
+  const p = state.player, c = worldChests(world)[ci], st = state.chests[ci], dx = p.x - c.x, dz = p.z - c.z; // squares < 2^36
+  if (st.open || dx * dx + dz * dz > c.reach * c.reach || !lineOfSight(world, state, c.x, c.z)) return;
+  batch.push(['interact', n]);
+  if (c.needles && !st.look) { st.look = true; events.push({ e: 'chest', id: c.id, look: true }); return; }
+  if (c.needles && !st.sprung) { die(state, 'needles', events); return; }
+  st.open = true;
+  const items = worldItems(world);
+  for (const ii of c.contents) {
+    const it = items[ii], num = it.n;
+    state.taken.push(num);
+    if (it.kind === 'flask') p.flasks += 1;
+    batch.push(['itemTaken', num]);
+    events.push({ e: 'item', id: it.id, kind: it.kind });
+  }
+  events.push({ e: 'chest', id: c.id, open: true });
+}
+
+/** R-CHEST-3: a trapped chest in front of the player takes the probe. Returns true if it did. */
+function probeChest(world, state, events) {
+  const p = state.player, chests = worldChests(world), sy = isin(p.yaw), cy = icos(p.yaw);
+  const z = zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM));
+  for (let ci = 0; ci < chests.length; ci++) {
+    const c = chests[ci], st = state.chests[ci];
+    if (!c.needles || st.open || zoneAt(world, c.k) !== z) continue;
+    const dx = c.x - p.x, dz = c.z - p.z, d = isqrt(dx * dx + dz * dz); // squares < 2^36
+    // In front: 2·(d · forward) > d·2^14, forward = (-sin, -cos)·2^14; |dx·sy| < 2^18 · 2^14.
+    if (d === 0 || d >= 2600 || 2 * (dx * -sy + dz * -cy) <= d * TRIG_ONE) continue;
+    if (!st.sprung) { st.sprung = true; events.push({ e: 'probe', k: 'needles' }); } else events.push({ e: 'probe', k: 'needlesSpent' });
+    return true;
+  }
+  return false;
+}
+
+/** R-ALCOVE-2: spring an armed alcove; inside = the player is in it. */
+function springAlcove(state, a, inside, events) {
+  if (!state.sealed.includes(a.door)) state.sealed.push(a.door);
+  state.sealing.push({ door: a.door, left: inside ? 45 : a.drown ? 78 : 66 });
+  events.push({ e: 'alcove', id: a.id, inside });
 }
 
 /** R-HOOK-2 */

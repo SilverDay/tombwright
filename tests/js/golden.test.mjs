@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { ROOT, loadCore } from './lib/load.mjs';
-import { replay, GLOAMHOLLOW, expand, trapRoom, toolRoom, mirrorRoom } from '../golden/generate.mjs';
+import { replay, GLOAMHOLLOW, expand, trapRoom, toolRoom, mirrorRoom, maskRoom } from '../golden/generate.mjs';
 import { solidCell, b64decode, worldProps, DOOR_FULL } from '../../public/js/sim/world.js';
 const utf8 = (t) => new TextEncoder().encode(t);
 import { fdiv } from '../../public/js/sim/int.js';
@@ -284,4 +284,36 @@ test('the Mirror Vault: Gloamhollow\'s solution opens the vault and reveals the 
   assert.ok(ev.some((e) => e.e === 'link' && e.id === 8));
   assert.equal(st.doors[g.entities.filter((e) => e.type === 'door').findIndex((e) => e.id === 'vault')].open, true);
   assert.deepEqual(st.revealed, [num('opal')]);
+});
+
+// Step 5c on the mask room: c1 (entity 4) trapped, d2 (2) onto the drown alcove, d3 (3) onto the tip alcove.
+function maskRun(start) {
+  const world = Sim.load(utf8(maskRoom(start))), st = Sim.init(world, 1, 'delve');
+  const step = (o = {}) => Sim.step(world, st, { move: [0, 0], yaw: 0, pitch: 0, buttons: 0, target: 0, ...o });
+  return { st, step };
+}
+
+test('the gilded chest kills when opened without the probe, after a first look (R-CHEST-2, decision #38)', () => {
+  const { st, step } = maskRun([3, 2]);
+  for (let k = 0; k < 20; k++) step({ move: [127, 0] });   // up to the chest
+  assert.deepEqual(step({ buttons: Sim.BTN.interact, target: 4 }), [{ e: 'chest', id: 'c1', look: true }]);
+  step();
+  assert.deepEqual(step({ buttons: Sim.BTN.interact, target: 4 }), [{ e: 'death', cause: 'needles' }]);
+  assert.deepEqual(st.chests[0], { look: true, sprung: false, open: false });
+});
+
+test('the probe sets off a tip alcove but only touches a drown one (R-PROBE-2, decision #37)', () => {
+  const { st, step } = maskRun([10, 5]);
+  step({ buttons: Sim.BTN.interact, target: 3 });
+  for (let k = 0; k < 40; k++) step({ yaw: 2048 });
+  for (let k = 0; k < 20; k++) step({ yaw: 2048, move: [127, 0] }); // into the doorway
+  assert.deepEqual(step({ yaw: 2048, buttons: Sim.BTN.probe }), [{ e: 'alcove', id: 'al2', inside: false }, { e: 'probe', k: 'tip' }]);
+  assert.deepEqual(st.sealed, [2]);
+  assert.deepEqual(st.sealing, [{ door: 2, left: 66 }]);
+  const m = maskRun([6, 5]);
+  m.step({ buttons: Sim.BTN.interact, target: 2 });
+  for (let k = 0; k < 40; k++) m.step({ yaw: 2048 });
+  for (let k = 0; k < 20; k++) m.step({ yaw: 2048, move: [127, 0] });
+  assert.deepEqual(m.step({ yaw: 2048, buttons: Sim.BTN.probe }), [{ e: 'probe', k: 'alcove' }]);
+  assert.deepEqual(m.st.sealed, []);
 });

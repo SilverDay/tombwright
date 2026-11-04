@@ -83,7 +83,7 @@ const takeable = (r) => r.type === 'item' && r.kind !== 'rubble';
 /** A trigger's argument (R-LINK-2): entity number, zone index, bell set index, link id or boolean. */
 function triggerArg(kind, v, c) {
   switch (kind) {
-    case 'interact': return entity(v, c.ctx, (r) => ['door', 'item', 'bell', 'lampHook', 'mirror'].includes(r.type)).n;
+    case 'interact': return entity(v, c.ctx, (r) => ['door', 'item', 'bell', 'lampHook', 'mirror', 'chest'].includes(r.type)).n;
     case 'itemTaken': case 'hasItem': return entity(v, c.ctx, takeable).n;
     case 'enterZone': case 'leaveZone': case 'inZone': return zone(v, c.ctx);
     case 'bellsWrong': case 'bellsSolved': return entity(v, c.ctx, (r) => r.type === 'bellSet').set;

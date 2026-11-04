@@ -372,6 +372,97 @@ const mirrors = [
   [40, I([127,0], 3072, 0, 0, 0)],
 ];
 
+// Chests, keys, mask doors and alcoves (R-CHEST-*, R-DOOR-1 key, R-ALCOVE-*). A 14x10 room: antechamber a (rows 1-5,
+// start 6, 4) with a trapped gilded chest c1 (3, 1; a treasure inside) and a plain chest c2 (9, 1; the key k1 and a
+// flask). Row 6 is wall but for three doors: d1 (2, 6) opens with k1 onto zone b; d2 (6, 6) onto a drown alcove
+// (6, 7); d3 (10, 6) onto a tip alcove (10, 7). Links: the keyhole, and the sealed doors.
+export function maskRoom(start = [6, 4], opened = false) {
+  const w = 14, h = 10, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j <= 5; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  set(2, 6, 2); set(6, 6, 2); set(10, 6, 2); set(2, 7, 1); set(2, 8, 1); set(6, 7, 8); set(10, 7, 8);
+  return JSON.stringify({
+    gdf: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: start },
+    zones: [{ id: 'a', name: 'A', rects: [[1, 1, 12, 5]], ceil: 4200 }, { id: 'b', name: 'B', rects: [[2, 7, 1, 2]], ceil: 3000, checkpoint: { cell: [2, 8], yaw: 0 } }],
+    entities: [
+      { id: 'd1', type: 'door', cell: [2, 6], style: 'mask', opens: 'key', key: 'k1', face: 'sleep' },
+      { id: 'd2', type: 'door', cell: [6, 6], style: 'mask', opens: 'interact', face: 'weep' },
+      { id: 'd3', type: 'door', cell: [10, 6], style: 'mask', opens: 'interact', face: 'laugh' },
+      { id: 'c1', type: 'chest', cell: [3, 1], wall: 'n', style: 'gilded', trap: 'needles' },
+      { id: 'c2', type: 'chest', cell: [9, 1], wall: 'n', style: 'plain', trap: 'none' },
+      { id: 't1', type: 'item', kind: 'treasure', in: 'c1', value: 400 },
+      { id: 'k1', type: 'item', kind: 'key', in: 'c2' },
+      { id: 'f1', type: 'item', kind: 'flask', in: 'c2' },
+      { id: 'al1', type: 'alcove', cell: [6, 7], kind: 'drown', door: 'd2' },
+      { id: 'al2', type: 'alcove', cell: [10, 7], kind: 'tip', door: 'd3' },
+    ],
+    links: [
+      { id: 1, when: { all: [{ interact: 'd1' }, { not: { hasItem: 'k1' } }], within: 1 }, repeat: true, do: [{ message: 'keyhole' }] },
+      { id: 2, when: { all: [{ interact: 'd2' }, { not: { doorOpen: 'd2' } }], within: 1 }, repeat: true, do: [{ message: 'sealed' }] },
+      { id: 3, when: { all: [{ interact: 'd3' }, { not: { doorOpen: 'd3' } }], within: 1 }, repeat: true, do: [{ message: 'sealed' }] },
+      { id: 4, when: { itemTaken: 'k1' }, do: [{ message: 'a key' }] },
+      ...(opened ? [{ id: 5, when: { inZone: 'a' }, do: [{ openDoor: 'd2' }, { openDoor: 'd3' }] }] : []),
+    ],
+  });
+}
+
+// The mask room by hand: look at the gilded chest, disarm it with the probe, open it; try the key door (keyhole);
+// open the plain chest (key, flask); open the key door and reach b's checkpoint; open the weeping door and throw a
+// pebble into the drown alcove (sealed, the door closes 78 ticks later); open the laughing door and walk into the
+// tip alcove (dead, sealed); rise at b; try the weeping door (sealed message).
+const masks = [
+  [68, I([127,0], 1024, 0, 0, 0)],
+  [52, I([127,0], 0, 0, 0, 0)],
+  [10, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 4)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, B.probe, 0, 0)],
+  [25, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 4)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, B.probe, 0, 0)],
+  [22, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 4)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [73, I([127,0], 2048, 0, 0, 0)],
+  [22, I([127,0], 1024, 0, 0, 0)],
+  [10, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 1)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [75, I([127,0], 0, 0, 0, 0)],
+  [160, I([127,0], 3072, 0, 0, 0)],
+  [10, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 5)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [160, I([127,0], 1024, 0, 0, 0)],
+  [75, I([127,0], 2048, 0, 0, 0)],
+  [10, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 1)],
+  [40, I([0,0], 0, 0, 0, 0)],
+  [60, I([127,0], 2048, 0, 0, 0)],
+  [60, I([127,0], 0, 0, 0, 0)],
+  [90, I([127,0], 3072, 0, 0, 0)],
+  [10, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 2)],
+  [40, I([0,0], 2048, 0, 0, 0)],
+  [1, I([0,0], 2048, B.pebble, -25, 0)],
+  [100, I([0,0], 2048, 0, 0, 0)],
+  [80, I([127,0], 3072, 0, 0, 0)],
+  [6, I([127,0], 2048, 0, 0, 0)],
+  [10, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 3)],
+  [40, I([0,0], 0, 0, 0, 0)],
+  [40, I([127,0], 2048, 0, 0, 0)],
+  [60, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, B.rise, 0, 0)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [70, I([127,0], 0, 0, 0, 0)],
+  [90, I([127,0], 3072, 0, 0, 0)],
+  [8, I([127,0], 2048, 0, 0, 0)],
+  [10, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 2)],
+  [5, I([0,0], 0, 0, 0, 0)],
+];
+
 // Vectors carry the GDF as its exact text: Sim.load takes bytes (R-GDF-0).
 export const GLOAMHOLLOW = readFileSync(ROOT + 'dungeons/gloamhollow.gdf.json', 'utf8');
 const utf8 = (s) => new TextEncoder().encode(s);
@@ -397,6 +488,10 @@ const VECTORS = {
   '0019-links-fuzz-4': { gdf: linkRoom(4), seed: 19, mode: 'practice', inputs: fuzz(0x4444, 8000, 12) },
   '0020-mirrors': { gdf: mirrorRoom(), seed: 20, mode: 'delve', inputs: mirrors },
   '0021-mirrors-fuzz': { gdf: mirrorRoom(), seed: 21, mode: 'delve', inputs: fuzz(0x3170, 9000, 7) },
+  '0023-masks': { gdf: maskRoom(), seed: 23, mode: 'delve', inputs: masks },
+  '0024-masks-fuzz': { gdf: maskRoom(), seed: 24, mode: 'delve', inputs: fuzz(0x3A5C, 9000, 11) },
+  '0025-chests-fuzz': { gdf: maskRoom([3, 3]), seed: 25, mode: 'practice', inputs: fuzz(0xC4E5, 9000, 6, 30) }, // slow, by the chests
+  '0026-alcoves-fuzz': { gdf: maskRoom([6, 5], true), seed: 26, mode: 'practice', inputs: fuzz(0xA1C0, 9000, 4, 60) }, // slow, by the doors
   '0022-mirrors-practice-fuzz': { gdf: mirrorRoom([1, 3]), seed: 22, mode: 'practice', inputs: fuzz(0x3171, 9000, 4, 30) }, // slow, near the hook
 };
 
@@ -449,7 +544,7 @@ function gdfCases() {
     raw('not an object', utf8('[1,2]')), raw('null', utf8('null')), raw('trailing garbage', utf8(text(r) + 'x')),
     raw('too large', utf8(text(r).replace('"gdf":1', '"gdf":1,"pad":"' + 'a'.repeat(262144) + '"'))),
   ];
-  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw), ...mirrorCases(raw));
+  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw), ...mirrorCases(raw), ...chestCases(raw));
   return cases.map((c) => { try { return { ...c, ok: true, id: Sim.load(b64decodeBytes(c.bytes)).id }; } catch { return { ...c, ok: false }; } });
 }
 
@@ -666,6 +761,36 @@ function mirrorCases(raw) {
     one('mirrors: hide ok', W({ beamHits: 'cr' }, { do: [{ hide: 'gem' }] })), one('mirrors: reveal door', W({ beamHits: 'cr' }, { do: [{ reveal: 'hook' }] })),
     one('mirrors: beamHits mirror', W({ beamHits: 'm1' })), one('mirrors: beamHits number', W({ beamHits: 1 })),
     one('mirrors: interact hook ok', W({ interact: 'hook' })), one('mirrors: interact mirror ok', W({ interact: 'm1' })), one('mirrors: interact crystal', W({ interact: 'cr' })),
+  ];
+}
+
+// Chests, keys, alcoves, items in chests (R-CHEST-1, R-DOOR-1, R-ALCOVE-1, R-ITEM-1): edits of the mask room.
+function chestCases(raw) {
+  const base = JSON.parse(maskRoom());
+  const one = (name, f) => { const g = structuredClone(base); f(g); return raw(name, utf8(JSON.stringify(g))); };
+  const ent = (id) => (g) => g.entities.find((e) => e.id === id);
+  const set = (id, o) => (g) => Object.assign(ent(id)(g), o);
+  const del = (id, k) => (g) => { delete ent(id)(g)[k]; };
+  return [
+    one('chests: room', () => {}),
+    one('chests: wall bad', set('c1', { wall: 'x' })), one('chests: style bad', set('c1', { style: 'iron' })), one('chests: trap bad', set('c1', { trap: 'darts' })),
+    one('chests: no trap', del('c1', 'trap')), one('chests: extra key', set('c1', { contents: [] })), one('chests: on wall', set('c1', { cell: [3, 0] })),
+    one('chests: on door', set('c1', { cell: [2, 6] })), one('chests: on start', set('c1', { cell: [6, 4] })), one('chests: wall e ok', set('c1', { wall: 'e' })),
+    one('chests: wall s ok', set('c1', { wall: 's' })), one('chests: wall w ok', set('c1', { wall: 'w' })),
+    one('chests: in unknown', set('t1', { in: 'zz' })), one('chests: in a door', set('t1', { in: 'd1' })), one('chests: in number', set('t1', { in: 3 })),
+    one('chests: in and cell', set('t1', { cell: [4, 4] })), one('chests: rubble in', (g) => { g.entities.push({ id: 'r1', type: 'item', kind: 'rubble', in: 'c1' }); }),
+    one('chests: hidden in', set('t1', { hidden: true })), one('chests: empty chest ok', (g) => { g.entities = g.entities.filter((e) => e.id !== 't1'); }),
+    one('chests: in before chest ok', (g) => { const t = g.entities.splice(g.entities.findIndex((e) => e.id === 't1'), 1)[0]; g.entities.unshift(t); }),
+    one('keys: key on floor ok', (g) => { delete ent('k1')(g).in; ent('k1')(g).cell = [4, 4]; }), one('keys: key with value', set('k1', { value: 1 })),
+    one('keys: door without key', del('d1', 'key')), one('keys: key on interact door', set('d2', { key: 'k1' })),
+    one('keys: key names flask', set('d1', { key: 'f1' })), one('keys: key names door', set('d1', { key: 'd2' })), one('keys: key unknown', set('d1', { key: 'zz' })),
+    one('keys: key number', set('d1', { key: 1 })), one('keys: hidden key ok', (g) => { delete ent('k1')(g).in; Object.assign(ent('k1')(g), { cell: [4, 4], hidden: true }); }),
+    one('alcoves: kind bad', set('al1', { kind: 'burn' })), one('alcoves: not on alcove', set('al1', { cell: [6, 5] })), one('alcoves: two on one', set('al2', { cell: [6, 7] })),
+    one('alcoves: door unknown', set('al1', { door: 'zz' })), one('alcoves: door a chest', set('al1', { door: 'c1' })), one('alcoves: no door', del('al1', 'door')),
+    one('alcoves: same door ok', set('al2', { door: 'd2' })), one('alcoves: bare alcove cell ok', (g) => { g.entities = g.entities.filter((e) => e.id !== 'al2'); }),
+    one('alcoves: links interact chest ok', (g) => { g.links.push({ id: 9, when: { interact: 'c1' }, do: [{ message: 'x' }] }); }),
+    one('alcoves: links interact alcove', (g) => { g.links.push({ id: 9, when: { interact: 'al1' }, do: [{ message: 'x' }] }); }),
+    one('alcoves: hasItem key ok', (g) => { g.links.push({ id: 9, when: { hasItem: 'k1' }, do: [{ message: 'x' }] }); }),
   ];
 }
 

@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.7';
+    public const CORE_VERSION = 'm0.8';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -121,6 +121,8 @@ final class Sim
             'sealed' => [],       // R-DOOR-5 (a lesson)
             'revealed' => [],     // R-LINK-8
             'mirrors' => array_map(static fn (array $m): int => $m['start'], $world->mirrors), // R-MIRROR-1
+            'chests' => array_map(static fn (): array => ['look' => false, 'sprung' => false, 'open' => false], $world->chests), // R-CHEST-1
+            'sealing' => [],      // R-ALCOVE-2
             'bellSets' => array_map(static fn (): array => ['seq' => [], 'solved' => false], $world->bellSets), // R-BELL-2
             'links' => Links::initState($world->links), // R-LINK-4
             'checkpoints' => [],  // R-CP-1
@@ -144,7 +146,7 @@ final class Sim
         $p = $state['player'];
         return [
             'hp' => $p['hp'], 'oil' => $p['oil'], 'hooded' => $p['hooded'], 'hung' => $p['hung'], 'flasks' => $p['flasks'], 'pebbles' => $p['pebbles'],
-            'revealed' => $state['revealed'], 'mirrors' => $state['mirrors'],
+            'revealed' => $state['revealed'], 'mirrors' => $state['mirrors'], 'chests' => $state['chests'],
             'doors' => array_map(static fn (array $d): bool => $d['open'], $state['doors']),
             'floor' => $state['floor'], 'taken' => $state['taken'],
             'bellSets' => $state['bellSets'], 'links' => $state['links'],
@@ -354,6 +356,24 @@ final class Sim
         $p = &$state['player'];
         $p['yaw'] = $input['yaw'];
         $p['pitch'] = $input['pitch'];
+        unset($p);
+        // R-ALCOVE-2: sprung alcoves' doors close after their delay.
+        if ($state['sealing'] !== []) {
+            $keep = [];
+            foreach ($state['sealing'] as $sl) {
+                $sl['left'] -= 1;
+                if ($sl['left'] > 0) {
+                    $keep[] = $sl;
+                    continue;
+                }
+                if ($state['doors'][$sl['door']]['open']) {
+                    $state['doors'][$sl['door']]['open'] = false;
+                    $events[] = ['e' => 'door', 'id' => $world->doors[$sl['door']]['id'], 'open' => false, 'sealed' => true];
+                }
+            }
+            $state['sealing'] = $keep;
+        }
+        $p = &$state['player'];
         // R-TOOL-1: tool presses, in button order, from where the player stood before moving.
         if ($pressed & self::BTN_HOOD) {
             if ($p['hung'] >= 0) { // R-HOOK-2
@@ -377,6 +397,10 @@ final class Sim
         }
         if (($pressed & self::BTN_INTERACT) && $input['target'] !== 0) {
             self::interact($world, $state, $input['target'], $events, $batch); // R-ACT-1
+        }
+        if ($state['dead'] !== null) {
+            self::moveDoors($state); // R-CHEST-2: the needles (doors still move, R-DEATH-2)
+            return;
         }
         $p = &$state['player'];
 
@@ -431,7 +455,7 @@ final class Sim
             }
             $state['zone'] = $zNow;
         }
-        $cause = self::trap($world, $state);
+        $cause = self::trap($world, $state, $events);
         if ($cause !== null) {
             self::die($state, $cause, $events);
             return;
@@ -499,6 +523,9 @@ final class Sim
             return;
         }
         $state['player']['probeCd'] = self::PROBE_CD;
+        if (self::probeChest($world, $state, $events)) {
+            return;
+        }
         $sy = SineTable::sin($p['yaw']);
         $cy = SineTable::cos($p['yaw']);
         $pi = IntMath::fdiv($p['x'], self::CELL_MM);
@@ -549,7 +576,13 @@ final class Sim
         } elseif ($code === World::VENT) {
             $what = 'vent';
         } elseif ($code === World::ALCOVE) {
-            $what = 'alcove';
+            $a = $world->alcoveAt($k);
+            if ($a !== null && !$a['drown'] && !in_array($a['door'], $state['sealed'], true)) {
+                self::springAlcove($state, $a, false, $events);
+                $what = 'tip';
+            } else {
+                $what = 'alcove';
+            }
         }
         $events[] = ['e' => 'probe', 'k' => $what];
     }
@@ -622,8 +655,13 @@ final class Sim
             $code = $world->cellCode($i, $j);
             $what = 'floor';
             $rests = true;
+            $al = $code === World::ALCOVE ? $world->alcoveAt($k) : null;
             if (self::slabOrSprung($world, $state, $i, $j)) {
                 $what = 'slab';
+            } elseif ($al !== null && !in_array($al['door'], $state['sealed'], true) && $state['doors'][$al['door']]['open']) {
+                self::springAlcove($state, $al, false, $events);
+                $what = 'alcove';
+                $rests = false;
             } elseif ($code === World::PLATE) {
                 $state['sprung'][] = $k;
                 $what = 'plate';
@@ -768,6 +806,9 @@ final class Sim
         if ($it['hidden'] && !in_array($n, $state['revealed'], true)) { // R-ITEM-1
             return;
         }
+        if ($it['k'] < 0) { // in a chest: R-CHEST-2
+            return;
+        }
         $dx = $p['x'] - $it['x'];
         $dz = $p['z'] - $it['z'];
         if ($dx * $dx + $dz * $dz > $it['reach'] * $it['reach'] || !self::lineOfSight($world, $state, $it['x'], $it['z'])) {
@@ -826,7 +867,7 @@ final class Sim
      *
      * @param array<string,mixed> $state
      */
-    private static function trap(World $world, array &$state): ?string
+    private static function trap(World $world, array &$state, array &$events): ?string
     {
         $p = $state['player'];
         $i = IntMath::fdiv($p['x'], self::CELL_MM);
@@ -857,7 +898,102 @@ final class Sim
         if ($code === World::VENT && self::ventFiring($world->ventAt($k), $state['tick'])) {
             return 'vent';
         }
+        if ($code === World::ALCOVE) {
+            $a = $world->alcoveAt($k);
+            if ($a !== null && !in_array($a['door'], $state['sealed'], true)) {
+                self::springAlcove($state, $a, true, $events);
+                return $a['drown'] ? 'drown' : 'tip';
+            }
+        }
         return null;
+    }
+
+    /**
+     * R-ALCOVE-2: spring an armed alcove; inside = the player is in it.
+     *
+     * @param array<string,mixed> $state
+     * @param array{id:string,k:int,drown:bool,door:int} $a
+     * @param list<array<string,mixed>> $events
+     */
+    private static function springAlcove(array &$state, array $a, bool $inside, array &$events): void
+    {
+        if (!in_array($a['door'], $state['sealed'], true)) {
+            $state['sealed'][] = $a['door'];
+        }
+        $state['sealing'][] = ['door' => $a['door'], 'left' => $inside ? 45 : ($a['drown'] ? 78 : 66)];
+        $events[] = ['e' => 'alcove', 'id' => $a['id'], 'inside' => $inside];
+    }
+
+    /**
+     * R-CHEST-2
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     * @param list<array{string,int}> $batch
+     */
+    private static function openChest(World $world, array &$state, int $n, int $ci, array &$events, array &$batch): void
+    {
+        $c = $world->chests[$ci];
+        $dx = $state['player']['x'] - $c['x'];
+        $dz = $state['player']['z'] - $c['z'];
+        if ($state['chests'][$ci]['open'] || $dx * $dx + $dz * $dz > $c['reach'] * $c['reach'] || !self::lineOfSight($world, $state, $c['x'], $c['z'])) {
+            return;
+        }
+        $batch[] = ['interact', $n];
+        if ($c['needles'] && !$state['chests'][$ci]['look']) {
+            $state['chests'][$ci]['look'] = true;
+            $events[] = ['e' => 'chest', 'id' => $c['id'], 'look' => true];
+            return;
+        }
+        if ($c['needles'] && !$state['chests'][$ci]['sprung']) {
+            self::die($state, 'needles', $events);
+            return;
+        }
+        $state['chests'][$ci]['open'] = true;
+        foreach ($c['contents'] as $ii) {
+            $it = $world->items[$ii];
+            $state['taken'][] = $it['n'];
+            if ($it['kind'] === 'flask') {
+                $state['player']['flasks'] += 1;
+            }
+            $batch[] = ['itemTaken', $it['n']];
+            $events[] = ['e' => 'item', 'id' => $it['id'], 'kind' => $it['kind']];
+        }
+        $events[] = ['e' => 'chest', 'id' => $c['id'], 'open' => true];
+    }
+
+    /**
+     * R-CHEST-3: a trapped chest in front of the player takes the probe. Returns true if it did.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function probeChest(World $world, array &$state, array &$events): bool
+    {
+        $p = $state['player'];
+        $sy = SineTable::sin($p['yaw']);
+        $cy = SineTable::cos($p['yaw']);
+        $z = $world->zoneAt(IntMath::fdiv($p['z'], self::CELL_MM) * $world->w + IntMath::fdiv($p['x'], self::CELL_MM));
+        foreach ($world->chests as $ci => $c) {
+            if (!$c['needles'] || $state['chests'][$ci]['open'] || $world->zoneAt($c['k']) !== $z) {
+                continue;
+            }
+            $dx = $c['x'] - $p['x'];
+            $dz = $c['z'] - $p['z'];
+            $d = IntMath::isqrt($dx * $dx + $dz * $dz);
+            // In front: 2·(d · forward) > d·2^14, forward = (-sin, -cos)·2^14.
+            if ($d === 0 || $d >= 2600 || 2 * ($dx * -$sy + $dz * -$cy) <= $d * SineTable::TRIG_ONE) {
+                continue;
+            }
+            if (!$state['chests'][$ci]['sprung']) {
+                $state['chests'][$ci]['sprung'] = true;
+                $events[] = ['e' => 'probe', 'k' => 'needles'];
+            } else {
+                $events[] = ['e' => 'probe', 'k' => 'needlesSpent'];
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -920,6 +1056,8 @@ final class Sim
         $state['bellSets'] = $life['bellSets'];
         $state['revealed'] = $life['revealed'];
         $state['mirrors'] = $life['mirrors'];
+        $state['chests'] = $life['chests'];
+        $state['sealing'] = [];
         $state['links'] = $life['links'];
         $p = &$state['player'];
         $p['hp'] = self::HP_FULL;
@@ -972,6 +1110,10 @@ final class Sim
             self::turnMirror($world, $state, $n, $ref['mirror'], $events, $batch);
             return;
         }
+        if ($ref !== null && $ref['type'] === 'chest') {
+            self::openChest($world, $state, $n, $ref['chest'], $events, $batch);
+            return;
+        }
         if ($ref === null || $ref['type'] !== 'door') {
             return;
         }
@@ -986,7 +1128,10 @@ final class Sim
             return;
         }
         $batch[] = ['interact', $n];
-        if (!$def['interact'] || in_array($ref['door'], $state['sealed'], true)) {
+        if (in_array($ref['door'], $state['sealed'], true)) {
+            return;
+        }
+        if (!$def['interact'] && !($def['key'] > 0 && in_array($def['key'], $state['taken'], true))) { // R-DOOR-1: interact or key
             return;
         }
         $state['doors'][$ref['door']]['open'] = true;

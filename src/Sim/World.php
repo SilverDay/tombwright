@@ -40,6 +40,8 @@ final class World
     private const KEYS_DOOR = ['id', 'type', 'cell', 'style', 'opens'];
     private const KEYS_DOOR_MASK = ['id', 'type', 'cell', 'style', 'opens', 'face'];
     private const KEYS_SLAB = ['id', 'type', 'cell'];
+    private const KEYS_CHEST = ['id', 'type', 'cell', 'wall', 'style', 'trap'];
+    private const KEYS_ALCOVE = ['id', 'type', 'cell', 'kind', 'door'];
     private const KEYS_PROP = ['id', 'type', 'kind', 'pos', 'yaw'];
     private const KEYS_VENT = ['id', 'type', 'cells', 'period', 'phase', 'warn', 'fire'];
     private const KEYS_ITEM = ['id', 'type', 'kind', 'cell'];
@@ -56,13 +58,13 @@ final class World
     private const BELL_R = [470, 650, 830];
     private const BELL_REACH = [2420, 2600, 2780];
     public const DOOR_CLOSE_STEP = 33;
-    private const ITEM_KINDS = ['flask', 'rubble', 'treasure'];
+    private const ITEM_KINDS = ['flask', 'rubble', 'treasure', 'key'];
     private const KEYS_ZONE = ['id', 'name', 'rects', 'ceil'];
     private const KEYS_ZONE_CP = ['id', 'name', 'rects', 'ceil', 'checkpoint'];
     private const KEYS_CP = ['cell', 'yaw'];
     private const KEYS_CP_REACH = ['cell', 'yaw', 'reach'];
     private const DOOR_STYLES = ['stone', 'grate', 'mask'];
-    private const DOOR_OPENS = ['interact', 'trigger'];
+    private const DOOR_OPENS = ['interact', 'trigger', 'key'];
     private const MASK_FACES = ['weep', 'laugh', 'sleep', 'blank'];
 
     /**
@@ -110,6 +112,9 @@ final class World
         public readonly array $hooks,
         public readonly array $mirrors,
         public readonly array $crystals,
+        public readonly array $chests,
+        public readonly array $alcoves,
+        private readonly array $alcoveAt,
     ) {
     }
 
@@ -306,7 +311,7 @@ final class World
             $id, $w, $h, $grid, $si, $sj, $ents['doorAt'], $ents['slab'], $ents['doors'], $ents['props'], $ents['refs'],
             $ents['ventAt'], $ents['vents'], $zs['zoneOf'], $zs['zones'], $zs['zoneOf'][$startK] ?? -1,
             $ents['items'], $ents['eyes'], $ents['bells'], $ents['bellSets'], $links,
-            $ents['hooks'], $ents['mirrors'], $ents['crystals'],
+            $ents['hooks'], $ents['mirrors'], $ents['crystals'], $ents['chests'], $ents['alcoves'], $ents['alcoveAt'],
         );
     }
 
@@ -452,6 +457,9 @@ final class World
         $hooks = [];
         $mirrors = [];
         $crystals = [];
+        $chests = [];
+        $alcoves = [];
+        $alcoveAt = [];
         foreach ($list as $e) {
             if (!is_array($e) || array_is_list($e) || !is_string($e['id'] ?? null) || preg_match(self::ID_RE, $e['id']) !== 1) {
                 throw new \RangeException('entity id');
@@ -463,7 +471,8 @@ final class World
             $type = $e['type'] ?? null;
             if ($type === 'door') {
                 $style = $e['style'] ?? null;
-                if (!self::hasExactKeys($e, $style === 'mask' ? self::KEYS_DOOR_MASK : self::KEYS_DOOR)) {
+                $dk = array_merge($style === 'mask' ? self::KEYS_DOOR_MASK : self::KEYS_DOOR, ($e['opens'] ?? null) === 'key' ? ['key'] : []);
+                if (!self::hasExactKeys($e, $dk)) {
                     throw new \RangeException('door keys');
                 }
                 if (!in_array($style, self::DOOR_STYLES, true) || !in_array($e['opens'], self::DOOR_OPENS, true)) {
@@ -486,7 +495,7 @@ final class World
                 $doors[] = [
                     'id' => $e['id'], 'k' => $k,
                     'cx' => $ci * self::CELL_MM + intdiv(self::CELL_MM, 2), 'cz' => $cj * self::CELL_MM + intdiv(self::CELL_MM, 2),
-                    'interact' => $e['opens'] === 'interact',
+                    'interact' => $e['opens'] === 'interact', 'keyName' => $e['opens'] === 'key' ? $e['key'] : null, 'key' => -1,
                 ];
             } elseif ($type === 'slab') {
                 if (!self::hasExactKeys($e, self::KEYS_SLAB)) {
@@ -566,31 +575,42 @@ final class World
             } elseif ($type === 'item') {
                 $kind = $e['kind'] ?? null;
                 $hidden = array_key_exists('hidden', $e);
-                $keys = array_merge($kind === 'treasure' ? self::KEYS_TREASURE : self::KEYS_ITEM, $hidden ? ['hidden'] : []);
+                $inChest = array_key_exists('in', $e);
+                $base = array_values(array_filter($kind === 'treasure' ? self::KEYS_TREASURE : self::KEYS_ITEM, static fn (string $x): bool => !$inChest || $x !== 'cell'));
+                $keys = array_merge($base, $hidden ? ['hidden'] : [], $inChest ? ['in'] : []);
                 if (!self::hasExactKeys($e, $keys)) {
                     throw new \RangeException('item keys');
                 }
                 if (!in_array($kind, self::ITEM_KINDS, true)) {
                     throw new \RangeException('item kind');
                 }
-                if ($hidden && ($e['hidden'] !== true || $kind === 'rubble')) {
+                if ($hidden && ($e['hidden'] !== true || $kind === 'rubble' || $inChest)) {
                     throw new \RangeException('item hidden');
+                }
+                if ($inChest && (!is_string($e['in']) || $kind === 'rubble')) {
+                    throw new \RangeException('item in');
                 }
                 if ($kind === 'treasure' && (!is_int($e['value']) || $e['value'] < 1 || $e['value'] > 100000)) {
                     throw new \RangeException('item value');
                 }
-                $k = self::cellIndex($e['cell'], $w, $h);
-                $code = ord($grid[$k]);
-                if ($code !== self::ROOM && $code !== self::CORR && $code !== self::BRIDGE) {
-                    throw new \RangeException('item cell');
+                $k = -1;
+                $x = 0;
+                $z = 0;
+                if (!$inChest) {
+                    $k = self::cellIndex($e['cell'], $w, $h);
+                    $code = ord($grid[$k]);
+                    if ($code !== self::ROOM && $code !== self::CORR && $code !== self::BRIDGE) {
+                        throw new \RangeException('item cell');
+                    }
+                    [$ci, $cj] = $e['cell'];
+                    $off = $kind === 'rubble' ? 300 : 0;
+                    $x = $ci * self::CELL_MM + intdiv(self::CELL_MM, 2) - $off;
+                    $z = $cj * self::CELL_MM + intdiv(self::CELL_MM, 2) - $off;
                 }
-                [$ci, $cj] = $e['cell'];
-                $off = $kind === 'rubble' ? 300 : 0;
                 $refs[] = ['type' => 'item', 'item' => count($items)];
                 $items[] = [
-                    'id' => $e['id'], 'kind' => $kind, 'hidden' => $hidden, 'k' => $k,
-                    'x' => $ci * self::CELL_MM + intdiv(self::CELL_MM, 2) - $off, 'z' => $cj * self::CELL_MM + intdiv(self::CELL_MM, 2) - $off,
-                    'reach' => $kind === 'rubble' ? 1600 : 1700,
+                    'id' => $e['id'], 'n' => count($refs), 'kind' => $kind, 'hidden' => $hidden, 'k' => $k, 'x' => $x, 'z' => $z,
+                    'reach' => $kind === 'rubble' ? 1600 : 1700, 'chestName' => $inChest ? $e['in'] : null,
                 ];
             } elseif ($type === 'eyes') {
                 if (!self::hasExactKeys($e, self::KEYS_EYES)) {
@@ -630,6 +650,45 @@ final class World
                 $props[] = ['circle' => true, 'x' => $x, 'z' => $z, 'r' => $r, 'x0' => $x - $r, 'x1' => $x + $r, 'z0' => $z - $r, 'z1' => $z + $r];
                 $refs[] = ['type' => 'bell', 'bell' => count($bells)];
                 $bells[] = ['id' => $e['id'], 'k' => $k, 'x' => $x, 'z' => $z, 'reach' => self::BELL_REACH[$e['size'] - 1], 'set' => -1, 'index' => -1];
+            } elseif ($type === 'chest') {
+                if (!self::hasExactKeys($e, self::KEYS_CHEST)) {
+                    throw new \RangeException('chest keys');
+                }
+                $d = is_string($e['wall']) ? (self::DIRS[$e['wall']] ?? null) : null;
+                if ($d === null || ($e['style'] !== 'plain' && $e['style'] !== 'gilded') || ($e['trap'] !== 'none' && $e['trap'] !== 'needles')) {
+                    throw new \RangeException('chest wall/style/trap');
+                }
+                $k = self::cellIndex($e['cell'], $w, $h);
+                $code = ord($grid[$k]);
+                if ($code !== self::ROOM && $code !== self::CORR) {
+                    throw new \RangeException('chest cell');
+                }
+                [$ci, $cj] = $e['cell'];
+                $x = $ci * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                $z = $cj * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                [$di, $dj] = $d;
+                // R-CHEST-1: 600 along the wall, 650 towards it, 150 away from it.
+                $x0 = $di === 0 ? $x - 600 : ($di > 0 ? $x - 150 : $x - 650);
+                $x1 = $di === 0 ? $x + 600 : ($di > 0 ? $x + 650 : $x + 150);
+                $z0 = $dj === 0 ? $z - 600 : ($dj > 0 ? $z - 150 : $z - 650);
+                $z1 = $dj === 0 ? $z + 600 : ($dj > 0 ? $z + 650 : $z + 150);
+                $props[] = ['circle' => false, 'x' => $x, 'z' => $z, 'r' => 0, 'x0' => $x0, 'x1' => $x1, 'z0' => $z0, 'z1' => $z1];
+                $refs[] = ['type' => 'chest', 'chest' => count($chests)];
+                $chests[] = ['id' => $e['id'], 'k' => $k, 'x' => $x + 250 * $di, 'z' => $z + 250 * $dj, 'reach' => 2200, 'needles' => $e['trap'] === 'needles', 'contents' => []];
+            } elseif ($type === 'alcove') {
+                if (!self::hasExactKeys($e, self::KEYS_ALCOVE)) {
+                    throw new \RangeException('alcove keys');
+                }
+                if ($e['kind'] !== 'drown' && $e['kind'] !== 'tip') {
+                    throw new \RangeException('alcove kind');
+                }
+                $k = self::cellIndex($e['cell'], $w, $h);
+                if (ord($grid[$k]) !== self::ALCOVE || isset($alcoveAt[$k])) {
+                    throw new \RangeException('alcove cell');
+                }
+                $alcoveAt[$k] = count($alcoves);
+                $refs[] = ['type' => 'alcove', 'alcove' => count($alcoves)];
+                $alcoves[] = ['id' => $e['id'], 'k' => $k, 'drown' => $e['kind'] === 'drown', 'doorName' => $e['door'], 'door' => -1];
             } elseif ($type === 'lampHook' || $type === 'mirror' || $type === 'crystal') {
                 if (!self::hasExactKeys($e, $type === 'lampHook' ? self::KEYS_HOOK : ($type === 'mirror' ? self::KEYS_MIRROR : self::KEYS_CRYSTAL))) {
                     throw new \RangeException($type . ' keys');
@@ -727,10 +786,44 @@ final class World
                 throw new \RangeException('bell without a set');
             }
         }
-        // R-ITEM-1: no item on a door or slab cell (checked after the loop, whatever the order).
-        foreach ($items as $it) {
-            if (isset($doorAt[$it['k']]) || isset($slab[$it['k']])) {
-                throw new \RangeException('item cell taken');
+        // R-ITEM-1: no item on a door or slab cell (checked after the loop, whatever the order); `in` names a chest.
+        foreach ($items as $n => $it) {
+            if ($it['chestName'] === null) {
+                if (isset($doorAt[$it['k']]) || isset($slab[$it['k']])) {
+                    throw new \RangeException('item cell taken');
+                }
+                continue;
+            }
+            $r = $byId[$it['chestName']] ?? null;
+            if ($r === null || $r['type'] !== 'chest') {
+                throw new \RangeException('item in: not a chest');
+            }
+            $chests[$r['chest']]['contents'][] = $n;
+        }
+        // R-DOOR-1: a key door names a key item. R-ALCOVE-1: an alcove names a door. R-CHEST-1: chests on free cells.
+        foreach ($doors as &$d) {
+            if ($d['keyName'] !== null) {
+                $r = is_string($d['keyName']) ? ($byId[$d['keyName']] ?? null) : null;
+                if ($r === null || $r['type'] !== 'item' || $r['kind'] !== 'key') {
+                    throw new \RangeException('door key');
+                }
+                $d['key'] = $r['n'];
+            }
+            unset($d['keyName']);
+        }
+        unset($d);
+        foreach ($alcoves as &$a) {
+            $r = is_string($a['doorName']) ? ($byId[$a['doorName']] ?? null) : null;
+            if ($r === null || $r['type'] !== 'door') {
+                throw new \RangeException('alcove door');
+            }
+            $a['door'] = $r['door'];
+            unset($a['doorName']);
+        }
+        unset($a);
+        foreach ($chests as $c) {
+            if (isset($doorAt[$c['k']]) || isset($slab[$c['k']])) {
+                throw new \RangeException('chest cell taken');
             }
         }
         // R-VENT-1: every vent cell belongs to a vent.
@@ -759,7 +852,8 @@ final class World
         }
         return ['doorAt' => $doorAt, 'slab' => $slab, 'doors' => $doors, 'props' => $props, 'refs' => $refs, 'ventAt' => $ventAt, 'vents' => $vents, 'items' => $items, 'eyes' => $eyes,
             'bells' => $bells, 'bellSets' => $bellSets, 'byId' => $byId,
-            'hooks' => $hooks, 'mirrors' => $mirrors, 'crystals' => $crystals];
+            'hooks' => $hooks, 'mirrors' => $mirrors, 'crystals' => $crystals,
+            'chests' => $chests, 'alcoves' => $alcoves, 'alcoveAt' => $alcoveAt];
     }
 
     /**
@@ -819,6 +913,16 @@ final class World
         }
         $d = $this->doorAt[$k] ?? -1;
         return $d >= 0 && 20 * $state['doors'][$d]['t'] < 17 * self::DOOR_FULL;
+    }
+
+    /**
+     * R-ALCOVE-*: the alcove on cell index k, or null.
+     *
+     * @return array{id:string,k:int,drown:bool,door:int}|null
+     */
+    public function alcoveAt(int $k): ?array
+    {
+        return isset($this->alcoveAt[$k]) ? $this->alcoves[$this->alcoveAt[$k]] : null;
     }
 
     /** R-ZONE-1: zone index of cell index k, or -1. */

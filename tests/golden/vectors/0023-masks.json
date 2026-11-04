@@ -1,0 +1,958 @@
+{
+ "name": "0023-masks",
+ "core": "m0.8",
+ "seed": 23,
+ "mode": "delve",
+ "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":10,\"cells\":\"DwAMAQIADAECAAwBAgAMAQIADAEDAAECAwABAgMAAQIFAAEBAwABCAMAAQgFAAEBGQA=\"},\"start\":{\"cell\":[6,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,12,5]],\"ceil\":4200},{\"id\":\"b\",\"name\":\"B\",\"rects\":[[2,7,1,2]],\"ceil\":3000,\"checkpoint\":{\"cell\":[2,8],\"yaw\":0}}],\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[2,6],\"style\":\"mask\",\"opens\":\"key\",\"key\":\"k1\",\"face\":\"sleep\"},{\"id\":\"d2\",\"type\":\"door\",\"cell\":[6,6],\"style\":\"mask\",\"opens\":\"interact\",\"face\":\"weep\"},{\"id\":\"d3\",\"type\":\"door\",\"cell\":[10,6],\"style\":\"mask\",\"opens\":\"interact\",\"face\":\"laugh\"},{\"id\":\"c1\",\"type\":\"chest\",\"cell\":[3,1],\"wall\":\"n\",\"style\":\"gilded\",\"trap\":\"needles\"},{\"id\":\"c2\",\"type\":\"chest\",\"cell\":[9,1],\"wall\":\"n\",\"style\":\"plain\",\"trap\":\"none\"},{\"id\":\"t1\",\"type\":\"item\",\"kind\":\"treasure\",\"in\":\"c1\",\"value\":400},{\"id\":\"k1\",\"type\":\"item\",\"kind\":\"key\",\"in\":\"c2\"},{\"id\":\"f1\",\"type\":\"item\",\"kind\":\"flask\",\"in\":\"c2\"},{\"id\":\"al1\",\"type\":\"alcove\",\"cell\":[6,7],\"kind\":\"drown\",\"door\":\"d2\"},{\"id\":\"al2\",\"type\":\"alcove\",\"cell\":[10,7],\"kind\":\"tip\",\"door\":\"d3\"}],\"links\":[{\"id\":1,\"when\":{\"all\":[{\"interact\":\"d1\"},{\"not\":{\"hasItem\":\"k1\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"keyhole\"}]},{\"id\":2,\"when\":{\"all\":[{\"interact\":\"d2\"},{\"not\":{\"doorOpen\":\"d2\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"sealed\"}]},{\"id\":3,\"when\":{\"all\":[{\"interact\":\"d3\"},{\"not\":{\"doorOpen\":\"d3\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"sealed\"}]},{\"id\":4,\"when\":{\"itemTaken\":\"k1\"},\"do\":[{\"message\":\"a key\"}]}]}",
+ "inputs": [
+  [
+   68,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   52,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   10,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 4
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 4,
+    "target": 0
+   }
+  ],
+  [
+   25,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 4
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 4,
+    "target": 0
+   }
+  ],
+  [
+   22,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 4
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   73,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   22,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   10,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 1
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   75,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   160,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   10,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 5
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   160,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   75,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   10,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 1
+   }
+  ],
+  [
+   40,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   60,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   60,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   90,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   10,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 2
+   }
+  ],
+  [
+   40,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": -25,
+    "buttons": 8,
+    "target": 0
+   }
+  ],
+  [
+   100,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   80,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   6,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   10,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 3
+   }
+  ],
+  [
+   40,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   40,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   60,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 128,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   70,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   90,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   8,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   10,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 2
+   }
+  ],
+  [
+   5,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ]
+ ],
+ "ticks": 1610,
+ "hashEvery": 300,
+ "hashes": {
+  "0": "c4641f85fa951201efa374b2974b0044",
+  "300": "a584b41d68b286a85a5055ec745594ad",
+  "600": "ee273053ca613bdbda786e730015507e",
+  "900": "78185e2ff25db154b8746108b7a04c71",
+  "1200": "12bd9f1c2042932fcada804341a8301b",
+  "1500": "2eefc2adc21c0b42e55526e470867c62"
+ },
+ "final": "8561bbc4daf58a81962fec793b5a1d35",
+ "finalState": {
+  "v": 1,
+  "core": "m0.8",
+  "world": "6b3819309858490d89288aa34afa326f",
+  "mode": "delve",
+  "tick": 1610,
+  "rng": [
+   2928128963,
+   4264891321,
+   122113845,
+   3234134870
+  ],
+  "player": {
+   "x": 15595,
+   "z": 13785,
+   "vx": 2,
+   "vz": 2,
+   "rx": 17,
+   "rz": 11,
+   "yaw": 0,
+   "pitch": 0,
+   "hp": 3000,
+   "calm": 151,
+   "oil": 2916320,
+   "hooded": false,
+   "hung": -1,
+   "flasks": 2,
+   "pebbles": 10,
+   "probeCd": 0,
+   "pebbleCd": 0
+  },
+  "doors": [
+   {
+    "open": true,
+    "t": 693
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   }
+  ],
+  "deaths": 1,
+  "dead": null,
+  "sprung": [],
+  "pits": [],
+  "marked": [],
+  "bridge": [],
+  "floor": [],
+  "flying": [],
+  "taken": [
+   6,
+   7,
+   8
+  ],
+  "eyes": [],
+  "zone": 0,
+  "sealed": [
+   1,
+   2
+  ],
+  "revealed": [],
+  "mirrors": [],
+  "chests": [
+   {
+    "look": true,
+    "sprung": true,
+    "open": true
+   },
+   {
+    "look": false,
+    "sprung": false,
+    "open": true
+   }
+  ],
+  "sealing": [],
+  "bellSets": [],
+  "links": [
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     784
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     1604
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": true,
+    "pend": [],
+    "m": [
+     537
+    ]
+   }
+  ],
+  "checkpoints": [
+   {
+    "zone": 0,
+    "x": 15600,
+    "z": 10800,
+    "yaw": 0,
+    "life": {
+     "hp": 3000,
+     "oil": 3000000,
+     "hooded": false,
+     "hung": -1,
+     "flasks": 1,
+     "pebbles": 10,
+     "revealed": [],
+     "mirrors": [],
+     "chests": [
+      {
+       "look": false,
+       "sprung": false,
+       "open": false
+      },
+      {
+       "look": false,
+       "sprung": false,
+       "open": false
+      }
+     ],
+     "doors": [
+      false,
+      false,
+      false
+     ],
+     "floor": [],
+     "taken": [],
+     "bellSets": [],
+     "links": [
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "zone": 1,
+    "x": 6000,
+    "z": 20400,
+    "yaw": 0,
+    "life": {
+     "hp": 3000,
+     "oil": 2931120,
+     "hooded": false,
+     "hung": -1,
+     "flasks": 2,
+     "pebbles": 10,
+     "revealed": [],
+     "mirrors": [],
+     "chests": [
+      {
+       "look": true,
+       "sprung": true,
+       "open": true
+      },
+      {
+       "look": false,
+       "sprung": false,
+       "open": true
+      }
+     ],
+     "doors": [
+      true,
+      false,
+      false
+     ],
+     "floor": [],
+     "taken": [
+      6,
+      7,
+      8
+     ],
+     "bellSets": [],
+     "links": [
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        784
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": true,
+       "pend": [],
+       "m": [
+        537
+       ]
+      }
+     ]
+    }
+   }
+  ],
+  "cp": 1,
+  "prevButtons": 0
+ }
+}
