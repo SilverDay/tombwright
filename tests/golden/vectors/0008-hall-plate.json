@@ -1,0 +1,304 @@
+{
+ "name": "0008-hall-plate",
+ "core": "m0.4",
+ "seed": 8,
+ "mode": "delve",
+ "gdf": "{\n \"gdf\": 1,\n \"meta\": {\n  \"title\": \"Gloamhollow\",\n  \"lang\": \"en\",\n  \"authorId\": 0\n },\n \"grid\": {\n  \"w\": 44,\n  \"h\": 63,\n  \"cells\": \"OgACAQoFAgEEAAgBEgACAQoFAgEEAAgBEgACAQQFBAYCBQIBBAAIARIAAgEEBQEGAgUBBgIFAgEEAggBEgACAQIGAgUBBgIFAwYCAQQACAESAAIBAQUBBgIFAQYFBQIBBAAIARIAAgEBBQQGBQUCAQQACAESAAIBBAUDBgMFAgEIAAECFQACAQoFAgEIAAECFQABAhUAAQIVAAECFQABAhUAAQISAAkBCAAHAQEAAQISAAkBCAAHAQICEgAJAQgABwEUAAkBCAAHARQACQEIAAcBFAAJAQkAAQIBAAECAQABAhUACQEJAAECAQABCAEAAQgVAAkBCQABAhkACQEJAAECBgAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQCAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJARcACwEBAAkBFwALAQEACQEXAAsBBQABAhsACwEFAAECGwALAQUAAQIqAAMBAQQHAQEEBwEZAAcBAQQDAQEEBwEZAAMBAQQDAQEECwEqAAECKwABAisAAQIpAAIDAQECAycAAgMDAScABAMBAScAAwMCAScAAwMBAQEDJwACAwIBAQMnAAIDAQECAycAAwECAycAAQEEAycAAgEDAycAAQMBAQMDJwABAwIBAgMnAAIDAQECAycABQEpAAECKwABAisAAQIoAAcBJQAHASUABwElAAcBJQAHASUAAwEBAAMBMgA=\"\n },\n \"zones\": [\n  {\n   \"id\": \"vest\",\n   \"name\": \"the Vestibule\",\n   \"rects\": [\n    [\n     31,\n     56,\n     7,\n     6\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     60\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"hall\",\n   \"name\": \"the Hall of the Kneeling Bearers\",\n   \"rects\": [\n    [\n     32,\n     39,\n     5,\n     14\n    ]\n   ],\n   \"ceil\": 4600,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     52\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"mouth\",\n   \"name\": \"the Mouth of the Gallery\",\n   \"rects\": [\n    [\n     33,\n     33,\n     3,\n     3\n    ]\n   ],\n   \"ceil\": 3600,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     34\n    ],\n    \"yaw\": 1024\n   }\n  },\n  {\n   \"id\": \"gallery\",\n   \"name\": \"the Gallery of Waking Eyes\",\n   \"rects\": [\n    [\n     17,\n     33,\n     16,\n     3\n    ]\n   ],\n   \"ceil\": 3600\n  },\n  {\n   \"id\": \"bells\",\n   \"name\": \"the Garden of Bells\",\n   \"rects\": [\n    [\n     14,\n     21,\n     9,\n     9\n    ]\n   ],\n   \"ceil\": 5400,\n   \"checkpoint\": {\n    \"cell\": [\n     18,\n     28\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"breath\",\n   \"name\": \"the Breathing Hall\",\n   \"rects\": [\n    [\n     27,\n     24,\n     12,\n     3\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     27,\n     25\n    ],\n    \"yaw\": 3072\n   }\n  },\n  {\n   \"id\": \"vault\",\n   \"name\": \"the Mirror Vault\",\n   \"rects\": [\n    [\n     33,\n     12,\n     9,\n     9\n    ]\n   ],\n   \"ceil\": 4600,\n   \"checkpoint\": {\n    \"cell\": [\n     37,\n     19\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"script\",\n   \"name\": \"the Scriptorium\",\n   \"rects\": [\n    [\n     32,\n     1,\n     8,\n     7\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     36,\n     6\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"chasm\",\n   \"name\": \"the Chasm of the Unlit Road\",\n   \"rects\": [\n    [\n     14,\n     1,\n     14,\n     9\n    ]\n   ],\n   \"ceil\": 6500,\n   \"checkpoint\": {\n    \"cell\": [\n     26,\n     5\n    ],\n    \"yaw\": 1024\n   }\n  },\n  {\n   \"id\": \"masks\",\n   \"name\": \"the Antechamber of Masks\",\n   \"rects\": [\n    [\n     6,\n     13,\n     7,\n     5\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     10,\n     14\n    ],\n    \"yaw\": 2048\n   }\n  },\n  {\n   \"id\": \"way\",\n   \"name\": \"the Dreamer's Way\",\n   \"rects\": [\n    [\n     7,\n     19,\n     1,\n     3\n    ]\n   ],\n   \"ceil\": 3000,\n   \"checkpoint\": {\n    \"cell\": [\n     7,\n     19\n    ],\n    \"yaw\": 2048\n   }\n  },\n  {\n   \"id\": \"sanctum\",\n   \"name\": \"the Sanctum of the Candle-Eater\",\n   \"rects\": [\n    [\n     2,\n     22,\n     11,\n     11\n    ]\n   ],\n   \"ceil\": 6200,\n   \"checkpoint\": {\n    \"cell\": [\n     7,\n     24\n    ],\n    \"yaw\": 2048,\n    \"reach\": \"effect\"\n   }\n  }\n ],\n \"start\": {\n  \"cell\": [\n   34,\n   60\n  ]\n },\n \"exit\": {\n  \"cell\": [\n   7,\n   27\n  ],\n  \"requires\": \"bossDefeated\"\n },\n \"entities\": [\n  {\n   \"id\": \"vest\",\n   \"type\": \"door\",\n   \"cell\": [\n    34,\n    55\n   ],\n   \"style\": \"stone\",\n   \"opens\": \"interact\"\n  },\n  {\n   \"id\": \"bell\",\n   \"type\": \"door\",\n   \"cell\": [\n    23,\n    25\n   ],\n   \"style\": \"grate\",\n   \"opens\": \"trigger\"\n  },\n  {\n   \"id\": \"vault\",\n   \"type\": \"door\",\n   \"cell\": [\n    36,\n    11\n   ],\n   \"style\": \"stone\",\n   \"opens\": \"trigger\"\n  },\n  {\n   \"id\": \"script\",\n   \"type\": \"door\",\n   \"cell\": [\n    31,\n    4\n   ],\n   \"style\": \"stone\",\n   \"opens\": \"interact\"\n  },\n  {\n   \"id\": \"mSleep\",\n   \"type\": \"door\",\n   \"cell\": [\n    7,\n    18\n   ],\n   \"style\": \"mask\",\n   \"opens\": \"trigger\",\n   \"face\": \"sleep\"\n  },\n  {\n   \"id\": \"mWeep\",\n   \"type\": \"door\",\n   \"cell\": [\n    9,\n    18\n   ],\n   \"style\": \"mask\",\n   \"opens\": \"trigger\",\n   \"face\": \"weep\"\n  },\n  {\n   \"id\": \"mLaugh\",\n   \"type\": \"door\",\n   \"cell\": [\n    11,\n    18\n   ],\n   \"style\": \"mask\",\n   \"opens\": \"trigger\",\n   \"face\": \"laugh\"\n  },\n  {\n   \"id\": \"slab1\",\n   \"type\": \"slab\",\n   \"cell\": [\n    32,\n    51\n   ]\n  },\n  {\n   \"id\": \"slab2\",\n   \"type\": \"slab\",\n   \"cell\": [\n    35,\n    47\n   ]\n  },\n  {\n   \"id\": \"vent1\",\n   \"type\": \"vent\",\n   \"cells\": [\n    [\n     29,\n     24\n    ],\n    [\n     29,\n     25\n    ],\n    [\n     29,\n     26\n    ]\n   ],\n   \"period\": 108,\n   \"phase\": 0,\n   \"warn\": 27,\n   \"fire\": 33\n  },\n  {\n   \"id\": \"vent2\",\n   \"type\": \"vent\",\n   \"cells\": [\n    [\n     32,\n     24\n    ],\n    [\n     32,\n     25\n    ],\n    [\n     32,\n     26\n    ]\n   ],\n   \"period\": 108,\n   \"phase\": 36,\n   \"warn\": 27,\n   \"fire\": 33\n  },\n  {\n   \"id\": \"vent3\",\n   \"type\": \"vent\",\n   \"cells\": [\n    [\n     35,\n     24\n    ],\n    [\n     35,\n     25\n    ],\n    [\n     35,\n     26\n    ]\n   ],\n   \"period\": 108,\n   \"phase\": 72,\n   \"warn\": 27,\n   \"fire\": 33\n  },\n  {\n   \"id\": \"statue1\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    77520,\n    118800\n   ],\n   \"yaw\": 3072\n  },\n  {\n   \"id\": \"statue2\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    77520,\n    106800\n   ],\n   \"yaw\": 3072\n  },\n  {\n   \"id\": \"statue3\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    77520,\n    99600\n   ],\n   \"yaw\": 3072\n  },\n  {\n   \"id\": \"statue4\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    77520,\n    94800\n   ],\n   \"yaw\": 3072\n  },\n  {\n   \"id\": \"statue5\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    88080,\n    123600\n   ],\n   \"yaw\": 1024\n  },\n  {\n   \"id\": \"statue6\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    88080,\n    116400\n   ],\n   \"yaw\": 1024\n  },\n  {\n   \"id\": \"statue7\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    88080,\n    109200\n   ],\n   \"yaw\": 1024\n  },\n  {\n   \"id\": \"statue8\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    88080,\n    104400\n   ],\n   \"yaw\": 1024\n  },\n  {\n   \"id\": \"stele1\",\n   \"type\": \"prop\",\n   \"kind\": \"stele\",\n   \"pos\": [\n    87900,\n    126200\n   ],\n   \"yaw\": 3770\n  },\n  {\n   \"id\": \"tree1\",\n   \"type\": \"prop\",\n   \"kind\": \"tree\",\n   \"pos\": [\n    37200,\n    54000\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"tree2\",\n   \"type\": \"prop\",\n   \"kind\": \"tree\",\n   \"pos\": [\n    51600,\n    54000\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"tree3\",\n   \"type\": \"prop\",\n   \"kind\": \"tree\",\n   \"pos\": [\n    37200,\n    68400\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"tree4\",\n   \"type\": \"prop\",\n   \"kind\": \"tree\",\n   \"pos\": [\n    51600,\n    68400\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"post1\",\n   \"type\": \"prop\",\n   \"kind\": \"post\",\n   \"pos\": [\n    40512,\n    61200\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"post2\",\n   \"type\": \"prop\",\n   \"kind\": \"post\",\n   \"pos\": [\n    48288,\n    61200\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"plinth1\",\n   \"type\": \"prop\",\n   \"kind\": \"plinth\",\n   \"pos\": [\n    39600,\n    68400\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"lectern1\",\n   \"type\": \"prop\",\n   \"kind\": \"lectern\",\n   \"pos\": [\n    85200,\n    10800\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"sarcophagus1\",\n   \"type\": \"prop\",\n   \"kind\": \"sarcophagus\",\n   \"pos\": [\n    18000,\n    75600\n   ],\n   \"yaw\": 0\n  }\n ],\n \"links\": []\n}\n",
+ "inputs": [
+  [
+   110,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 1
+   }
+  ],
+  [
+   40,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   95,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   12,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   20,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 512,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   30,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 128,
+    "target": 0
+   }
+  ],
+  [
+   25,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 128,
+    "target": 0
+   }
+  ],
+  [
+   10,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   30,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 512,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   30,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   20,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ]
+ ],
+ "ticks": 425,
+ "hashEvery": 300,
+ "hashes": {
+  "0": "0f3c17a8d264eac965957307c5432779",
+  "300": "3b7194cf396680a590de8e934497b047"
+ },
+ "final": "159e155c3a58252be32411b83cf947f5",
+ "finalState": {
+  "v": 1,
+  "core": "m0.4",
+  "world": "cf2e7b61c4d5effd3e51474ec9317c9f",
+  "mode": "delve",
+  "tick": 425,
+  "rng": [
+   3829098881,
+   2117710239,
+   44065233,
+   3366399766
+  ],
+  "player": {
+   "x": 78642,
+   "z": 125160,
+   "vx": -2,
+   "vz": -5398,
+   "rx": -14,
+   "rz": -8,
+   "yaw": 0,
+   "pitch": 0,
+   "hp": 100,
+   "oil": 2974960,
+   "hooded": false
+  },
+  "doors": [
+   {
+    "open": true,
+    "t": 693
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   }
+  ],
+  "deaths": 1,
+  "dead": null,
+  "sprung": [
+   2277
+  ],
+  "pits": [],
+  "checkpoints": [
+   {
+    "zone": 0,
+    "x": 82800,
+    "z": 145200,
+    "yaw": 0,
+    "life": {
+     "hp": 100,
+     "oil": 3000000,
+     "hooded": false,
+     "doors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+     ]
+    }
+   },
+   {
+    "zone": 1,
+    "x": 82800,
+    "z": 126000,
+    "yaw": 0,
+    "life": {
+     "hp": 100,
+     "oil": 2982160,
+     "hooded": false,
+     "doors": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+     ]
+    }
+   }
+  ],
+  "cp": 1,
+  "prevButtons": 64
+ }
+}

@@ -6,9 +6,12 @@ import { isin, icos, TRIG_ONE } from './sine.js';
 import { rngSeed } from './rng.js';
 import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
-import { loadWorld, solidCell, assertWorld, worldProps, worldDoors, entityRef, DOOR_FULL, DOOR_STEP } from './world.js';
+import {
+  loadWorld, solidCell, assertWorld, worldProps, worldDoors, entityRef, cellCode, slabAt, ventAt, zoneAt, worldZones, startZone,
+  CELL, DOOR_FULL, DOOR_STEP,
+} from './world.js';
 
-export const CORE_VERSION = 'm0.3';
+export const CORE_VERSION = 'm0.4';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -23,6 +26,12 @@ export const OIL_BURN_HOODED = 25; // 0.025 points/s
 export const PLAYER_R_MM = 360;
 // R-ACT-1: interact reach, mm (Gloamhollow ia r 2.6 m).
 export const REACH_MM = 2600;
+// R-TRAP-1: only the inner part of a cell is armed (Gloamhollow 0.12-0.88 of 2.4 m).
+export const TRAP_LO = 288, TRAP_HI = 2112;
+// R-RISE-1: rise is accepted from 51 ticks after the death (1.7 s, Gloamhollow's death card).
+export const RISE_TICKS = 51;
+// R-RISE-1: rising tops the lantern up to 50 points.
+export const RISE_OIL = 50 * 30000;
 
 export const BTN = Object.freeze({
   strike: 1 << 0, hood: 1 << 1, probe: 1 << 2, pebble: 1 << 3,
@@ -51,7 +60,7 @@ export function init(world, seed, mode) {
   assertWorld(world);
   if (!MODES.includes(mode)) throw new Error('bad mode');
   const { i: ci, j: cj } = world.start;
-  return {
+  const st = {
     v: 1,
     core: CORE_VERSION,
     world: world.id, // R-WORLD-3
@@ -65,19 +74,53 @@ export function init(world, seed, mode) {
       hp: 100, oil: 100 * OIL_UNIT, hooded: false,
     },
     doors: worldDoors(world).map(() => ({ open: false, t: 0 })), // R-DOOR-2
+    deaths: 0,
+    dead: null,             // R-DEATH-1: { cause, at } while dead
+    sprung: [],             // R-CP-3 lessons: plates sprung during play, cell indices
+    pits: [],               // R-CP-3 lessons: hidden pits found
+    checkpoints: [],        // R-CP-1
+    cp: 0,
     prevButtons: 0,
   };
+  st.checkpoints.push({ zone: startZone(world), x: st.player.x, z: st.player.z, yaw: 0, life: lifeOf(st) });
+  return st;
+}
+
+/** R-CP-3: what a death rolls back. */
+function lifeOf(state) {
+  const p = state.player;
+  return { hp: p.hp, oil: p.oil, hooded: p.hooded, doors: state.doors.map((d) => d.open) };
 }
 
 /** Sim.step(world, state, input) -> events. Mutates state; advances exactly one tick. */
 export function step(world, state, input) {
   assertWorld(world);
   if (state.world !== world.id) throw new Error('state belongs to another world');
+  if (state.core !== CORE_VERSION) throw new Error('state from another core version'); // R-WORLD-3
+  if (state.dead !== null && state.mode === 'ironman') throw new Error('the run is over'); // R-DEATH-3
   checkInput(input);
-  const p = state.player;
   const events = [];
   const pressed = input.buttons & ~state.prevButtons; // R-INPUT-2: rising edges
 
+  if (state.dead !== null) {
+    // R-DEATH-2: while dead only rising and the doors go on.
+    if ((pressed & BTN.rise) && state.tick >= state.dead.at + RISE_TICKS) rise(world, state, input.target, events);
+    moveDoors(state);
+  } else live(world, state, input, pressed, events);
+
+  state.prevButtons = input.buttons;
+  state.tick += 1;
+  return events;
+}
+
+/** R-DOOR-3: opening doors move on. */
+function moveDoors(state) {
+  for (const d of state.doors) if (d.open && d.t < DOOR_FULL) d.t = Math.min(DOOR_FULL, d.t + DOOR_STEP);
+}
+
+/** One tick of a living player. */
+function live(world, state, input, pressed, events) {
+  const p = state.player;
   p.yaw = input.yaw;
   p.pitch = input.pitch;
 
@@ -103,10 +146,11 @@ export function step(world, state, input) {
   p.rx = ax - dx * TICK_HZ; p.rz = az - dz * TICK_HZ;
   const ox = p.x, oz = p.z;
   p.x += dx; p.z += dz;
-  pushOut(world, state.doors, p, PLAYER_R_MM, ox, oz);
-
-  // R-DOOR-3: opening doors move on.
-  for (const d of state.doors) if (d.open && d.t < DOOR_FULL) d.t = Math.min(DOOR_FULL, d.t + DOOR_STEP);
+  pushOut(world, state, p, PLAYER_R_MM, ox, oz);
+  moveDoors(state);
+  checkpoint(world, state, events);
+  const cause = trap(world, state);
+  if (cause !== null) { die(state, cause, events); return; }
 
   // R-OIL-2: hood toggles on the press; refused with no oil.
   if (pressed & BTN.hood) {
@@ -117,10 +161,71 @@ export function step(world, state, input) {
     p.oil = Math.max(0, p.oil - (p.hooded ? OIL_BURN_HOODED : OIL_BURN_OPEN));
     if (p.oil === 0) { p.hooded = false; events.push({ e: 'msg', k: 'lanternOut' }); }
   }
+}
 
-  state.prevButtons = input.buttons;
-  state.tick += 1;
-  return events;
+/** R-CP-2: entering a zone whose checkpoint lies further on than the current one. */
+function checkpoint(world, state, events) {
+  const p = state.player;
+  const z = zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM));
+  if (z < 0) return;
+  const cp = worldZones(world)[z].cp;
+  if (cp === null || !cp.enter || z <= state.checkpoints[state.cp].zone) return;
+  const entry = { zone: z, x: cp.x, z: cp.z, yaw: cp.yaw, life: lifeOf(state) };
+  let n = state.checkpoints.findIndex((c) => c.zone === z);
+  if (n < 0) { n = state.checkpoints.length; state.checkpoints.push(entry); } else state.checkpoints[n] = entry;
+  state.cp = n;
+  events.push({ e: 'checkpoint', zone: worldZones(world)[z].id });
+}
+
+/** R-TRAP-1: the trap under the player, if armed: returns the cause of death or null. Records lessons. */
+function trap(world, state) {
+  const p = state.player, i = fdiv(p.x, CELL_MM), j = fdiv(p.z, CELL_MM);
+  const lx = p.x - i * CELL_MM, lz = p.z - j * CELL_MM;
+  if (lx <= TRAP_LO || lx >= TRAP_HI || lz <= TRAP_LO || lz >= TRAP_HI) return null;
+  const k = j * world.w + i, code = cellCode(world, i, j);
+  if (code === CELL.PLATE) {
+    if (slabAt(world, k) || state.sprung.includes(k)) return null;
+    state.sprung.push(k);
+    return 'slab';
+  }
+  if (code === CELL.HPIT) { if (!state.pits.includes(k)) state.pits.push(k); return 'pit'; }
+  if (code === CELL.VOID) return 'chasm';
+  if (code === CELL.VENT && ventFiring(ventAt(world, k), state.tick)) return 'vent';
+  return null;
+}
+
+/** R-VENT-2: is the vent firing on the step that starts at tick n? */
+export function ventFiring(v, n) {
+  const u = (n + v.phase) % v.period;
+  return u >= v.warn && u < v.warn + v.fire;
+}
+
+/** R-DEATH-1 */
+function die(state, cause, events) {
+  const p = state.player;
+  state.dead = { cause, at: state.tick };
+  state.deaths += 1;
+  p.vx = 0; p.vz = 0; p.rx = 0; p.rz = 0;
+  events.push({ e: 'death', cause });
+}
+
+/** R-RISE-1: rise at the current checkpoint, or (practice) at a chosen one reached this run. */
+function rise(world, state, target, events) {
+  let n = state.cp;
+  if (state.mode === 'practice' && target !== 0) {
+    n = state.checkpoints.findIndex((c) => c.zone === target - 1);
+    if (n < 0) return;
+  }
+  const c = state.checkpoints[n], p = state.player, life = c.life;
+  state.cp = n;
+  state.doors.forEach((d, k) => { d.open = life.doors[k]; d.t = d.open ? DOOR_FULL : 0; });
+  p.hp = 100;
+  p.oil = Math.max(life.oil, RISE_OIL);
+  p.hooded = life.hooded;
+  p.x = c.x; p.z = c.z; p.yaw = c.yaw; p.pitch = 0;
+  p.vx = 0; p.vz = 0; p.rx = 0; p.rz = 0;
+  state.dead = null;
+  events.push({ e: 'rise', zone: c.zone >= 0 ? worldZones(world)[c.zone].id : null });
 }
 
 /** R-ACT-1: open an interact door within reach. Anything else does nothing. */
@@ -143,13 +248,13 @@ function interact(world, state, n, events) {
  * Bounds (R-INT-2): cells: |dx|, |dz| <= 2400 + r, so dx*r and d2 stay below 2^23. Props: |dx|, |dz|
  * <= 64*2400, so d2 < 2^36; a push needs d2 < R^2 <= 910^2, so dx*R < 2^20.
  */
-function pushOut(world, doors, e, r, ox, oz) {
+function pushOut(world, state, e, r, ox, oz) {
   const props = worldProps(world);
   for (let pass = 0; pass < 3; pass++) {
     const ci = fdiv(e.x, CELL_MM), cj = fdiv(e.z, CELL_MM);
     for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
       const gi = ci + di, gj = cj + dj;
-      if (!solidCell(world, doors, gi, gj)) continue;
+      if (!solidCell(world, state, gi, gj)) continue;
       const minx = gi * CELL_MM, minz = gj * CELL_MM;
       const qx = clamp(e.x, minx, minx + CELL_MM), qz = clamp(e.z, minz, minz + CELL_MM);
       const dx = e.x - qx, dz = e.z - qz, d2 = dx * dx + dz * dz;

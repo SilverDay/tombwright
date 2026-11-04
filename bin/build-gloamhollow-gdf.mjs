@@ -24,7 +24,7 @@ const ZONES = [
   { id: 'chasm', name: 'the Chasm of the Unlit Road', r: [14, 1, 14, 9], ceil: 6.5, cp: [26, 5, Q] },
   { id: 'masks', name: 'the Antechamber of Masks', r: [6, 13, 7, 5], ceil: 4.2, cp: [10, 14, 2 * Q] },
   { id: 'way', name: "the Dreamer's Way", r: [7, 19, 1, 3], ceil: 3.0, corr: true, cp: [7, 19, 2 * Q] },
-  { id: 'sanctum', name: 'the Sanctum of the Candle-Eater', r: [2, 22, 11, 11], ceil: 6.2, cp: [7, 24, 2 * Q] },
+  { id: 'sanctum', name: 'the Sanctum of the Candle-Eater', r: [2, 22, 11, 11], ceil: 6.2, cp: [7, 24, 2 * Q], reach: 'effect' }, // set when the boss falls (decision #20)
 ];
 const CORRS = [[34, 53], [34, 54], [34, 55], [34, 36], [34, 37], [34, 38], [18, 30], [18, 31], [18, 32],
   [23, 25], [24, 25], [25, 25], [26, 25], [37, 21], [37, 22], [37, 23], [36, 8], [36, 9], [36, 10], [36, 11],
@@ -51,6 +51,8 @@ const DOORS = [
   { id: 'mLaugh', cell: [11, 18], style: 'mask', opens: 'trigger', face: 'laugh' },
 ];
 const PRE_SLABS = [[32, 51], [35, 47]];  // plates sprung long ago, a skeleton under each
+// Vents (Gloamhollow VENTS, VENT_T 3.6 s, VENT_WARN 0.9 s, VENT_FIRE 1.1 s, phases 0 / 1.2 / 2.4 s), in ticks (R-VENT-*).
+const VENT_PHASES = [0, 36, 72];
 // Props (Gloamhollow buildProps addCircle/addBox), positions in mm. cx/cz = cell centre.
 const MM = 2400, cx = (i) => i * MM + MM / 2;
 const PROPS = [
@@ -82,13 +84,14 @@ const gdf = {
   grid: { w: W, h: H, cells: b64encode(rleEncode(cells)) },
   zones: ZONES.map((z) => ({
     id: z.id, name: z.name, rects: [z.r], ceil: Math.round(z.ceil * 1000),
-    ...(z.cp ? { checkpoint: { cell: [z.cp[0], z.cp[1]], yaw: z.cp[2] } } : {}),
+    ...(z.cp ? { checkpoint: { cell: [z.cp[0], z.cp[1]], yaw: z.cp[2], ...(z.reach ? { reach: z.reach } : {}) } } : {}),
   })),
   start: { cell: [34, 60] },
   exit: { cell: [7, 27], requires: 'bossDefeated' },
   entities: [
     ...DOORS.map((d) => ({ id: d.id, type: 'door', cell: d.cell, style: d.style, opens: d.opens, ...(d.face ? { face: d.face } : {}) })),
     ...PRE_SLABS.map(([i, j], n) => ({ id: `slab${n + 1}`, type: 'slab', cell: [i, j] })),
+    ...VENTS.map((i, n) => ({ id: `vent${n + 1}`, type: 'vent', cells: VENT_ROWS.map((j) => [i, j]), period: 108, phase: VENT_PHASES[n], warn: 27, fire: 33 })),
     ...PROPS.map(([kind, x, z, yaw], n) => ({ id: kind + PROPS.slice(0, n + 1).filter((p) => p[0] === kind).length, type: 'prop', kind, pos: [x, z], yaw })),
   ],
   links: [],

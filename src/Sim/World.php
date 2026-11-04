@@ -24,6 +24,8 @@ final class World
     public const MAX_GDF_BYTES = 262144;
     public const MAX_GDF_DEPTH = 12;
     public const MAX_ENTITIES = 400;
+    public const MAX_ZONES = 16;
+    public const MAX_CHECKPOINTS = 12;
     /** R-DOOR-2..4: door travel in [0, DOOR_FULL], +DOOR_STEP per tick while opening; solid while 20*t < 17*DOOR_FULL. */
     public const DOOR_FULL = 693;
     public const DOOR_STEP = 21;
@@ -39,6 +41,11 @@ final class World
     private const KEYS_DOOR_MASK = ['id', 'type', 'cell', 'style', 'opens', 'face'];
     private const KEYS_SLAB = ['id', 'type', 'cell'];
     private const KEYS_PROP = ['id', 'type', 'kind', 'pos', 'yaw'];
+    private const KEYS_VENT = ['id', 'type', 'cells', 'period', 'phase', 'warn', 'fire'];
+    private const KEYS_ZONE = ['id', 'name', 'rects', 'ceil'];
+    private const KEYS_ZONE_CP = ['id', 'name', 'rects', 'ceil', 'checkpoint'];
+    private const KEYS_CP = ['cell', 'yaw'];
+    private const KEYS_CP_REACH = ['cell', 'yaw', 'reach'];
     private const DOOR_STYLES = ['stone', 'grate', 'mask'];
     private const DOOR_OPENS = ['interact', 'trigger'];
     private const MASK_FACES = ['weep', 'laugh', 'sleep', 'blank'];
@@ -50,6 +57,10 @@ final class World
      * @param list<array{id:string,k:int,cx:int,cz:int,interact:bool}> $doors in entity order
      * @param list<array{circle:bool,x:int,z:int,r:int,x0:int,x1:int,z0:int,z1:int}> $props in entity order
      * @param list<array{type:string,door?:int}> $refs one per entity (R-ENT-3)
+     * @param array<int,int> $ventAt cell index -> vent index
+     * @param list<array{period:int,phase:int,warn:int,fire:int}> $vents
+     * @param array<int,int> $zoneOf cell index -> zone index (absent: no zone)
+     * @param list<array{id:string,cp:array{x:int,z:int,yaw:int,enter:bool}|null}> $zones
      */
     private function __construct(
         public readonly string $id,
@@ -63,6 +74,11 @@ final class World
         public readonly array $doors,
         public readonly array $props,
         private readonly array $refs,
+        private readonly array $ventAt,
+        private readonly array $vents,
+        private readonly array $zoneOf,
+        public readonly array $zones,
+        public readonly int $startZone,
     ) {
     }
 
@@ -240,10 +256,21 @@ final class World
         if ($sk !== self::ROOM && $sk !== self::CORR) {
             throw new \RangeException('start.cell is not floor');
         }
-        $ents = self::loadEntities($gdf, $grid, $w, $h, $sj * $w + $si);
+        $startK = $sj * $w + $si;
+        $zs = self::loadZones($gdf, $grid, $w, $h);
+        $ents = self::loadEntities($gdf, $grid, $w, $h, $startK, $zs['cpCells']);
+        // R-ZONE-2: checkpoint cells hold no door or slab (props were checked in loadEntities).
+        foreach ($zs['cpCells'] as $k) {
+            if (isset($ents['doorAt'][$k]) || isset($ents['slab'][$k])) {
+                throw new \RangeException('checkpoint cell taken');
+            }
+        }
         // R-WORLD-3: world id = first 16 bytes of SHA-256 over the canonical GDF, as hex.
         $id = substr(hash('sha256', Canonical::encode($gdf)), 0, 32);
-        return new self($id, $w, $h, $grid, $si, $sj, $ents['doorAt'], $ents['slab'], $ents['doors'], $ents['props'], $ents['refs']);
+        return new self(
+            $id, $w, $h, $grid, $si, $sj, $ents['doorAt'], $ents['slab'], $ents['doors'], $ents['props'], $ents['refs'],
+            $ents['ventAt'], $ents['vents'], $zs['zoneOf'], $zs['zones'], $zs['zoneOf'][$startK] ?? -1,
+        );
     }
 
     /** @param array<mixed> $e @param list<string> $keys */
@@ -274,13 +301,99 @@ final class World
     }
 
     /**
-     * R-ENT-*, R-DOOR-1, R-SLAB-1, R-PROP-*: validate the entity list and build the collision tables
+     * R-ZONE-1, R-ZONE-2: zones, their cells and checkpoints (mirrors loadZones in world.js).
+     *
+     * @param array<string,mixed> $gdf
+     * @return array{zoneOf:array<int,int>,zones:list<array{id:string,cp:array{x:int,z:int,yaw:int,enter:bool}|null}>,cpCells:list<int>}
+     */
+    private static function loadZones(array $gdf, string $grid, int $w, int $h): array
+    {
+        $list = array_key_exists('zones', $gdf) ? $gdf['zones'] : [];
+        if (!is_array($list) || !array_is_list($list) || count($list) > self::MAX_ZONES) {
+            throw new \RangeException('zones');
+        }
+        $zoneOf = [];
+        $ids = [];
+        $zones = [];
+        $cpCells = [];
+        foreach ($list as $zi => $z) {
+            if (!is_array($z) || array_is_list($z) || !is_string($z['id'] ?? null) || preg_match(self::ID_RE, $z['id']) !== 1) {
+                throw new \RangeException('zone id');
+            }
+            if (isset($ids[$z['id']])) {
+                throw new \RangeException('duplicate zone id');
+            }
+            $ids[$z['id']] = true;
+            if (!self::hasExactKeys($z, array_key_exists('checkpoint', $z) ? self::KEYS_ZONE_CP : self::KEYS_ZONE)) {
+                throw new \RangeException('zone keys');
+            }
+            if (!is_string($z['name'])) {
+                throw new \RangeException('zone name');
+            }
+            if (!is_int($z['ceil']) || $z['ceil'] < 3000 || $z['ceil'] > 6500) {
+                throw new \RangeException('zone ceil');
+            }
+            $rects = $z['rects'];
+            if (!is_array($rects) || !array_is_list($rects) || count($rects) < 1 || count($rects) > 8) {
+                throw new \RangeException('zone rects');
+            }
+            foreach ($rects as $r) {
+                if (!is_array($r) || !array_is_list($r) || count($r) !== 4 || count(array_filter($r, 'is_int')) !== 4) {
+                    throw new \RangeException('zone rect');
+                }
+                [$x, $y, $rw, $rh] = $r;
+                if ($rw < 1 || $rh < 1 || $x < 0 || $y < 0 || $x > $w - $rw || $y > $h - $rh) {
+                    throw new \RangeException('zone rect outside grid');
+                }
+                for ($j = $y; $j < $y + $rh; $j++) {
+                    for ($i = $x; $i < $x + $rw; $i++) {
+                        if (isset($zoneOf[$j * $w + $i])) {
+                            throw new \RangeException('zones overlap');
+                        }
+                        $zoneOf[$j * $w + $i] = $zi;
+                    }
+                }
+            }
+            $cp = null;
+            if (array_key_exists('checkpoint', $z)) {
+                $c = $z['checkpoint'];
+                if (!is_array($c) || array_is_list($c) || !self::hasExactKeys($c, array_key_exists('reach', $c) ? self::KEYS_CP_REACH : self::KEYS_CP)) {
+                    throw new \RangeException('checkpoint keys');
+                }
+                if (!is_int($c['yaw']) || $c['yaw'] < 0 || $c['yaw'] > 4095) {
+                    throw new \RangeException('checkpoint yaw');
+                }
+                if (array_key_exists('reach', $c) && $c['reach'] !== 'enter' && $c['reach'] !== 'effect') {
+                    throw new \RangeException('checkpoint reach');
+                }
+                $k = self::cellIndex($c['cell'], $w, $h);
+                $code = ord($grid[$k]);
+                if (($zoneOf[$k] ?? -1) !== $zi || ($code !== self::ROOM && $code !== self::CORR)) {
+                    throw new \RangeException('checkpoint cell');
+                }
+                if (count($cpCells) >= self::MAX_CHECKPOINTS) {
+                    throw new \RangeException('too many checkpoints');
+                }
+                $cpCells[] = $k;
+                [$ci, $cj] = $c['cell'];
+                $cp = [
+                    'x' => $ci * self::CELL_MM + intdiv(self::CELL_MM, 2), 'z' => $cj * self::CELL_MM + intdiv(self::CELL_MM, 2),
+                    'yaw' => $c['yaw'], 'enter' => ($c['reach'] ?? 'enter') !== 'effect',
+                ];
+            }
+            $zones[] = ['id' => $z['id'], 'cp' => $cp];
+        }
+        return ['zoneOf' => $zoneOf, 'zones' => $zones, 'cpCells' => $cpCells];
+    }
+
+    /**
+     * R-ENT-*, R-DOOR-1, R-SLAB-1, R-PROP-*, R-VENT-1: validate the entity list and build the collision tables
      * (mirrors loadEntities in world.js, check for check).
      *
      * @param array<string,mixed> $gdf
      * @return array{doorAt:array<int,int>,slab:array<int,true>,doors:list<array{id:string,k:int,cx:int,cz:int,interact:bool}>,props:list<array{circle:bool,x:int,z:int,r:int,x0:int,x1:int,z0:int,z1:int}>,refs:list<array{type:string,door?:int}>}
      */
-    private static function loadEntities(array $gdf, string $grid, int $w, int $h, int $startK): array
+    private static function loadEntities(array $gdf, string $grid, int $w, int $h, int $startK, array $cpCells): array
     {
         $list = array_key_exists('entities', $gdf) ? $gdf['entities'] : [];
         if (!is_array($list) || !array_is_list($list) || count($list) > self::MAX_ENTITIES) {
@@ -292,6 +405,8 @@ final class World
         $doors = [];
         $props = [];
         $refs = [];
+        $vents = [];
+        $ventAt = [];
         foreach ($list as $e) {
             if (!is_array($e) || array_is_list($e) || !is_string($e['id'] ?? null) || preg_match(self::ID_RE, $e['id']) !== 1) {
                 throw new \RangeException('entity id');
@@ -375,8 +490,42 @@ final class World
                     $props[] = ['circle' => false, 'x' => $x, 'z' => $z, 'r' => 0, 'x0' => $x - $hx, 'x1' => $x + $hx, 'z0' => $z - $hz, 'z1' => $z + $hz];
                 }
                 $refs[] = ['type' => 'prop'];
+            } elseif ($type === 'vent') {
+                if (!self::hasExactKeys($e, self::KEYS_VENT)) {
+                    throw new \RangeException('vent keys');
+                }
+                $period = $e['period'];
+                $phase = $e['phase'];
+                $warn = $e['warn'];
+                $fire = $e['fire'];
+                if (!is_int($period) || !is_int($phase) || !is_int($warn) || !is_int($fire)) {
+                    throw new \RangeException('vent timing');
+                }
+                if ($period < 2 || $period > 1800 || $phase < 0 || $phase >= $period || $warn < 0 || $fire < 1
+                    || $warn + $fire > $period || 5 * $fire > 3 * $period) {
+                    throw new \RangeException('vent timing');
+                }
+                $cells = $e['cells'];
+                if (!is_array($cells) || !array_is_list($cells) || count($cells) < 1 || count($cells) > 64) {
+                    throw new \RangeException('vent cells');
+                }
+                foreach ($cells as $c) {
+                    $k = self::cellIndex($c, $w, $h);
+                    if (ord($grid[$k]) !== self::VENT || isset($ventAt[$k])) {
+                        throw new \RangeException('vent cell');
+                    }
+                    $ventAt[$k] = count($vents);
+                }
+                $vents[] = ['period' => $period, 'phase' => $phase, 'warn' => $warn, 'fire' => $fire];
+                $refs[] = ['type' => 'vent'];
             } else {
                 throw new \RangeException('unknown entity type');
+            }
+        }
+        // R-VENT-1: every vent cell belongs to a vent.
+        for ($k = 0; $k < $w * $h; $k++) {
+            if (ord($grid[$k]) === self::VENT && !isset($ventAt[$k])) {
+                throw new \RangeException('vent cell without a vent');
             }
         }
         // R-PROP-2: every cell under the footprint's bounds is inside the grid and free floor.
@@ -391,31 +540,60 @@ final class World
                         throw new \RangeException('prop outside grid');
                     }
                     $k = $j * $w + $i;
-                    if (ord($grid[$k]) === self::WALL || isset($doorAt[$k]) || isset($slab[$k]) || $k === $startK) {
+                    if (ord($grid[$k]) === self::WALL || isset($doorAt[$k]) || isset($slab[$k]) || $k === $startK || in_array($k, $cpCells, true)) {
                         throw new \RangeException('prop footprint blocked');
                     }
                 }
             }
         }
-        return ['doorAt' => $doorAt, 'slab' => $slab, 'doors' => $doors, 'props' => $props, 'refs' => $refs];
+        return ['doorAt' => $doorAt, 'slab' => $slab, 'doors' => $doors, 'props' => $props, 'refs' => $refs, 'ventAt' => $ventAt, 'vents' => $vents];
     }
 
     /**
-     * R-MOVE-4: solid for collision. Outside the grid, wall, a door cell while R-DOOR-4 holds, a slab.
+     * R-MOVE-4: solid for collision. Outside the grid, wall, a door cell while R-DOOR-4 holds, a slab,
+     * a plate sprung during play (state.sprung, R-TRAP-2).
      *
-     * @param list<array{open:bool,t:int}> $doors state.doors
+     * @param array<string,mixed> $state
      */
-    public function solidCell(array $doors, int $i, int $j): bool
+    public function solidCell(array $state, int $i, int $j): bool
     {
         if ($i < 0 || $j < 0 || $i >= $this->w || $j >= $this->h) {
             return true;
         }
         $k = $j * $this->w + $i;
-        if (ord($this->grid[$k]) === self::WALL || isset($this->slab[$k])) {
+        if (ord($this->grid[$k]) === self::WALL || isset($this->slab[$k]) || in_array($k, $state['sprung'], true)) {
             return true;
         }
         $d = $this->doorAt[$k] ?? -1;
-        return $d >= 0 && 20 * $doors[$d]['t'] < 17 * self::DOOR_FULL;
+        return $d >= 0 && 20 * $state['doors'][$d]['t'] < 17 * self::DOOR_FULL;
+    }
+
+    /** The cell code at (i, j), which must be inside the grid. */
+    public function cellCode(int $i, int $j): int
+    {
+        return ord($this->grid[$j * $this->w + $i]);
+    }
+
+    /** True if cell index k holds a slab from the GDF (R-SLAB-1). */
+    public function slabAt(int $k): bool
+    {
+        return isset($this->slab[$k]);
+    }
+
+    /**
+     * R-VENT-*: the vent covering cell index k, or null.
+     *
+     * @return array{period:int,phase:int,warn:int,fire:int}|null
+     */
+    public function ventAt(int $k): ?array
+    {
+        return isset($this->ventAt[$k]) ? $this->vents[$this->ventAt[$k]] : null;
+    }
+
+    /** R-ZONE-1: zone index of cell index k, or -1. */
+    public function zoneAt(int $k): int
+    {
+        return $this->zoneOf[$k] ?? -1;
     }
 
     /**

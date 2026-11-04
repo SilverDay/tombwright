@@ -126,6 +126,43 @@ final class SimParityTest extends TestCase
         Canonical::encode(['x' => 1.5]);
     }
 
+    public function testStepRefusesAnotherCoreVersion(): void
+    {
+        $world = Sim::load((string) file_get_contents(__DIR__ . '/../../dungeons/gloamhollow.gdf.json'));
+        $st = Sim::init($world, 1, 'delve');
+        $st['core'] = 'm0.3';
+        $this->expectExceptionMessage('state from another core version');
+        Sim::step($world, $st, ['move' => [127, 0], 'yaw' => 0, 'pitch' => 0, 'buttons' => 0, 'target' => 0]);
+    }
+
+    /** R-VENT-2: same window as the JS test (period 60, phase 10, warn 15, fire 20). */
+    public function testVentFiring(): void
+    {
+        $on = [];
+        for ($n = 0; $n < 120; $n++) {
+            if (Sim::ventFiring(['period' => 60, 'phase' => 10, 'warn' => 15, 'fire' => 20], $n)) {
+                $on[] = $n;
+            }
+        }
+        self::assertSame(array_merge(range(5, 24), range(65, 84)), $on);
+    }
+
+    /** R-DEATH-3: an Ironman run is over after its death; the vector ends on that tick. */
+    public function testIronmanRefusesStepAfterDeath(): void
+    {
+        $v = json_decode((string) file_get_contents(self::DIR . '0009-ironman.json'), true, 64, JSON_THROW_ON_ERROR);
+        $world = Sim::load($v['gdf']);
+        $st = Sim::init($world, $v['seed'], $v['mode']);
+        foreach ($v['inputs'] as [$n, $inp]) {
+            for ($k = 0; $k < $n; $k++) {
+                Sim::step($world, $st, $inp);
+            }
+        }
+        self::assertSame('slab', $st['dead']['cause']);
+        $this->expectExceptionMessage('the run is over');
+        Sim::step($world, $st, ['move' => [0, 0], 'yaw' => 0, 'pitch' => 0, 'buttons' => Sim::BTN_RISE, 'target' => 0]);
+    }
+
     /** @return iterable<string,array{string}> */
     public static function vectors(): iterable
     {

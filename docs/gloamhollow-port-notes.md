@@ -10,8 +10,8 @@ the rules themselves go in `docs/sim-rules.md`.
 |---|---|---|
 | `updatePlayer` | walk 3.2, run 5.4, stick 4.8·m m/s; velocity lerp `min(1, dt·12)`; arrows turn 2.1 rad/s | Done provisionally (R-MOVE-*). Arrow turning becomes client-side yaw input |
 | `pushCircle` | player radius 0.36 m, 3 iterations, cells + circle/box obstacles + foes | Done for cells, doors, old slabs and decor props (R-MOVE-4, R-PROP-*). Bells, mirrors, chests and braziers bring their footprints with them; foes later |
-| `checkTraps` | the "inner" test: 0.12–0.88 of the cell | Plates, pits, void, vents, weep/laugh alcoves |
-| `ventState` | period 3.6 s, warn 0.9 s, fire 1.1 s, phases 0 / 1.2 / 2.4 s | 108 / 27 / 33 ticks; phases 0 / 36 / 72 |
+| `checkTraps` | the "inner" test: 0.12–0.88 of the cell | Done for plates, pits, void and vents (R-TRAP-1: 288 < offset < 2112 mm). Weep/laugh alcoves come with the mask doors |
+| `ventState` | period 3.6 s, warn 0.9 s, fire 1.1 s, phases 0 / 1.2 / 2.4 s | Done: `vent` entities, 108 / 27 / 33 ticks, phases 0 / 36 / 72, on the tick count (R-VENT-*) |
 | Waking eyes | wake when the lantern is lit in the gallery; die at 1.0 s; decay ×1.4 | 30 ticks; spec floor is ≥ 0.6 s |
 | Oil | burn 0.08/s open, 0.025/s hooded; flask +60; rise with oil ≥ 50 | Done (R-OIL-*) |
 | Health | regen 4/s after 5 s unhurt | |
@@ -37,4 +37,6 @@ the rules themselves go in `docs/sim-rules.md`.
 `window.__gh` exposes state and `sim(sec)`, which steps `tick(1/30)` with rendering off (`window.__ghNoRender`).
 Keep an equivalent hook for the Playwright walkthroughs (spec §15). `tests/e2e/gloamhollow-walkthrough.spec.mjs` uses `__gh.sim`, `player`, `keys`, `nearestInteract`, `interact`, `probe`, `throwPebble`, `toggleHood`, `pourOil`, `attack`, `rise`, `newGame`, `closePanel`, `ventState`, `G`, `L`, `CP`, `STATS`, `mode`, `mons`, `boss` and `eyeWake`. The ported client must keep all of them, or the driver must be adapted in the same change.
 
-Two real-time timers still sit in game logic and the walkthrough has to wait for them: the 110 ms strike delay (`setTimeout(strike)`) and the death card. Both must become tick-scheduled in the sim core.
+Two real-time timers still sit in game logic and the walkthrough has to wait for them: the 110 ms strike delay (`setTimeout(strike)`) and the death card. The death card is now a sim rule: rise is accepted from 51 ticks after the death (R-RISE-1). The strike delay must still become tick-scheduled.
+
+Checkpoints, death and rising are done (R-CP-*, R-DEATH-*, R-RISE-1): Gloamhollow's `G` becomes the checkpoint's `life`, `L` becomes the lesson lists `sprung` and `pits`. The Sanctum checkpoint waits for the `setCheckpoint` effect (decision #20).

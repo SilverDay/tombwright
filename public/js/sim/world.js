@@ -12,6 +12,8 @@ export const MAX_GRID = 64;
 export const MAX_GDF_BYTES = 262144; // spec §7.2: 256 KiB
 export const MAX_GDF_DEPTH = 12;     // spec §7.2: JSON nesting depth
 export const MAX_ENTITIES = 400;     // spec §7.2
+export const MAX_ZONES = 16;         // spec §7.2
+export const MAX_CHECKPOINTS = 12;   // spec §7.2
 const CELL_MM = 2400;
 // R-DOOR-2..4: door travel t in [0, DOOR_FULL]; +DOOR_STEP per tick while opening (33 ticks, Gloamhollow 1.1 s);
 // solid while 20*t < 17*DOOR_FULL (Gloamhollow anim < 0.85).
@@ -26,6 +28,9 @@ const PROP_KINDS = new Map([
 const KEYS = {
   door: ['id', 'type', 'cell', 'style', 'opens'], doorMask: ['id', 'type', 'cell', 'style', 'opens', 'face'],
   slab: ['id', 'type', 'cell'], prop: ['id', 'type', 'kind', 'pos', 'yaw'],
+  vent: ['id', 'type', 'cells', 'period', 'phase', 'warn', 'fire'],
+  zone: ['id', 'name', 'rects', 'ceil'], zoneCp: ['id', 'name', 'rects', 'ceil', 'checkpoint'],
+  cp: ['cell', 'yaw'], cpReach: ['cell', 'yaw', 'reach'],
 };
 const DOOR_STYLES = ['stone', 'grate', 'mask'], DOOR_OPENS = ['interact', 'trigger'], MASK_FACES = ['weep', 'laugh', 'sleep', 'blank'];
 
@@ -145,11 +150,15 @@ function worldFrom(gdf) {
   if (si < 0 || sj < 0 || si >= w || sj >= h) throw new RangeError('start.cell outside grid');
   const sk = grid[sj * w + si];
   if (sk !== CELL.ROOM && sk !== CELL.CORR) throw new RangeError('start.cell is not floor');
-  const ents = loadEntities(gdf.entities, grid, w, h, sj * w + si);
+  const startK = sj * w + si;
+  const zs = loadZones(gdf.zones, grid, w, h);
+  const ents = loadEntities(gdf.entities, grid, w, h, startK, zs.cpCells);
+  // R-ZONE-2: checkpoint cells hold no door or slab (props were checked in loadEntities).
+  for (const k of zs.cpCells) if (ents.doorAt[k] >= 0 || ents.slab[k]) throw new RangeError('checkpoint cell taken');
   // R-WORLD-3: world id = first 16 bytes of SHA-256 over the canonical GDF, as hex.
   const id = toHex(sha256(canonicalBytes(gdf)).subarray(0, 16));
   const world = Object.freeze({ id, w, h, start: Object.freeze({ i: si, j: sj }) });
-  GRIDS.set(world, { grid, ...ents });
+  GRIDS.set(world, { grid, zoneOf: zs.zoneOf, zones: zs.zones, startZone: zs.zoneOf[startK], ...ents });
   return world;
 }
 
@@ -169,12 +178,52 @@ function cellIndex(v, w, h) {
   return j * w + i;
 }
 
-/** R-ENT-*, R-DOOR-1, R-SLAB-1, R-PROP-*: validate the entity list and build the collision tables. */
-function loadEntities(list, grid, w, h, startK) {
+/** R-ZONE-1, R-ZONE-2: zones, their cells and checkpoints (door/slab/prop checks follow the entities). */
+function loadZones(list, grid, w, h) {
+  if (list === undefined) list = [];
+  if (!Array.isArray(list) || list.length > MAX_ZONES) throw new RangeError('zones');
+  const zoneOf = new Int8Array(w * h).fill(-1), ids = new Set(), zones = [], cpCells = [];
+  list.forEach((z, zi) => {
+    if (!isObj(z) || typeof z.id !== 'string' || !ID_RE.test(z.id)) throw new RangeError('zone id');
+    if (ids.has(z.id)) throw new RangeError('duplicate zone id');
+    ids.add(z.id);
+    if (!hasExactKeys(z, Object.hasOwn(z, 'checkpoint') ? KEYS.zoneCp : KEYS.zone)) throw new RangeError('zone keys');
+    if (typeof z.name !== 'string') throw new RangeError('zone name');
+    if (!isInt(z.ceil) || z.ceil < 3000 || z.ceil > 6500) throw new RangeError('zone ceil');
+    if (!Array.isArray(z.rects) || z.rects.length < 1 || z.rects.length > 8) throw new RangeError('zone rects');
+    for (const r of z.rects) {
+      if (!Array.isArray(r) || r.length !== 4 || !r.every(isInt)) throw new RangeError('zone rect');
+      const [x, y, rw, rh] = r;
+      if (rw < 1 || rh < 1 || x < 0 || y < 0 || x > w - rw || y > h - rh) throw new RangeError('zone rect outside grid');
+      for (let j = y; j < y + rh; j++) for (let i = x; i < x + rw; i++) {
+        if (zoneOf[j * w + i] >= 0) throw new RangeError('zones overlap');
+        zoneOf[j * w + i] = zi;
+      }
+    }
+    let cp = null;
+    if (Object.hasOwn(z, 'checkpoint')) {
+      const c = z.checkpoint;
+      if (!isObj(c) || !hasExactKeys(c, Object.hasOwn(c, 'reach') ? KEYS.cpReach : KEYS.cp)) throw new RangeError('checkpoint keys');
+      if (!isInt(c.yaw) || c.yaw < 0 || c.yaw > 4095) throw new RangeError('checkpoint yaw');
+      if (Object.hasOwn(c, 'reach') && c.reach !== 'enter' && c.reach !== 'effect') throw new RangeError('checkpoint reach');
+      const k = cellIndex(c.cell, w, h);
+      if (zoneOf[k] !== zi || (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR)) throw new RangeError('checkpoint cell');
+      if (cpCells.length >= MAX_CHECKPOINTS) throw new RangeError('too many checkpoints');
+      cpCells.push(k);
+      const [ci, cj] = c.cell;
+      cp = Object.freeze({ x: ci * CELL_MM + CELL_MM / 2, z: cj * CELL_MM + CELL_MM / 2, yaw: c.yaw, enter: c.reach !== 'effect' });
+    }
+    zones.push(Object.freeze({ id: z.id, cp }));
+  });
+  return { zoneOf, zones: Object.freeze(zones), cpCells };
+}
+
+/** R-ENT-*, R-DOOR-1, R-SLAB-1, R-PROP-*, R-VENT-1: validate the entity list and build the collision tables. */
+function loadEntities(list, grid, w, h, startK, cpCells) {
   if (list === undefined) list = [];
   if (!Array.isArray(list) || list.length > MAX_ENTITIES) throw new RangeError('entities');
   const ids = new Set(), doorAt = new Int16Array(w * h).fill(-1), slab = new Uint8Array(w * h);
-  const doors = [], props = [], refs = [];
+  const doors = [], props = [], refs = [], vents = [], ventAt = new Int16Array(w * h).fill(-1);
   for (const e of list) {
     if (!isObj(e) || typeof e.id !== 'string' || !ID_RE.test(e.id)) throw new RangeError('entity id');
     if (ids.has(e.id)) throw new RangeError('duplicate entity id');
@@ -215,8 +264,23 @@ function loadEntities(list, grid, w, h, startK) {
       }
       props.push(Object.freeze(p));
       refs.push({ type: 'prop' });
+    } else if (e.type === 'vent') {
+      if (!hasExactKeys(e, KEYS.vent)) throw new RangeError('vent keys');
+      const { period, phase, warn, fire, cells } = e;
+      if (![period, phase, warn, fire].every(isInt)) throw new RangeError('vent timing');
+      if (period < 2 || period > 1800 || phase < 0 || phase >= period || warn < 0 || fire < 1 || warn + fire > period || 5 * fire > 3 * period) throw new RangeError('vent timing');
+      if (!Array.isArray(cells) || cells.length < 1 || cells.length > 64) throw new RangeError('vent cells');
+      for (const c of cells) {
+        const k = cellIndex(c, w, h);
+        if (grid[k] !== CELL.VENT || ventAt[k] >= 0) throw new RangeError('vent cell');
+        ventAt[k] = vents.length;
+      }
+      vents.push(Object.freeze({ period, phase, warn, fire }));
+      refs.push({ type: 'vent' });
     } else throw new RangeError('unknown entity type');
   }
+  // R-VENT-1: every vent cell belongs to a vent.
+  for (let k = 0; k < w * h; k++) if (grid[k] === CELL.VENT && ventAt[k] < 0) throw new RangeError('vent cell without a vent');
   // R-PROP-2: every cell under the footprint's bounds is inside the grid and free floor.
   // Checked after the loop, so a prop can't overlap a door or slab listed after it.
   for (const p of props) {
@@ -224,10 +288,10 @@ function loadEntities(list, grid, w, h, startK) {
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
       if (i < 0 || j < 0 || i >= w || j >= h) throw new RangeError('prop outside grid');
       const k = j * w + i;
-      if (grid[k] === CELL.WALL || doorAt[k] >= 0 || slab[k] || k === startK) throw new RangeError('prop footprint blocked');
+      if (grid[k] === CELL.WALL || doorAt[k] >= 0 || slab[k] || k === startK || cpCells.includes(k)) throw new RangeError('prop footprint blocked');
     }
   }
-  return { doorAt, slab, doors: Object.freeze(doors), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
+  return { doorAt, slab, ventAt, vents: Object.freeze(vents), doors: Object.freeze(doors), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
 }
 
 /** Throws unless world came from loadWorld (not a look-alike object). */
@@ -236,13 +300,14 @@ export function assertWorld(world) {
 }
 
 /**
- * R-MOVE-4: solid for collision. Outside the grid, wall, a door cell while R-DOOR-4 holds, a slab.
- * doors = state.doors.
+ * R-MOVE-4: solid for collision. Outside the grid, wall, a door cell while R-DOOR-4 holds, a slab,
+ * a plate sprung during play (state.sprung).
  */
-export function solidCell(world, doors, i, j) {
+export function solidCell(world, state, i, j) {
   if (i < 0 || j < 0 || i >= world.w || j >= world.h) return true;
   const W = GRIDS.get(world), k = j * world.w + i;
-  if (W.grid[k] === CELL.WALL || W.slab[k]) return true;
+  if (W.grid[k] === CELL.WALL || W.slab[k] || state.sprung.includes(k)) return true; // R-TRAP-2
+  const doors = state.doors;
   const d = W.doorAt[k];
   return d >= 0 && 20 * doors[d].t < 17 * DOOR_FULL;
 }
@@ -252,6 +317,20 @@ export function worldProps(world) { return GRIDS.get(world).props; }
 
 /** The doors, in entity order (frozen): { id, k, cx, cz, interact }. */
 export function worldDoors(world) { return GRIDS.get(world).doors; }
+
+/** The cell code at (i, j), which must be inside the grid. */
+export function cellCode(world, i, j) { return GRIDS.get(world).grid[j * world.w + i]; }
+
+/** True if cell index k holds a slab from the GDF (R-SLAB-1). */
+export function slabAt(world, k) { return GRIDS.get(world).slab[k] === 1; }
+
+/** R-VENT-*: the vent covering cell index k, or undefined. */
+export function ventAt(world, k) { const W = GRIDS.get(world), v = W.ventAt[k]; return v >= 0 ? W.vents[v] : undefined; }
+
+/** R-ZONE-1: zone index of cell k (−1 for none), the zones ({ id, cp }), and the start cell's zone. */
+export function zoneAt(world, k) { return GRIDS.get(world).zoneOf[k]; }
+export function worldZones(world) { return GRIDS.get(world).zones; }
+export function startZone(world) { return GRIDS.get(world).startZone; }
 
 /** R-ENT-3: the entity with number n (1-based), or undefined. */
 export function entityRef(world, n) { return n >= 1 ? GRIDS.get(world).refs[n - 1] : undefined; }

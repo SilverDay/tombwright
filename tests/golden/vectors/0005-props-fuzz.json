@@ -1,6 +1,6 @@
 {
  "name": "0005-props-fuzz",
- "core": "m0.3",
+ "core": "m0.4",
  "seed": 11,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":12,\"h\":10,\"cells\":\"DQACAQECBAEBAgIBAgAKAQIACgECAAoBAgAKAQIACAEBAwEBAgAKAQIACgENAA==\"},\"start\":{\"cell\":[5,7]},\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[3,1],\"style\":\"stone\",\"opens\":\"interact\"},{\"id\":\"d2\",\"type\":\"door\",\"cell\":[8,1],\"style\":\"mask\",\"opens\":\"trigger\",\"face\":\"blank\"},{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[9,6]},{\"id\":\"p1\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[6000,10800],\"yaw\":1024},{\"id\":\"p2\",\"type\":\"prop\",\"kind\":\"stele\",\"pos\":[11100,8600],\"yaw\":3770},{\"id\":\"p3\",\"type\":\"prop\",\"kind\":\"tree\",\"pos\":[15600,10800],\"yaw\":0},{\"id\":\"p4\",\"type\":\"prop\",\"kind\":\"post\",\"pos\":[17100,6000],\"yaw\":0},{\"id\":\"p5\",\"type\":\"prop\",\"kind\":\"plinth\",\"pos\":[22800,8400],\"yaw\":0},{\"id\":\"p6\",\"type\":\"prop\",\"kind\":\"lectern\",\"pos\":[8400,15600],\"yaw\":2048},{\"id\":\"p7\",\"type\":\"prop\",\"kind\":\"sarcophagus\",\"pos\":[18000,15600],\"yaw\":1024},{\"id\":\"p8\",\"type\":\"prop\",\"kind\":\"sarcophagus\",\"pos\":[24000,20000],\"yaw\":0}]}",
@@ -3818,32 +3818,32 @@
  "ticks": 6011,
  "hashEvery": 300,
  "hashes": {
-  "0": "7a4ad4a74e183eaf6fc2188e1944dcc8",
-  "300": "bf0764ec68ad7db964b7bc605a148ddc",
-  "600": "e25565b1302e7695982bd0e7afe02eab",
-  "900": "8a13591f85d0e83b8a4e331c37726cac",
-  "1200": "3b35c0b127011b114cd2e080dea8ad49",
-  "1500": "1bae81504dba62e81261f6d46bec0a1f",
-  "1800": "95baebb3c04262aa23206df4ff900496",
-  "2100": "ee7cc6f8e89732733bba41b636804a6c",
-  "2400": "4b46ff45affe656d45b75bf1fdd9ee97",
-  "2700": "98e789bbb165a1bdebdfd4027ae7a390",
-  "3000": "2f5bbc235294bc38ac566e287861cd32",
-  "3300": "9a161ca09bfccbf375e5428233c51a44",
-  "3600": "94f3d280b66340cd654dc06195c5e6c9",
-  "3900": "674891b67959ab56bc93f8d12a1756c5",
-  "4200": "6cad5101dfc2df047f57987afce09d31",
-  "4500": "0297b003b6d6747b63266b5f21523445",
-  "4800": "c9b6496549d7dc7642a2f9d74ff3410d",
-  "5100": "e3922a0a10842f4f1edf0b58bcb7e56d",
-  "5400": "6559d3bf71b4462af1e45db44dedc181",
-  "5700": "91094a3df6d772b5ee2621dcb60f238f",
-  "6000": "d9e60af687c165da2ddb4e7faf50ce31"
+  "0": "576af4b1651e43c10455f5d684f251e8",
+  "300": "5d5b98137b3a1748902059442c21ff64",
+  "600": "84190718fc6ab9418ead23fe1a467f8e",
+  "900": "0a5b3384f31d3d466a4b0288227dabe4",
+  "1200": "8e044b519eb8ec79902b050b791813ed",
+  "1500": "f4d81319e9d99d8380dac698697132fe",
+  "1800": "a090b6a87cb5e2e72003bc345f45fd48",
+  "2100": "ae99031c128c90355b59ab7a434369c0",
+  "2400": "4f0cbb6a309fff902678480b2c7999a7",
+  "2700": "17aae8550f7dc1574517db5bf3fe4761",
+  "3000": "0f6a56039eb5f1562f4bc01ad83f9789",
+  "3300": "9adc3e26ac458cd287410ebdc4ce3072",
+  "3600": "2959934c92f8c4b5baf41922bf6d4473",
+  "3900": "f9f86fcc520625dfcc2a16b220868377",
+  "4200": "b44345038822d0798b3488e5067ce691",
+  "4500": "2222f7f48d93a8d76c248d0003f5b07d",
+  "4800": "0cb49e622d3ba72250460478278a4224",
+  "5100": "0599c3c6629807cb8c57d972f1286a0a",
+  "5400": "1cbe5bc4ff83b20f0881943be0d7a2a3",
+  "5700": "d6bb7e40466ff699531371929f886904",
+  "6000": "06e81ac1d06ae173818da72113d01024"
  },
- "final": "8804f5f8dc226ef64a92b56b0fc074c7",
+ "final": "f7479935040ea023993453c820cea8bd",
  "finalState": {
   "v": 1,
-  "core": "m0.3",
+  "core": "m0.4",
   "world": "2cd11d250d4a991ae1a5d9283803c59b",
   "mode": "practice",
   "tick": 6011,
@@ -3876,6 +3876,28 @@
     "t": 0
    }
   ],
+  "deaths": 0,
+  "dead": null,
+  "sprung": [],
+  "pits": [],
+  "checkpoints": [
+   {
+    "zone": -1,
+    "x": 13200,
+    "z": 18000,
+    "yaw": 0,
+    "life": {
+     "hp": 100,
+     "oil": 3000000,
+     "hooded": false,
+     "doors": [
+      false,
+      false
+     ]
+    }
+   }
+  ],
+  "cp": 0,
   "prevButtons": 172
  }
 }

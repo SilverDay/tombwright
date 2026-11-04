@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.3';
+    public const CORE_VERSION = 'm0.4';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -21,6 +21,12 @@ final class Sim
     public const PLAYER_R_MM = 360;
     /** R-ACT-1: interact reach, mm (Gloamhollow ia r 2.6 m). */
     public const REACH_MM = 2600;
+    /** R-TRAP-1: only the inner part of a cell is armed (Gloamhollow 0.12-0.88 of 2.4 m). */
+    public const TRAP_LO = 288;
+    public const TRAP_HI = 2112;
+    /** R-RISE-1: rise is accepted from 51 ticks after the death; rising tops the lantern up to 50 points. */
+    public const RISE_TICKS = 51;
+    public const RISE_OIL = 50 * 30000;
 
     public const BTN_STRIKE = 1 << 0;
     public const BTN_HOOD = 1 << 1;
@@ -76,7 +82,7 @@ final class Sim
         }
         $ci = $world->startI;
         $cj = $world->startJ;
-        return [
+        $st = [
             'v' => 1,
             'core' => self::CORE_VERSION,
             'world' => $world->id,
@@ -90,7 +96,32 @@ final class Sim
                 'hp' => 100, 'oil' => 100 * self::OIL_UNIT, 'hooded' => false,
             ],
             'doors' => array_map(static fn (): array => ['open' => false, 't' => 0], $world->doors), // R-DOOR-2
+            'deaths' => 0,
+            'dead' => null,       // R-DEATH-1
+            'sprung' => [],       // R-CP-3 lessons
+            'pits' => [],
+            'checkpoints' => [],  // R-CP-1
+            'cp' => 0,
             'prevButtons' => 0,
+        ];
+        $st['checkpoints'][] = [
+            'zone' => $world->startZone, 'x' => $st['player']['x'], 'z' => $st['player']['z'], 'yaw' => 0, 'life' => self::lifeOf($st),
+        ];
+        return $st;
+    }
+
+    /**
+     * R-CP-3: what a death rolls back.
+     *
+     * @param array<string,mixed> $state
+     * @return array<string,mixed>
+     */
+    private static function lifeOf(array $state): array
+    {
+        $p = $state['player'];
+        return [
+            'hp' => $p['hp'], 'oil' => $p['oil'], 'hooded' => $p['hooded'],
+            'doors' => array_map(static fn (array $d): bool => $d['open'], $state['doors']),
         ];
     }
 
@@ -104,11 +135,56 @@ final class Sim
         if ($state['world'] !== $world->id) {
             throw new \InvalidArgumentException('state belongs to another world');
         }
+        if (($state['core'] ?? null) !== self::CORE_VERSION) {
+            throw new \InvalidArgumentException('state from another core version'); // R-WORLD-3
+        }
+        if ($state['dead'] !== null && $state['mode'] === 'ironman') {
+            throw new \InvalidArgumentException('the run is over'); // R-DEATH-3
+        }
         self::checkInput($input);
-        $p = &$state['player'];
         $events = [];
         $pressed = $input['buttons'] & ~$state['prevButtons'];
 
+        if ($state['dead'] !== null) {
+            // R-DEATH-2: while dead only rising and the doors go on.
+            if (($pressed & self::BTN_RISE) && $state['tick'] >= $state['dead']['at'] + self::RISE_TICKS) {
+                self::rise($world, $state, $input['target'], $events);
+            }
+            self::moveDoors($state);
+        } else {
+            self::live($world, $state, $input, $pressed, $events);
+        }
+
+        $state['prevButtons'] = $input['buttons'];
+        $state['tick'] += 1;
+        return $events;
+    }
+
+    /**
+     * R-DOOR-3: opening doors move on.
+     *
+     * @param array<string,mixed> $state
+     */
+    private static function moveDoors(array &$state): void
+    {
+        foreach ($state['doors'] as &$d) {
+            if ($d['open'] && $d['t'] < World::DOOR_FULL) {
+                $d['t'] = min(World::DOOR_FULL, $d['t'] + World::DOOR_STEP);
+            }
+        }
+        unset($d);
+    }
+
+    /**
+     * One tick of a living player.
+     *
+     * @param array<string,mixed> $state
+     * @param array<string,mixed> $input
+     * @param list<array<string,mixed>> $events
+     */
+    private static function live(World $world, array &$state, array $input, int $pressed, array &$events): void
+    {
+        $p = &$state['player'];
         $p['yaw'] = $input['yaw'];
         $p['pitch'] = $input['pitch'];
         unset($p);
@@ -144,15 +220,16 @@ final class Sim
         $oz = $p['z'];
         $p['x'] += $dx;
         $p['z'] += $dz;
-        self::pushOut($world, $state['doors'], $p, self::PLAYER_R_MM, $ox, $oz);
-
-        // R-DOOR-3: opening doors move on.
-        foreach ($state['doors'] as &$d) {
-            if ($d['open'] && $d['t'] < World::DOOR_FULL) {
-                $d['t'] = min(World::DOOR_FULL, $d['t'] + World::DOOR_STEP);
-            }
+        self::pushOut($world, $state, $p, self::PLAYER_R_MM, $ox, $oz);
+        unset($p);
+        self::moveDoors($state);
+        self::checkpoint($world, $state, $events);
+        $cause = self::trap($world, $state);
+        if ($cause !== null) {
+            self::die($state, $cause, $events);
+            return;
         }
-        unset($d);
+        $p = &$state['player'];
 
         if ($pressed & self::BTN_HOOD) {
             if ($p['oil'] > 0) {
@@ -170,10 +247,154 @@ final class Sim
             }
         }
         unset($p);
+    }
 
-        $state['prevButtons'] = $input['buttons'];
-        $state['tick'] += 1;
-        return $events;
+    /**
+     * R-CP-2: entering a zone whose checkpoint lies further on than the current one.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function checkpoint(World $world, array &$state, array &$events): void
+    {
+        $p = $state['player'];
+        $z = $world->zoneAt(IntMath::fdiv($p['z'], self::CELL_MM) * $world->w + IntMath::fdiv($p['x'], self::CELL_MM));
+        if ($z < 0) {
+            return;
+        }
+        $cp = $world->zones[$z]['cp'];
+        if ($cp === null || !$cp['enter'] || $z <= $state['checkpoints'][$state['cp']]['zone']) {
+            return;
+        }
+        $entry = ['zone' => $z, 'x' => $cp['x'], 'z' => $cp['z'], 'yaw' => $cp['yaw'], 'life' => self::lifeOf($state)];
+        $n = -1;
+        foreach ($state['checkpoints'] as $k => $c) {
+            if ($c['zone'] === $z) {
+                $n = $k;
+                break;
+            }
+        }
+        if ($n < 0) {
+            $n = count($state['checkpoints']);
+            $state['checkpoints'][] = $entry;
+        } else {
+            $state['checkpoints'][$n] = $entry;
+        }
+        $state['cp'] = $n;
+        $events[] = ['e' => 'checkpoint', 'zone' => $world->zones[$z]['id']];
+    }
+
+    /**
+     * R-TRAP-1: the trap under the player, if armed: returns the cause of death or null. Records lessons.
+     *
+     * @param array<string,mixed> $state
+     */
+    private static function trap(World $world, array &$state): ?string
+    {
+        $p = $state['player'];
+        $i = IntMath::fdiv($p['x'], self::CELL_MM);
+        $j = IntMath::fdiv($p['z'], self::CELL_MM);
+        $lx = $p['x'] - $i * self::CELL_MM;
+        $lz = $p['z'] - $j * self::CELL_MM;
+        if ($lx <= self::TRAP_LO || $lx >= self::TRAP_HI || $lz <= self::TRAP_LO || $lz >= self::TRAP_HI) {
+            return null;
+        }
+        $k = $j * $world->w + $i;
+        $code = $world->cellCode($i, $j);
+        if ($code === World::PLATE) {
+            if ($world->slabAt($k) || in_array($k, $state['sprung'], true)) {
+                return null;
+            }
+            $state['sprung'][] = $k;
+            return 'slab';
+        }
+        if ($code === World::HPIT) {
+            if (!in_array($k, $state['pits'], true)) {
+                $state['pits'][] = $k;
+            }
+            return 'pit';
+        }
+        if ($code === World::VOID) {
+            return 'chasm';
+        }
+        if ($code === World::VENT && self::ventFiring($world->ventAt($k), $state['tick'])) {
+            return 'vent';
+        }
+        return null;
+    }
+
+    /**
+     * R-VENT-2: is the vent firing on the step that starts at tick n?
+     *
+     * @param array{period:int,phase:int,warn:int,fire:int} $v
+     */
+    public static function ventFiring(array $v, int $n): bool
+    {
+        $u = ($n + $v['phase']) % $v['period'];
+        return $u >= $v['warn'] && $u < $v['warn'] + $v['fire'];
+    }
+
+    /**
+     * R-DEATH-1
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function die(array &$state, string $cause, array &$events): void
+    {
+        $state['dead'] = ['cause' => $cause, 'at' => $state['tick']];
+        $state['deaths'] += 1;
+        $state['player']['vx'] = 0;
+        $state['player']['vz'] = 0;
+        $state['player']['rx'] = 0;
+        $state['player']['rz'] = 0;
+        $events[] = ['e' => 'death', 'cause' => $cause];
+    }
+
+    /**
+     * R-RISE-1: rise at the current checkpoint, or (practice) at a chosen one reached this run.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function rise(World $world, array &$state, int $target, array &$events): void
+    {
+        $n = $state['cp'];
+        if ($state['mode'] === 'practice' && $target !== 0) {
+            $n = -1;
+            foreach ($state['checkpoints'] as $k => $c) {
+                if ($c['zone'] === $target - 1) {
+                    $n = $k;
+                    break;
+                }
+            }
+            if ($n < 0) {
+                return;
+            }
+        }
+        $c = $state['checkpoints'][$n];
+        $life = $c['life'];
+        $state['cp'] = $n;
+        foreach ($state['doors'] as $k => &$d) {
+            $d['open'] = $life['doors'][$k];
+            $d['t'] = $d['open'] ? World::DOOR_FULL : 0;
+        }
+        unset($d);
+        $p = &$state['player'];
+        $p['hp'] = 100;
+        $p['oil'] = max($life['oil'], self::RISE_OIL);
+        $p['hooded'] = $life['hooded'];
+        $p['x'] = $c['x'];
+        $p['z'] = $c['z'];
+        $p['yaw'] = $c['yaw'];
+        $p['pitch'] = 0;
+        $p['vx'] = 0;
+        $p['vz'] = 0;
+        $p['rx'] = 0;
+        $p['rz'] = 0;
+        unset($p);
+        $state['dead'] = null;
+        $events[] = ['e' => 'rise', 'zone' => $c['zone'] >= 0 ? $world->zones[$c['zone']]['id'] : null];
     }
 
     /**
@@ -208,10 +429,10 @@ final class Sim
      * Bounds (R-INT-2): cells: |dx|, |dz| <= 2400 + r, so dx*r and d2 stay below 2^23. Props: |dx|, |dz|
      * <= 64*2400, so d2 < 2^36; a push needs d2 < R^2 <= 910^2, so dx*R < 2^20.
      *
-     * @param list<array{open:bool,t:int}> $doors
+     * @param array<string,mixed> $state read only (doors, sprung)
      * @param array<string,mixed> $e
      */
-    private static function pushOut(World $world, array $doors, array &$e, int $r, int $ox, int $oz): void
+    private static function pushOut(World $world, array $state, array &$e, int $r, int $ox, int $oz): void
     {
         for ($pass = 0; $pass < 3; $pass++) {
             $ci = IntMath::fdiv($e['x'], self::CELL_MM);
@@ -220,7 +441,7 @@ final class Sim
                 for ($di = -1; $di <= 1; $di++) {
                     $gi = $ci + $di;
                     $gj = $cj + $dj;
-                    if (!$world->solidCell($doors, $gi, $gj)) {
+                    if (!$world->solidCell($state, $gi, $gj)) {
                         continue;
                     }
                     $minx = $gi * self::CELL_MM;

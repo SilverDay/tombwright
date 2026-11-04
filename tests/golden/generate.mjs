@@ -90,15 +90,53 @@ function propRoom() {
   });
 }
 
+// Traps, checkpoints, death and rising (R-ZONE-*, R-CP-*, R-TRAP-*, R-VENT-*, R-DEATH-*, R-RISE-1). A 14x9 room in
+// four zones side by side: a (start, no checkpoint of its own), b (checkpoint 5,4), c (checkpoint 8,4) and d
+// (checkpoint 11,4, reached only by an effect). One trap of each kind, an old slab on a plate, a bridge, an alcove.
+export function trapRoom() {
+  const w = 14, h = 9, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  set(5, 2, 3); set(2, 2, 3); set(5, 6, 4); set(8, 2, 5); set(8, 6, 7); set(8, 7, 7); set(11, 2, 6); set(11, 6, 8);
+  return JSON.stringify({
+    gdf: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: [2, 4] },
+    zones: [
+      { id: 'a', name: 'A', rects: [[1, 1, 3, 7]], ceil: 4200 },
+      { id: 'b', name: 'B', rects: [[4, 1, 3, 7]], ceil: 4200, checkpoint: { cell: [5, 4], yaw: 3072 } },
+      { id: 'c', name: 'C', rects: [[7, 1, 3, 4], [7, 5, 3, 3]], ceil: 6500, checkpoint: { cell: [8, 4], yaw: 3072, reach: 'enter' } },
+      { id: 'd', name: 'D', rects: [[10, 1, 3, 7]], ceil: 3000, checkpoint: { cell: [11, 4], yaw: 1024, reach: 'effect' } },
+    ],
+    entities: [
+      { id: 's1', type: 'slab', cell: [2, 2] },
+      { id: 'v1', type: 'vent', cells: [[8, 6], [8, 7]], period: 60, phase: 10, warn: 15, fire: 20 },
+    ],
+  });
+}
+
+// Gloamhollow's Hall: open the door, reach the Hall checkpoint, step on the plate at (33, 51) and die; press
+// rise too early (ignored), rise, then walk back into the sprung plate, which is solid now.
+const hall = [
+  [110, I([127, 0])], [1, I([0, 0], 0, X, 0, 1)], [40, I()], [95, I([127, 0])],
+  [12, I([127, 0], 1024)], [20, I([127, 0], 512)],
+  [30, I()], [1, I([0, 0], 0, B.rise)], [25, I()], [1, I([0, 0], 0, B.rise)], [10, I()],
+  [30, I([127, 0], 512)], [30, I([127, 0], 1024)], [20, I([127, 0], 0, B.run)],
+];
+// Ironman: walk from the start through b's checkpoint, north onto the plate at (5, 2), and die. The log ends
+// on the death tick: step refuses the state afterwards (R-DEATH-3).
+const ironman = [[66, I([127, 0], 3072)], [38, I([127, 0], 0)]];
+
 // Vectors carry the GDF as its exact text: Sim.load takes bytes (R-GDF-0).
 export const GLOAMHOLLOW = readFileSync(ROOT + 'dungeons/gloamhollow.gdf.json', 'utf8');
 const utf8 = (s) => new TextEncoder().encode(s);
 const VECTORS = {
   '0001-walk': { gdf: GLOAMHOLLOW, seed: 1, mode: 'delve', inputs: walk },
-  '0002-fuzz': { gdf: GLOAMHOLLOW, seed: 0xC0FFEE, mode: 'ironman', inputs: fuzz(0xBADC0DE, 3000) },
+  '0002-fuzz': { gdf: GLOAMHOLLOW, seed: 0xC0FFEE, mode: 'delve', inputs: fuzz(0xBADC0DE, 3000) },
   '0003-walls': { gdf: GLOAMHOLLOW, seed: 7, mode: 'practice', inputs: walls },
   '0004-doors': { gdf: GLOAMHOLLOW, seed: 3, mode: 'delve', inputs: doors },
   '0005-props-fuzz': { gdf: propRoom(), seed: 11, mode: 'practice', inputs: fuzz(0x5EED, 6000, 14) },
+  '0006-traps-fuzz': { gdf: trapRoom(), seed: 5, mode: 'delve', inputs: fuzz(0x7EA9, 9000, 6) },
+  '0007-practice-fuzz': { gdf: trapRoom(), seed: 6, mode: 'practice', inputs: fuzz(0xC4EC, 9000, 6) },
+  '0008-hall-plate': { gdf: GLOAMHOLLOW, seed: 8, mode: 'delve', inputs: hall },
+  '0009-ironman': { gdf: trapRoom(), seed: 9, mode: 'ironman', inputs: ironman },
 };
 
 export function replay(gdf, seed, mode, rle, each) {
@@ -150,7 +188,7 @@ function gdfCases() {
     raw('not an object', utf8('[1,2]')), raw('null', utf8('null')), raw('trailing garbage', utf8(text(r) + 'x')),
     raw('too large', utf8(text(r).replace('"gdf":1', '"gdf":1,"pad":"' + 'a'.repeat(262144) + '"'))),
   ];
-  cases.push(...entityCases(raw));
+  cases.push(...entityCases(raw), ...zoneCases(raw));
   return cases.map((c) => { try { return { ...c, ok: true, id: Sim.load(b64decodeBytes(c.bytes)).id }; } catch { return { ...c, ok: false }; } });
 }
 
@@ -201,6 +239,52 @@ function entityCases(raw) {
     edit('ents: key 0', [slab()], '"cell":[5,3]', '"cell":[5,3],"0":1'),
     edit('ents: duplicate key', [slab()], '"cell":[5,3]', '"cell":[4,3],"cell":[5,3]'),
     edit('ents: pos past 2^53', [prop()], '"pos":[9000,9000]', '"pos":[9007199254740993,9000]'),
+  ];
+}
+
+// Zones, checkpoints and vents (R-ZONE-*, R-VENT-1): edits of the trap room, which loads as it stands.
+function zoneCases(raw) {
+  const base = JSON.parse(trapRoom());
+  const one = (name, f) => { const g = structuredClone(base); f(g); return raw(name, utf8(JSON.stringify(g))); };
+  const z = (n) => (g) => g.zones[n], vent = (g) => g.entities[1];
+  const zone = (n, o) => (g) => Object.assign(g.zones[n], o), cp = (n, o) => (g) => Object.assign(g.zones[n].checkpoint, o);
+  const many = (n) => Array.from({ length: n }, (_, k) => ({ id: 'q' + k, name: '', rects: [[12, 7, 1, 1]], ceil: 3000 }));
+  const vt = (o) => (g) => Object.assign(vent(g), o);
+  return [
+    one('zones: trap room', () => {}), one('zones: none', (g) => { delete g.zones; }), one('zones: empty', (g) => { g.zones = []; }),
+    one('zones: 16', (g) => { g.zones = many(16).map((q, k) => ({ ...q, rects: [[1 + (k % 12), 1 + ((k / 12) | 0), 1, 1]] })); }),
+    one('zones: 17', (g) => { g.zones = many(17).map((q, k) => ({ ...q, rects: [[1 + (k % 12), 1 + ((k / 12) | 0), 1, 1]] })); }),
+    one('zones: object', (g) => { g.zones = { a: 1 }; }), one('zones: zone is list', (g) => { g.zones[0] = [1]; }),
+    one('zones: duplicate id', zone(1, { id: 'a' })), one('zones: id clash with entity ok', zone(0, { id: 's1' })), one('zones: bad id', zone(0, { id: '9a' })),
+    one('zones: name number', zone(0, { name: 3 })), one('zones: extra key', zone(0, { tint: 1 })), one('zones: no ceil', (g) => { delete z(0)(g).ceil; }),
+    one('zones: ceil 2999', zone(0, { ceil: 2999 })), one('zones: ceil 6501', zone(0, { ceil: 6501 })),
+    one('zones: no rects', zone(0, { rects: [] })), one('zones: 9 rects', zone(0, { rects: Array.from({ length: 9 }, (_, k) => [1 + (k % 3), 1 + ((k / 3) | 0), 1, 1]) })),
+    one('zones: 9 cells in 8 rects ok', zone(0, { rects: Array.from({ length: 8 }, (_, k) => [1 + (k % 3), 1 + ((k / 3) | 0), k === 7 ? 2 : 1, 1]) })),
+    one('zones: 8 rects', zone(0, { rects: Array.from({ length: 7 }, (_, k) => [1, 1 + k, 3, 1]).concat([[13, 0, 1, 1]]) })),
+    one('zones: rect 3 numbers', zone(0, { rects: [[1, 1, 3]] })), one('zones: rect zero width', zone(0, { rects: [[1, 1, 0, 7]] })),
+    one('zones: rect past edge', zone(0, { rects: [[1, 1, 3, 9]] })), one('zones: rect negative', zone(0, { rects: [[-1, 1, 3, 7]] })),
+    one('zones: rect on border ok', zone(0, { rects: [[0, 0, 4, 9]] })), one('zones: overlap', zone(0, { rects: [[1, 1, 4, 7]] })),
+    one('zones: overlap inside one zone', zone(0, { rects: [[1, 1, 3, 7], [2, 2, 1, 1]] })),
+    one('zones: checkpoint null', zone(1, { checkpoint: null })), one('zones: checkpoint list', zone(1, { checkpoint: [5, 4] })),
+    one('zones: checkpoint extra key', cp(1, { zone: 'b' })), one('zones: checkpoint no yaw', (g) => { delete z(1)(g).checkpoint.yaw; }),
+    one('zones: checkpoint yaw 4096', cp(1, { yaw: 4096 })), one('zones: reach bad', cp(1, { reach: 'touch' })), one('zones: reach null', cp(1, { reach: null })),
+    one('zones: checkpoint in other zone', cp(1, { cell: [8, 4] })), one('zones: checkpoint on plate', cp(1, { cell: [5, 2] })),
+    one('zones: checkpoint outside zones', (g) => { z(1)(g).rects = [[4, 1, 3, 6]]; z(1)(g).checkpoint.cell = [5, 7]; }),
+    one('zones: checkpoint on wall', (g) => { z(0)(g).rects = [[0, 0, 4, 9]]; z(0)(g).checkpoint = { cell: [0, 4], yaw: 0 }; }),
+    one('zones: checkpoint on start', (g) => { z(0)(g).checkpoint = { cell: [2, 4], yaw: 0 }; }),
+    one('zones: checkpoint under prop', (g) => { g.entities.push({ id: 'p1', type: 'prop', kind: 'post', pos: [13200, 10800], yaw: 0 }); }),
+    one('zones: prop next to checkpoint', (g) => { g.entities.push({ id: 'p1', type: 'prop', kind: 'post', pos: [13200, 12500], yaw: 0 }); }),
+    one('zones: checkpoint on door', (g) => { g.entities.push({ id: 'd1', type: 'door', cell: [5, 4], style: 'stone', opens: 'interact' }); }),
+    one('zones: 13 checkpoints', (g) => { g.zones = many(13).map((q, k) => ({ ...q, rects: [[1 + (k % 12), 3 + ((k / 12) | 0), 1, 1]], checkpoint: { cell: [1 + (k % 12), 3 + ((k / 12) | 0)], yaw: 0 } })); }),
+    one('zones: 12 checkpoints', (g) => { g.zones = many(12).map((q, k) => ({ ...q, rects: [[1 + k, 3, 1, 1]], checkpoint: { cell: [1 + k, 3], yaw: 0 } })); }),
+    one('vents: missing vent', (g) => { g.entities.pop(); }), one('vents: cell not a vent', vt({ cells: [[8, 6], [8, 7], [8, 5]] })),
+    one('vents: half covered', vt({ cells: [[8, 6]] })), one('vents: two vents', (g) => { vent(g).cells = [[8, 6]]; g.entities.push({ ...vent(g), id: 'v2', cells: [[8, 7]] }); }),
+    one('vents: shared cell', (g) => { g.entities.push({ ...vent(g), id: 'v2', cells: [[8, 7]] }); }), one('vents: same cell twice', vt({ cells: [[8, 6], [8, 7], [8, 6]] })),
+    one('vents: no cells', vt({ cells: [] })), one('vents: extra key', vt({ name: 'x' })), one('vents: no warn', (g) => { delete vent(g).warn; }),
+    one('vents: period 1', vt({ period: 1, phase: 0, warn: 0, fire: 1 })), one('vents: period 1800', vt({ period: 1800 })), one('vents: period 1801', vt({ period: 1801 })),
+    one('vents: phase = period', vt({ phase: 60 })), one('vents: phase -1', vt({ phase: -1 })), one('vents: warn 0', vt({ warn: 0 })),
+    one('vents: fire 0', vt({ fire: 0 })), one('vents: fire 60 %', vt({ period: 60, warn: 0, fire: 36 })), one('vents: fire over 60 %', vt({ period: 60, warn: 0, fire: 37 })),
+    one('vents: warn + fire > period', vt({ period: 10, warn: 5, fire: 6 })), one('vents: timing string', vt({ fire: '20' })),
   ];
 }
 
