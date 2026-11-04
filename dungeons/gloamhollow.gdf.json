@@ -350,6 +350,115 @@
    ]
   },
   {
+   "id": "chain",
+   "type": "item",
+   "kind": "treasure",
+   "cell": [
+    35,
+    33
+   ],
+   "value": 60
+  },
+  {
+   "id": "coins",
+   "type": "item",
+   "kind": "treasure",
+   "cell": [
+    14,
+    21
+   ],
+   "value": 40
+  },
+  {
+   "id": "censer",
+   "type": "item",
+   "kind": "treasure",
+   "cell": [
+    33,
+    24
+   ],
+   "value": 150
+  },
+  {
+   "id": "ring",
+   "type": "item",
+   "kind": "treasure",
+   "cell": [
+    22,
+    8
+   ],
+   "value": 250
+  },
+  {
+   "id": "f1",
+   "type": "item",
+   "kind": "flask",
+   "cell": [
+    32,
+    57
+   ]
+  },
+  {
+   "id": "f2",
+   "type": "item",
+   "kind": "flask",
+   "cell": [
+    38,
+    26
+   ]
+  },
+  {
+   "id": "f3",
+   "type": "item",
+   "kind": "flask",
+   "cell": [
+    40,
+    20
+   ]
+  },
+  {
+   "id": "f4",
+   "type": "item",
+   "kind": "flask",
+   "cell": [
+    3,
+    23
+   ]
+  },
+  {
+   "id": "f5",
+   "type": "item",
+   "kind": "flask",
+   "cell": [
+    11,
+    23
+   ]
+  },
+  {
+   "id": "rub1",
+   "type": "item",
+   "kind": "rubble",
+   "cell": [
+    33,
+    35
+   ]
+  },
+  {
+   "id": "rub2",
+   "type": "item",
+   "kind": "rubble",
+   "cell": [
+    27,
+    1
+   ]
+  },
+  {
+   "id": "eyes",
+   "type": "eyes",
+   "zone": "gallery",
+   "wake": 30
+  },
+  {
    "id": "vent1",
    "type": "vent",
    "cells": [

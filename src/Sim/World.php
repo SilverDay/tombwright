@@ -42,6 +42,10 @@ final class World
     private const KEYS_SLAB = ['id', 'type', 'cell'];
     private const KEYS_PROP = ['id', 'type', 'kind', 'pos', 'yaw'];
     private const KEYS_VENT = ['id', 'type', 'cells', 'period', 'phase', 'warn', 'fire'];
+    private const KEYS_ITEM = ['id', 'type', 'kind', 'cell'];
+    private const KEYS_TREASURE = ['id', 'type', 'kind', 'cell', 'value'];
+    private const KEYS_EYES = ['id', 'type', 'zone', 'wake'];
+    private const ITEM_KINDS = ['flask', 'rubble', 'treasure'];
     private const KEYS_ZONE = ['id', 'name', 'rects', 'ceil'];
     private const KEYS_ZONE_CP = ['id', 'name', 'rects', 'ceil', 'checkpoint'];
     private const KEYS_CP = ['cell', 'yaw'];
@@ -61,6 +65,8 @@ final class World
      * @param list<array{period:int,phase:int,warn:int,fire:int}> $vents
      * @param array<int,int> $zoneOf cell index -> zone index (absent: no zone)
      * @param list<array{id:string,cp:array{x:int,z:int,yaw:int,enter:bool}|null}> $zones
+     * @param list<array{id:string,kind:string,k:int,x:int,z:int,reach:int}> $items in entity order
+     * @param list<array{id:string,zone:int,wake:int}> $eyes in entity order
      */
     private function __construct(
         public readonly string $id,
@@ -79,6 +85,8 @@ final class World
         private readonly array $zoneOf,
         public readonly array $zones,
         public readonly int $startZone,
+        public readonly array $items,
+        public readonly array $eyes,
     ) {
     }
 
@@ -258,7 +266,7 @@ final class World
         }
         $startK = $sj * $w + $si;
         $zs = self::loadZones($gdf, $grid, $w, $h);
-        $ents = self::loadEntities($gdf, $grid, $w, $h, $startK, $zs['cpCells']);
+        $ents = self::loadEntities($gdf, $grid, $w, $h, $startK, $zs['cpCells'], array_column($zs['zones'], 'id'));
         // R-ZONE-2: checkpoint cells hold no door or slab (props were checked in loadEntities).
         foreach ($zs['cpCells'] as $k) {
             if (isset($ents['doorAt'][$k]) || isset($ents['slab'][$k])) {
@@ -270,6 +278,7 @@ final class World
         return new self(
             $id, $w, $h, $grid, $si, $sj, $ents['doorAt'], $ents['slab'], $ents['doors'], $ents['props'], $ents['refs'],
             $ents['ventAt'], $ents['vents'], $zs['zoneOf'], $zs['zones'], $zs['zoneOf'][$startK] ?? -1,
+            $ents['items'], $ents['eyes'],
         );
     }
 
@@ -393,7 +402,7 @@ final class World
      * @param array<string,mixed> $gdf
      * @return array{doorAt:array<int,int>,slab:array<int,true>,doors:list<array{id:string,k:int,cx:int,cz:int,interact:bool}>,props:list<array{circle:bool,x:int,z:int,r:int,x0:int,x1:int,z0:int,z1:int}>,refs:list<array{type:string,door?:int}>}
      */
-    private static function loadEntities(array $gdf, string $grid, int $w, int $h, int $startK, array $cpCells): array
+    private static function loadEntities(array $gdf, string $grid, int $w, int $h, int $startK, array $cpCells, array $zoneIds): array
     {
         $list = array_key_exists('entities', $gdf) ? $gdf['entities'] : [];
         if (!is_array($list) || !array_is_list($list) || count($list) > self::MAX_ENTITIES) {
@@ -407,6 +416,8 @@ final class World
         $refs = [];
         $vents = [];
         $ventAt = [];
+        $items = [];
+        $eyes = [];
         foreach ($list as $e) {
             if (!is_array($e) || array_is_list($e) || !is_string($e['id'] ?? null) || preg_match(self::ID_RE, $e['id']) !== 1) {
                 throw new \RangeException('entity id');
@@ -518,8 +529,51 @@ final class World
                 }
                 $vents[] = ['period' => $period, 'phase' => $phase, 'warn' => $warn, 'fire' => $fire];
                 $refs[] = ['type' => 'vent'];
+            } elseif ($type === 'item') {
+                $kind = $e['kind'] ?? null;
+                if (!self::hasExactKeys($e, $kind === 'treasure' ? self::KEYS_TREASURE : self::KEYS_ITEM)) {
+                    throw new \RangeException('item keys');
+                }
+                if (!in_array($kind, self::ITEM_KINDS, true)) {
+                    throw new \RangeException('item kind');
+                }
+                if ($kind === 'treasure' && (!is_int($e['value']) || $e['value'] < 1 || $e['value'] > 100000)) {
+                    throw new \RangeException('item value');
+                }
+                $k = self::cellIndex($e['cell'], $w, $h);
+                $code = ord($grid[$k]);
+                if ($code !== self::ROOM && $code !== self::CORR && $code !== self::BRIDGE) {
+                    throw new \RangeException('item cell');
+                }
+                [$ci, $cj] = $e['cell'];
+                $off = $kind === 'rubble' ? 300 : 0;
+                $refs[] = ['type' => 'item', 'item' => count($items)];
+                $items[] = [
+                    'id' => $e['id'], 'kind' => $kind, 'k' => $k,
+                    'x' => $ci * self::CELL_MM + intdiv(self::CELL_MM, 2) - $off, 'z' => $cj * self::CELL_MM + intdiv(self::CELL_MM, 2) - $off,
+                    'reach' => $kind === 'rubble' ? 1600 : 1700,
+                ];
+            } elseif ($type === 'eyes') {
+                if (!self::hasExactKeys($e, self::KEYS_EYES)) {
+                    throw new \RangeException('eyes keys');
+                }
+                $zi = is_string($e['zone']) ? array_search($e['zone'], $zoneIds, true) : false;
+                if ($zi === false || in_array($zi, array_column($eyes, 'zone'), true)) {
+                    throw new \RangeException('eyes zone');
+                }
+                if (!is_int($e['wake']) || $e['wake'] < 18 || $e['wake'] > 1800) {
+                    throw new \RangeException('eyes wake');
+                }
+                $refs[] = ['type' => 'eyes'];
+                $eyes[] = ['id' => $e['id'], 'zone' => $zi, 'wake' => $e['wake']];
             } else {
                 throw new \RangeException('unknown entity type');
+            }
+        }
+        // R-ITEM-1: no item on a door or slab cell (checked after the loop, whatever the order).
+        foreach ($items as $it) {
+            if (isset($doorAt[$it['k']]) || isset($slab[$it['k']])) {
+                throw new \RangeException('item cell taken');
             }
         }
         // R-VENT-1: every vent cell belongs to a vent.
@@ -546,7 +600,7 @@ final class World
                 }
             }
         }
-        return ['doorAt' => $doorAt, 'slab' => $slab, 'doors' => $doors, 'props' => $props, 'refs' => $refs, 'ventAt' => $ventAt, 'vents' => $vents];
+        return ['doorAt' => $doorAt, 'slab' => $slab, 'doors' => $doors, 'props' => $props, 'refs' => $refs, 'ventAt' => $ventAt, 'vents' => $vents, 'items' => $items, 'eyes' => $eyes];
     }
 
     /**
@@ -588,6 +642,24 @@ final class World
     public function ventAt(int $k): ?array
     {
         return isset($this->ventAt[$k]) ? $this->vents[$this->ventAt[$k]] : null;
+    }
+
+    /**
+     * R-LOS-1: blocks sight: wall, or a door cell while R-DOOR-4 holds. Outside the grid blocks.
+     *
+     * @param array<string,mixed> $state
+     */
+    public function sightBlocked(array $state, int $i, int $j): bool
+    {
+        if ($i < 0 || $j < 0 || $i >= $this->w || $j >= $this->h) {
+            return true;
+        }
+        $k = $j * $this->w + $i;
+        if (ord($this->grid[$k]) === self::WALL) {
+            return true;
+        }
+        $d = $this->doorAt[$k] ?? -1;
+        return $d >= 0 && 20 * $state['doors'][$d]['t'] < 17 * self::DOOR_FULL;
     }
 
     /** R-ZONE-1: zone index of cell index k, or -1. */

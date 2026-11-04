@@ -8,10 +8,11 @@ import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
 import {
   loadWorld, solidCell, assertWorld, worldProps, worldDoors, entityRef, cellCode, slabAt, ventAt, zoneAt, worldZones, startZone,
+  worldItems, worldEyes, sightBlocked,
   CELL, DOOR_FULL, DOOR_STEP,
 } from './world.js';
 
-export const CORE_VERSION = 'm0.4';
+export const CORE_VERSION = 'm0.5';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -32,6 +33,8 @@ export const TRAP_LO = 288, TRAP_HI = 2112;
 export const RISE_TICKS = 51;
 // R-RISE-1: rising tops the lantern up to 50 points.
 export const RISE_OIL = 50 * 30000;
+// R-TOOL-2 cooldowns in ticks (Gloamhollow 0.7 s and 0.5 s). R-PEB-1: pouch. R-PEB-4: pick-up radius.
+export const PROBE_CD = 21, PEBBLE_CD = 15, PEBBLE_MAX = 12, PICKUP_MM = 750;
 
 export const BTN = Object.freeze({
   strike: 1 << 0, hood: 1 << 1, probe: 1 << 2, pebble: 1 << 3,
@@ -72,12 +75,19 @@ export function init(world, seed, mode) {
       vx: 0, vz: 0, rx: 0, rz: 0,   // velocity mm/s; sub-mm remainders in 1/30 mm (R-MOVE-3)
       yaw: 0, pitch: 0,
       hp: 100, oil: 100 * OIL_UNIT, hooded: false,
+      flasks: 1, pebbles: 10, probeCd: 0, pebbleCd: 0, // R-OIL-3, R-PEB-1, R-TOOL-2
     },
     doors: worldDoors(world).map(() => ({ open: false, t: 0 })), // R-DOOR-2
     deaths: 0,
     dead: null,             // R-DEATH-1: { cause, at } while dead
     sprung: [],             // R-CP-3 lessons: plates sprung during play, cell indices
     pits: [],               // R-CP-3 lessons: hidden pits found
+    marked: [],             // R-CP-3 lessons: plates found with the probe
+    bridge: [],             // R-CP-3 lessons: bridge cells found
+    floor: [],              // R-PEB-3: pebbles lying on the floor, { x, z }
+    flying: [],             // R-PEB-2: pebbles in flight, { x, z, at }
+    taken: [],              // R-ITEM-2: entity numbers of items taken
+    eyes: worldEyes(world).map(() => 0), // R-EYES-1
     checkpoints: [],        // R-CP-1
     cp: 0,
     prevButtons: 0,
@@ -89,7 +99,10 @@ export function init(world, seed, mode) {
 /** R-CP-3: what a death rolls back. */
 function lifeOf(state) {
   const p = state.player;
-  return { hp: p.hp, oil: p.oil, hooded: p.hooded, doors: state.doors.map((d) => d.open) };
+  return {
+    hp: p.hp, oil: p.oil, hooded: p.hooded, flasks: p.flasks, pebbles: p.pebbles,
+    doors: state.doors.map((d) => d.open), floor: state.floor.map((f) => ({ x: f.x, z: f.z })), taken: state.taken.slice(),
+  };
 }
 
 /** Sim.step(world, state, input) -> events. Mutates state; advances exactly one tick. */
@@ -107,6 +120,7 @@ export function step(world, state, input) {
     if ((pressed & BTN.rise) && state.tick >= state.dead.at + RISE_TICKS) rise(world, state, input.target, events);
     moveDoors(state);
   } else live(world, state, input, pressed, events);
+  landPebbles(world, state, events);
 
   state.prevButtons = input.buttons;
   state.tick += 1;
@@ -124,8 +138,15 @@ function live(world, state, input, pressed, events) {
   p.yaw = input.yaw;
   p.pitch = input.pitch;
 
-  // R-ACT-1: interact with the target entity, from where the player stood before moving.
-  if ((pressed & BTN.interact) && input.target !== 0) interact(world, state, input.target, events);
+  // R-TOOL-1: tool presses, in button order, from where the player stood before moving.
+  if (pressed & BTN.hood) {
+    if (p.oil > 0) { p.hooded = !p.hooded; events.push({ e: 'hood', on: p.hooded }); } // R-OIL-2
+    else events.push({ e: 'msg', k: 'lanternOut' });
+  }
+  if (pressed & BTN.probe) probe(world, state, events);
+  if (pressed & BTN.pebble) throwPebble(world, state, events);
+  if (pressed & BTN.oil) pourOil(p, events);
+  if ((pressed & BTN.interact) && input.target !== 0) interact(world, state, input.target, events); // R-ACT-1
 
   // R-MOVE-2: normalise the move vector to length <= 127.
   let [fw, st] = input.move;
@@ -151,16 +172,158 @@ function live(world, state, input, pressed, events) {
   checkpoint(world, state, events);
   const cause = trap(world, state);
   if (cause !== null) { die(state, cause, events); return; }
+  if (wakeEyes(world, state, events)) { die(state, 'eyes', events); return; }
+  pickPebbles(state);
 
-  // R-OIL-2: hood toggles on the press; refused with no oil.
-  if (pressed & BTN.hood) {
-    if (p.oil > 0) { p.hooded = !p.hooded; events.push({ e: 'hood', on: p.hooded }); }
-    else events.push({ e: 'msg', k: 'lanternOut' });
-  }
+  // R-OIL-1/2: the lantern burns; at 0 it goes out and un-hoods.
   if (p.oil > 0) {
     p.oil = Math.max(0, p.oil - (p.hooded ? OIL_BURN_HOODED : OIL_BURN_OPEN));
     if (p.oil === 0) { p.hooded = false; events.push({ e: 'msg', k: 'lanternOut' }); }
   }
+  // R-TOOL-2: cooldowns.
+  if (p.probeCd > 0) p.probeCd -= 1;
+  if (p.pebbleCd > 0) p.pebbleCd -= 1;
+}
+
+/** R-TOOL-1: the point at distance d (mm) ahead of the player, for yaw sine/cosine sy, cy. */
+function ahead(p, sy, cy, d) { // |sy·d| <= 2^14 · 8600 < 2^28 (R-INT-2)
+  return [p.x + idiv(-sy * d, TRIG_ONE), p.z + idiv(-cy * d, TRIG_ONE)];
+}
+
+/** A slab from the GDF or a plate sprung during play, at (i, j); false outside the grid. */
+function slabOrSprung(world, state, i, j) {
+  if (i < 0 || j < 0 || i >= world.w || j >= world.h) return false;
+  const k = j * world.w + i;
+  return slabAt(world, k) || state.sprung.includes(k);
+}
+
+/** R-PROBE-1, R-PROBE-2 */
+function probe(world, state, events) {
+  const p = state.player;
+  if (p.probeCd > 0) return;
+  p.probeCd = PROBE_CD;
+  const sy = isin(p.yaw), cy = icos(p.yaw), pi = fdiv(p.x, CELL_MM), pj = fdiv(p.z, CELL_MM);
+  let r = 2050, [tx, tz] = ahead(p, sy, cy, r);
+  if (fdiv(tx, CELL_MM) === pi && fdiv(tz, CELL_MM) === pj) { r = 2600; [tx, tz] = ahead(p, sy, cy, r); }
+  for (let s = 1; s <= 8; s++) {
+    // r·s <= 2600·8
+    const [qx, qz] = ahead(p, sy, cy, idiv(r * s, 8)), a = fdiv(qx, CELL_MM), b = fdiv(qz, CELL_MM);
+    if (solidCell(world, state, a, b) && !slabOrSprung(world, state, a, b)) { events.push({ e: 'probe', k: 'wall' }); return; }
+  }
+  const i = fdiv(tx, CELL_MM), j = fdiv(tz, CELL_MM), k = j * world.w + i, code = cellCode(world, i, j);
+  let what = 'stone';
+  if (code === CELL.PLATE) {
+    if (slabOrSprung(world, state, i, j)) what = 'slab';
+    else if (state.marked.includes(k)) what = 'plateKnown';
+    else { state.marked.push(k); what = 'plate'; }
+  } else if (code === CELL.HPIT) {
+    if (state.pits.includes(k)) what = 'pitKnown'; else { state.pits.push(k); what = 'pit'; }
+  } else if (code === CELL.VOID) what = 'void';
+  else if (code === CELL.BRIDGE) { if (!state.bridge.includes(k)) state.bridge.push(k); what = 'bridge'; }
+  else if (code === CELL.VENT) what = 'vent';
+  else if (code === CELL.ALCOVE) what = 'alcove';
+  events.push({ e: 'probe', k: what });
+}
+
+/** R-PEB-1, R-PEB-2 */
+function throwPebble(world, state, events) {
+  const p = state.player;
+  if (p.pebbleCd > 0) return;
+  if (p.pebbles <= 0) { events.push({ e: 'msg', k: 'pouchEmpty' }); return; }
+  p.pebbles -= 1;
+  p.pebbleCd = PEBBLE_CD;
+  const want = clamp(6200 + idiv(6000 * p.pitch, 127), 1600, 8500);
+  const sy = isin(p.yaw), cy = icos(p.yaw);
+  let d = 400, lx = p.x, lz = p.z;
+  while (d < want) {
+    const [nx, nz] = ahead(p, sy, cy, d), i = fdiv(nx, CELL_MM), j = fdiv(nz, CELL_MM);
+    if (slabOrSprung(world, state, i, j)) { lx = nx; lz = nz; break; }
+    if (solidCell(world, state, i, j)) break;
+    lx = nx; lz = nz; d += 120;
+  }
+  const flight = idiv(21000 + 3 * d + 1999, 2000);
+  state.flying.push({ x: lx, z: lz, at: state.tick + flight - 1 });
+  events.push({ e: 'throw' });
+}
+
+/** R-PEB-3: pebbles due this tick land, in list order. */
+function landPebbles(world, state, events) {
+  if (state.flying.length === 0) return;
+  const keep = [];
+  for (const f of state.flying) {
+    if (f.at !== state.tick) { keep.push(f); continue; }
+    const i = fdiv(f.x, CELL_MM), j = fdiv(f.z, CELL_MM), k = j * world.w + i, code = cellCode(world, i, j);
+    let what = 'floor', rests = true;
+    if (slabOrSprung(world, state, i, j)) what = 'slab';
+    else if (code === CELL.PLATE) { state.sprung.push(k); what = 'plate'; rests = false; }
+    else if (code === CELL.HPIT) { if (!state.pits.includes(k)) state.pits.push(k); what = 'pit'; rests = false; }
+    else if (code === CELL.VOID) { what = 'void'; rests = false; }
+    else if (code === CELL.BRIDGE) { if (!state.bridge.includes(k)) state.bridge.push(k); what = 'bridge'; }
+    if (rests) state.floor.push({ x: f.x, z: f.z });
+    events.push({ e: 'land', k: what });
+  }
+  state.flying = keep;
+}
+
+/** R-PEB-4 */
+function pickPebbles(state) {
+  const p = state.player;
+  for (let n = state.floor.length - 1; n >= 0; n--) {
+    const f = state.floor[n], dx = f.x - p.x, dz = f.z - p.z; // |dx|, |dz| <= 64*2400: squares < 2^36
+    if (p.pebbles >= PEBBLE_MAX || dx * dx + dz * dz > PICKUP_MM * PICKUP_MM) continue;
+    state.floor.splice(n, 1);
+    p.pebbles += 1;
+  }
+}
+
+/** R-OIL-3 */
+function pourOil(p, events) {
+  if (p.flasks <= 0) { events.push({ e: 'msg', k: 'noFlasks' }); return; }
+  if (p.oil >= 96 * OIL_UNIT) { events.push({ e: 'msg', k: 'lanternFull' }); return; }
+  const relit = p.oil === 0;
+  p.flasks -= 1;
+  p.oil = Math.min(100 * OIL_UNIT, p.oil + 60 * OIL_UNIT);
+  events.push({ e: 'oil', relit });
+}
+
+/** R-EYES-2: returns true if any eyes meter reached its wake time. */
+function wakeEyes(world, state, events) {
+  const eyes = worldEyes(world);
+  if (eyes.length === 0) return false;
+  const p = state.player, z = zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM));
+  const lit = p.oil > 0 && !p.hooded;
+  let woke = false;
+  eyes.forEach((ey, n) => {
+    if (z === ey.zone && lit) {
+      if (state.eyes[n] === 0) events.push({ e: 'eyes', id: ey.id });
+      state.eyes[n] += 5;
+    } else state.eyes[n] = Math.max(0, state.eyes[n] - 7);
+  });
+  eyes.forEach((ey, n) => { if (state.eyes[n] >= 5 * ey.wake) woke = true; });
+  return woke;
+}
+
+/** R-LOS-1 */
+function lineOfSight(world, state, ix, iz) {
+  // R-INT-2: every coordinate lies in the 64·2400 mm grid, so |ex|, |vx| < 2^18: squares < 2^36; |v·s| < 2^18 · n.
+  const p = state.player, ex = ix - p.x, ez = iz - p.z, e = isqrt(ex * ex + ez * ez);
+  const ax = e > 0 ? ix - idiv(ex * 300, e) : ix, az = e > 0 ? iz - idiv(ez * 300, e) : iz;
+  const vx = ax - p.x, vz = az - p.z, n = idiv(isqrt(vx * vx + vz * vz) + 599, 600);
+  for (let s = 1; s < n; s++) {
+    if (sightBlocked(world, state, fdiv(p.x + idiv(vx * s, n), CELL_MM), fdiv(p.z + idiv(vz * s, n), CELL_MM))) return false;
+  }
+  return true;
+}
+
+/** R-ITEM-2 */
+function takeItem(world, state, n, it, events) {
+  const p = state.player;
+  if (it.kind === 'rubble' ? p.pebbles >= PEBBLE_MAX : state.taken.includes(n)) return;
+  const dx = p.x - it.x, dz = p.z - it.z; // squares < 2^36
+  if (dx * dx + dz * dz > it.reach * it.reach || !lineOfSight(world, state, it.x, it.z)) return;
+  if (it.kind === 'rubble') p.pebbles = PEBBLE_MAX;
+  else { state.taken.push(n); if (it.kind === 'flask') p.flasks += 1; }
+  events.push({ e: 'item', id: it.id, kind: it.kind });
 }
 
 /** R-CP-2: entering a zone whose checkpoint lies further on than the current one. */
@@ -222,6 +385,12 @@ function rise(world, state, target, events) {
   p.hp = 100;
   p.oil = Math.max(life.oil, RISE_OIL);
   p.hooded = life.hooded;
+  p.flasks = life.flasks;
+  p.pebbles = life.pebbles;
+  state.floor = life.floor.map((f) => ({ x: f.x, z: f.z }));
+  state.taken = life.taken.slice();
+  state.flying = [];
+  state.eyes = state.eyes.map(() => 0);
   p.x = c.x; p.z = c.z; p.yaw = c.yaw; p.pitch = 0;
   p.vx = 0; p.vz = 0; p.rx = 0; p.rz = 0;
   state.dead = null;
@@ -231,6 +400,7 @@ function rise(world, state, target, events) {
 /** R-ACT-1: open an interact door within reach. Anything else does nothing. */
 function interact(world, state, n, events) {
   const ref = entityRef(world, n);
+  if (ref && ref.type === 'item') { takeItem(world, state, n, worldItems(world)[ref.item], events); return; }
   if (!ref || ref.type !== 'door') return;
   const def = worldDoors(world)[ref.door], d = state.doors[ref.door], p = state.player;
   if (!def.interact || d.open) return;

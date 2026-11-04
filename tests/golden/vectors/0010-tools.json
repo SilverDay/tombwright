@@ -1,0 +1,498 @@
+{
+ "name": "0010-tools",
+ "core": "m0.5",
+ "seed": 10,
+ "mode": "delve",
+ "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAFAQEABgECAAMBAQMBAQEAAQEBBgEFAQECAwIABQEBAAYBAgAFAQECBgECAAUBAQAGAQIAAwEBBAEBAQABAQEEAQEBBwEBAQgCAAUBAQAGAQ8A\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,5,7]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[7,1,6,7]],\"ceil\":3600,\"checkpoint\":{\"cell\":[7,4],\"yaw\":3072}}],\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[6,4],\"style\":\"stone\",\"opens\":\"interact\"},{\"id\":\"f1\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[3,3]},{\"id\":\"r1\",\"type\":\"item\",\"kind\":\"rubble\",\"cell\":[2,6]},{\"id\":\"t1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[1,1],\"value\":100},{\"id\":\"t2\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[12,4],\"value\":250},{\"id\":\"b1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[8,2],\"value\":7},{\"id\":\"e1\",\"type\":\"eyes\",\"zone\":\"g\",\"wake\":18},{\"id\":\"v1\",\"type\":\"vent\",\"cells\":[[10,6]],\"period\":90,\"phase\":0,\"warn\":20,\"fire\":30},{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[12,2]}]}",
+ "inputs": [
+  [
+   25,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3584,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3584,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 2
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3584,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3584,
+    "pitch": -60,
+    "buttons": 8,
+    "target": 0
+   }
+  ],
+  [
+   20,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3584,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   60,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   12,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   10,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 3
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   15,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 4,
+    "target": 0
+   }
+  ],
+  [
+   5,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   30,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   55,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 128,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   75,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 1
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 2,
+    "target": 0
+   }
+  ],
+  [
+   40,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   60,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 5
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 4,
+    "target": 0
+   }
+  ],
+  [
+   20,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 2,
+    "target": 0
+   }
+  ],
+  [
+   30,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   55,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 128,
+    "target": 0
+   }
+  ],
+  [
+   3,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ]
+ ],
+ "ticks": 529,
+ "hashEvery": 300,
+ "hashes": {
+  "0": "1eee53c90977feed561a8ca9d3e57131",
+  "300": "30a1c4690d2552f3c5bce08efe46935c"
+ },
+ "final": "77beca5b2b31182963a5c8dcae297d59",
+ "finalState": {
+  "v": 1,
+  "core": "m0.5",
+  "world": "ed07117ae227eea674dbae0f20b67882",
+  "mode": "delve",
+  "tick": 529,
+  "rng": [
+   888966967,
+   500502597,
+   2220140984,
+   3195399946
+  ],
+  "player": {
+   "x": 18000,
+   "z": 10800,
+   "vx": 0,
+   "vz": 0,
+   "rx": 0,
+   "rz": 0,
+   "yaw": 0,
+   "pitch": 0,
+   "hp": 100,
+   "oil": 2992065,
+   "hooded": true,
+   "flasks": 1,
+   "pebbles": 10,
+   "probeCd": 0,
+   "pebbleCd": 0
+  },
+  "doors": [
+   {
+    "open": true,
+    "t": 693
+   }
+  ],
+  "deaths": 2,
+  "dead": null,
+  "sprung": [
+   32
+  ],
+  "pits": [
+   88
+  ],
+  "marked": [],
+  "bridge": [],
+  "floor": [],
+  "flying": [],
+  "taken": [],
+  "eyes": [
+   0
+  ],
+  "checkpoints": [
+   {
+    "zone": 0,
+    "x": 6000,
+    "z": 10800,
+    "yaw": 0,
+    "life": {
+     "hp": 100,
+     "oil": 3000000,
+     "hooded": false,
+     "flasks": 1,
+     "pebbles": 10,
+     "doors": [
+      false
+     ],
+     "floor": [],
+     "taken": []
+    }
+   },
+   {
+    "zone": 1,
+    "x": 18000,
+    "z": 10800,
+    "yaw": 3072,
+    "life": {
+     "hp": 100,
+     "oil": 2992140,
+     "hooded": true,
+     "flasks": 1,
+     "pebbles": 10,
+     "doors": [
+      true
+     ],
+     "floor": [],
+     "taken": []
+    }
+   }
+  ],
+  "cp": 1,
+  "prevButtons": 0
+ }
+}

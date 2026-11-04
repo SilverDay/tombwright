@@ -12,11 +12,11 @@ the rules themselves go in `docs/sim-rules.md`.
 | `pushCircle` | player radius 0.36 m, 3 iterations, cells + circle/box obstacles + foes | Done for cells, doors, old slabs and decor props (R-MOVE-4, R-PROP-*). Bells, mirrors, chests and braziers bring their footprints with them; foes later |
 | `checkTraps` | the "inner" test: 0.12–0.88 of the cell | Done for plates, pits, void and vents (R-TRAP-1: 288 < offset < 2112 mm). Weep/laugh alcoves come with the mask doors |
 | `ventState` | period 3.6 s, warn 0.9 s, fire 1.1 s, phases 0 / 1.2 / 2.4 s | Done: `vent` entities, 108 / 27 / 33 ticks, phases 0 / 36 / 72, on the tick count (R-VENT-*) |
-| Waking eyes | wake when the lantern is lit in the gallery; die at 1.0 s; decay ×1.4 | 30 ticks; spec floor is ≥ 0.6 s |
-| Oil | burn 0.08/s open, 0.025/s hooded; flask +60; rise with oil ≥ 50 | Done (R-OIL-*) |
+| Waking eyes | wake when the lantern is lit in the gallery; die at 1.0 s; decay ×1.4 | Done: `eyes` entity, meter +5 / −7 per tick, death at 5·30 (R-EYES-*) |
+| Oil | burn 0.08/s open, 0.025/s hooded; flask +60; rise with oil ≥ 50 | Done (R-OIL-*, flasks as items) |
 | Health | regen 4/s after 5 s unhurt | |
-| Pebbles | range `clamp(6.2 + pitch·5, 1.6, 8.5)` m, 0.12 m march, flight `0.35 + d·0.05` s | Pitch now int8, so the mapping needs a rule |
-| Probe | reach 2.05 m (2.6 m if still in your own cell), 8-step wall check | |
+| Pebbles | range `clamp(6.2 + pitch·5, 1.6, 8.5)` m, 0.12 m march, flight `0.35 + d·0.05` s | Done (R-PEB-*): int8 pitch = ±1.2 rad (decision #22); flight in whole ticks; pick-up 0.75 m; rubble refills to 12 |
+| Probe | reach 2.05 m (2.6 m if still in your own cell), 8-step wall check | Done (R-PROBE-*); the gilded chest's needles come with chests |
 | Foes | warden 3 hp/14 dmg/2.2 m/s; crawler 2/9/2.9; wind-up and cooldowns | `ph: Math.random()` is visual only; leave it out of state |
 | Boss | 6 hp, solid within 3.6 m of a lit brazier, phase 2 at ≤ 3 hp, oil drain | |
 | `later()` / `setTimeout` in rules (`strike` 110 ms, bell 0.65 s / 0.9 s, mask doors 1.5–2.6 s) | | Tick-scheduled events in state (spec §6.2) |

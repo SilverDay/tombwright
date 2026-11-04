@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { ROOT, loadCore } from './lib/load.mjs';
-import { replay, GLOAMHOLLOW, expand, trapRoom } from '../golden/generate.mjs';
+import { replay, GLOAMHOLLOW, expand, trapRoom, toolRoom } from '../golden/generate.mjs';
 import { solidCell, b64decode, worldProps, DOOR_FULL } from '../../public/js/sim/world.js';
 const utf8 = (t) => new TextEncoder().encode(t);
 import { fdiv } from '../../public/js/sim/int.js';
@@ -45,7 +45,7 @@ test('walking speed matches Gloamhollow (3.2 m/s, within 1 %)', () => {
   assert.ok(Math.abs(metresPerSecond - 3.2) < 0.032, `got ${metresPerSecond}`);
 });
 
-for (const name of ['0002-fuzz', '0005-props-fuzz', '0006-traps-fuzz', '0007-practice-fuzz']) {
+for (const name of ['0002-fuzz', '0005-props-fuzz', '0006-traps-fuzz', '0007-practice-fuzz', '0011-tools-fuzz', '0014-east-fuzz']) {
   test(`collision (${name}): the player never ends a tick inside or within 359 mm of a solid cell or a prop`, () => {
     const v = JSON.parse(readFileSync(DIR + name + '.json', 'utf8'));
     let ticks = 0, props = 0;
@@ -182,4 +182,83 @@ test('ironman: the run is over after a death', () => {
   for (const inp of expand(v.inputs)) Sim.step(world, st, inp);
   assert.equal(st.dead.cause, 'slab');
   assert.throws(() => Sim.step(world, st, { move: [0, 0], yaw: 0, pitch: 0, buttons: Sim.BTN.rise, target: 0 }), /run is over/);
+});
+
+// Step 4 (R-TOOL-*, R-PROBE-*, R-PEB-*, R-OIL-3, R-ITEM-2, R-EYES-2) on the tool room: start (2, 4), door (6, 4) = entity 1,
+// flask (3, 3) = 2, rubble (2, 6) = 3, plates (4, 2) and (11, 2), pit (4, 6); east room g under the eyes (wake 18).
+function toolRun(script, gdf = toolRoom(), mode = 'delve') {
+  const world = Sim.load(utf8(gdf)), st = Sim.init(world, 1, mode), log = [];
+  const run = (more) => { for (const [n, inp] of more) for (let k = 0; k < n; k++) for (const e of Sim.step(world, st, { move: [0, 0], yaw: 0, pitch: 0, buttons: 0, target: 0, ...inp })) log.push({ t: st.tick - 1, ...e }); };
+  run(script);
+  return { world, st, log, run };
+}
+const BT = Sim.BTN;
+
+test('probe: marks a plate once, then knows it; cooldown 21 ticks', () => {
+  // From (2, 4) walk north-east to (3, 3); face east: the probe reaches (4, 3)? No: face north-east at the plate (4, 2).
+  const { st, log, run } = toolRun([[25, { move: GO, yaw: 3584 }], [1, { yaw: 3584, buttons: BT.probe }], [1, { yaw: 3584 }]]);
+  assert.deepEqual(log.filter((e) => e.e === 'probe').map((e) => e.k), ['plate']);
+  assert.deepEqual(st.marked, [2 * 14 + 4]);
+  assert.equal(st.player.probeCd, 19);
+  run([[1, { yaw: 3584, buttons: BT.probe }], [1, { yaw: 3584 }]]);
+  assert.equal(log.filter((e) => e.e === 'probe').length, 1, 'refused while cooling down');
+  run([[20, { yaw: 3584 }], [1, { yaw: 3584, buttons: BT.probe }]]);
+  assert.deepEqual(log.filter((e) => e.e === 'probe').map((e) => e.k), ['plate', 'plateKnown']);
+});
+
+test('pebbles: a short throw lands on the floor, is picked up on walking over it, and the pouch caps at 12', () => {
+  // Face south from the start with the pitch fully down (range 1.6 m): the pebble rests on (2, 4)/(2, 5).
+  const { st, log, run } = toolRun([[1, { yaw: 2048, pitch: -127, buttons: BT.pebble }], [20, {}]]);
+  assert.deepEqual(log.filter((e) => e.e === 'land').map((e) => e.k), ['floor']);
+  assert.equal(st.player.pebbles, 9);
+  assert.equal(st.floor.length, 1);
+  const f = st.floor[0];
+  assert.equal(f.z - 10800, 1480, 'the last 120 mm step short of the 1.6 m range (R-PEB-2)');
+  run([[20, { move: GO, yaw: 2048 }]]);
+  assert.equal(st.floor.length, 0);
+  assert.equal(st.player.pebbles, 10);
+  st.player.pebbles = 12;                               // a full pouch leaves pebbles where they lie
+  run([[1, { yaw: 0, pitch: -127, buttons: BT.pebble }], [40, {}], [20, { move: GO, yaw: 0 }]]);
+  assert.equal(st.player.pebbles, 12, '11 after the throw, 12 after picking it up');
+});
+
+test('oil: refused when full, pours 60 points, relights an empty lantern', () => {
+  const { st, log, run } = toolRun([[1, { buttons: BT.oil }]]);
+  assert.deepEqual(log.map((e) => e.k ?? e.e), ['lanternFull']);
+  st.player.oil = 0; st.player.hooded = false;
+  run([[1, {}], [1, { buttons: BT.oil }]]);
+  assert.deepEqual(log.at(-1), { t: 2, e: 'oil', relit: true });
+  assert.equal(st.player.oil, 60 * Sim.OIL_UNIT - Sim.OIL_BURN_OPEN);
+  assert.equal(st.player.flasks, 0);
+  run([[1, {}], [1, { buttons: BT.oil }]]);
+  assert.equal(log.at(-1).k, 'noFlasks');
+});
+
+test('items: a flask is taken once; rubble refills only a short pouch; both need reach', () => {
+  const X = BT.interact;
+  const { st, log, run } = toolRun([[1, { buttons: X, target: 2 }]]);
+  assert.equal(log.length, 0, 'the flask is out of reach from the start');
+  run([[25, { move: GO, yaw: 3584 }], [1, { buttons: X, target: 2 }], [1, {}], [1, { buttons: X, target: 2 }]]);
+  assert.deepEqual(log.filter((e) => e.e === 'item').map((e) => e.id), ['f1']);
+  assert.equal(st.player.flasks, 2);
+  assert.deepEqual(st.taken, [2]);
+  run([[1, {}], [1, { buttons: X, target: 3 }]]);
+  assert.equal(log.filter((e) => e.e === 'item').length, 1, 'the rubble is out of reach from the flask');
+  run([[60, { move: GO, yaw: 2048 }], [10, { move: GO, yaw: 1024 }], [1, {}], [1, { buttons: X, target: 3 }]]);
+  assert.deepEqual(log.filter((e) => e.e === 'item').map((e) => e.id), ['f1', 'r1']);
+  assert.equal(st.player.pebbles, 12);
+  run([[1, {}], [1, { buttons: X, target: 3 }]]);
+  assert.equal(log.filter((e) => e.e === 'item').length, 2, 'a full pouch takes nothing');
+});
+
+test('eyes: an open flame wakes them in 18 ticks; hooding cools them by 7 a tick', () => {
+  const { st, log, run } = toolRun([[1, {}]], toolRoom([10, 4]));
+  assert.equal(st.eyes[0], 5);
+  run([[9, {}], [1, { buttons: BT.hood }]]);
+  assert.equal(st.eyes[0], 50 - 7, 'ten lit ticks, then one hooded');
+  run([[7, { buttons: BT.hood }]]);                     // still held: no second press
+  assert.equal(st.eyes[0], 0);
+  run([[1, {}], [1, { buttons: BT.hood }], [17, {}]]);
+  assert.equal(log.filter((e) => e.e === 'death').map((e) => e.cause).join(), 'eyes');
+  assert.equal(st.eyes[0], 90);
 });

@@ -1,6 +1,6 @@
 {
  "name": "0009-ironman",
- "core": "m0.4",
+ "core": "m0.5",
  "seed": 9,
  "mode": "ironman",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIAAQEBAwIBAQMCAQEFAgEBBgEBAgAMAQIADAECAAwBAgAEAQEEAgEBBwIBAQgBAQIABwEBBwQBDwA=\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,3,7]],\"ceil\":4200},{\"id\":\"b\",\"name\":\"B\",\"rects\":[[4,1,3,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[5,4],\"yaw\":3072}},{\"id\":\"c\",\"name\":\"C\",\"rects\":[[7,1,3,4],[7,5,3,3]],\"ceil\":6500,\"checkpoint\":{\"cell\":[8,4],\"yaw\":3072,\"reach\":\"enter\"}},{\"id\":\"d\",\"name\":\"D\",\"rects\":[[10,1,3,7]],\"ceil\":3000,\"checkpoint\":{\"cell\":[11,4],\"yaw\":1024,\"reach\":\"effect\"}}],\"entities\":[{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[2,2]},{\"id\":\"v1\",\"type\":\"vent\",\"cells\":[[8,6],[8,7]],\"period\":60,\"phase\":10,\"warn\":15,\"fire\":20}]}",
@@ -35,12 +35,12 @@
  "ticks": 104,
  "hashEvery": 300,
  "hashes": {
-  "0": "bf302ec2b2eb339c5dd10872ee8f61a4"
+  "0": "e51947cb79151fb8152131b79418fd8c"
  },
- "final": "06b89b888dd2ba97df8f620f7bd5da0e",
+ "final": "4ec70b1cfb1fb8dbed21a575e0f7d137",
  "finalState": {
   "v": 1,
-  "core": "m0.4",
+  "core": "m0.5",
   "world": "3105c26a5fe9b85dd09aca967c41891f",
   "mode": "ironman",
   "tick": 104,
@@ -61,7 +61,11 @@
    "pitch": 0,
    "hp": 100,
    "oil": 2991760,
-   "hooded": false
+   "hooded": false,
+   "flasks": 1,
+   "pebbles": 10,
+   "probeCd": 0,
+   "pebbleCd": 0
   },
   "doors": [],
   "deaths": 1,
@@ -73,6 +77,12 @@
    33
   ],
   "pits": [],
+  "marked": [],
+  "bridge": [],
+  "floor": [],
+  "flying": [],
+  "taken": [],
+  "eyes": [],
   "checkpoints": [
    {
     "zone": 0,
@@ -83,7 +93,11 @@
      "hp": 100,
      "oil": 3000000,
      "hooded": false,
-     "doors": []
+     "flasks": 1,
+     "pebbles": 10,
+     "doors": [],
+     "floor": [],
+     "taken": []
     }
    },
    {
@@ -95,7 +109,11 @@
      "hp": 100,
      "oil": 2997200,
      "hooded": false,
-     "doors": []
+     "flasks": 1,
+     "pebbles": 10,
+     "doors": [],
+     "floor": [],
+     "taken": []
     }
    }
   ],

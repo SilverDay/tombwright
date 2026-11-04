@@ -26,6 +26,9 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 19 | 2026-11-04 | **Modes at death:** in Ironman a death ends the run; `step` refuses the state afterwards, so the run log must end there. In Practice the rise's `target` = zone number picks any checkpoint reached this run (0 = the current one); Delve always rises at the current one. | Owner |
 | 20 | 2026-11-04 | **Checkpoint reach:** a zone checkpoint is reached on entering the zone (`reach: "enter"`, the default) or only by a new `setCheckpoint` effect (`reach: "effect"`); Gloamhollow's Sanctum uses `effect`, fired when the boss falls. The sim doesn't enforce spec §4.4's "no lethal cell within one cell of a checkpoint spawn"; the publish validator (§7.3) checks it for the four orthogonal neighbours only, which Gloamhollow's Hall (34, 52) and Chasm (26, 5) spawns pass. Amends §4.3.4 (new effect) and §4.4. | Owner |
 | 21 | 2026-11-04 | Commits are authored with `klingner@silverday.de`. | Owner |
+| 22 | 2026-11-04 | **Pitch:** the input's int8 pitch maps linearly onto Gloamhollow's look range, ±1.2 rad (pitch_rad = 1.2·p/127). The client quantises its camera pitch on the same scale. Pebble range = clamp(6200 + idiv(6000·p, 127), 1600, 8500) mm. | Owner |
+| 23 | 2026-11-04 | **Items:** an `item` entity of kind `flask`, `rubble` or `treasure` (with `value`), taken by interact within reach and line of sight (Gloamhollow 1.7 m, rubble 1.6 m). Rubble refills the pouch to 12 and stays. Item names stay client text for now; hidden items and keys come with their puzzles. | Owner |
+| 24 | 2026-11-04 | **Waking eyes:** an `eyes` entity names a zone and a wake time in ticks (≥ 18, one per zone). Its meter is in state: +5 per tick with an open flame inside, −7 otherwise, death at 5·wake; it resets on rise. | Owner |
 
 ## Still open (spec §17)
 

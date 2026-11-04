@@ -53,6 +53,14 @@ const DOORS = [
 const PRE_SLABS = [[32, 51], [35, 47]];  // plates sprung long ago, a skeleton under each
 // Vents (Gloamhollow VENTS, VENT_T 3.6 s, VENT_WARN 0.9 s, VENT_FIRE 1.1 s, phases 0 / 1.2 / 2.4 s), in ticks (R-VENT-*).
 const VENT_PHASES = [0, 36, 72];
+// Loot and rubble (Gloamhollow LOOT, RUBBLE; R-ITEM-*). The sun-opal (hidden until the mirrors are solved)
+// comes with the mirror puzzle; names stay client text for now (decision #23).
+const ITEMS = [
+  ['chain', 'treasure', 35, 33, 60], ['coins', 'treasure', 14, 21, 40], ['censer', 'treasure', 33, 24, 150],
+  ['ring', 'treasure', 22, 8, 250],
+  ['f1', 'flask', 32, 57], ['f2', 'flask', 38, 26], ['f3', 'flask', 40, 20], ['f4', 'flask', 3, 23], ['f5', 'flask', 11, 23],
+  ['rub1', 'rubble', 33, 35], ['rub2', 'rubble', 27, 1],
+];
 // Props (Gloamhollow buildProps addCircle/addBox), positions in mm. cx/cz = cell centre.
 const MM = 2400, cx = (i) => i * MM + MM / 2;
 const PROPS = [
@@ -91,6 +99,8 @@ const gdf = {
   entities: [
     ...DOORS.map((d) => ({ id: d.id, type: 'door', cell: d.cell, style: d.style, opens: d.opens, ...(d.face ? { face: d.face } : {}) })),
     ...PRE_SLABS.map(([i, j], n) => ({ id: `slab${n + 1}`, type: 'slab', cell: [i, j] })),
+    ...ITEMS.map(([id, kind, i, j, value]) => ({ id, type: 'item', kind, cell: [i, j], ...(kind === 'treasure' ? { value } : {}) })),
+    { id: 'eyes', type: 'eyes', zone: 'gallery', wake: 30 },  // the Waking Eyes: 1.0 s (R-EYES-*)
     ...VENTS.map((i, n) => ({ id: `vent${n + 1}`, type: 'vent', cells: VENT_ROWS.map((j) => [i, j]), period: 108, phase: VENT_PHASES[n], warn: 27, fire: 33 })),
     ...PROPS.map(([kind, x, z, yaw], n) => ({ id: kind + PROPS.slice(0, n + 1).filter((p) => p[0] === kind).length, type: 'prop', kind, pos: [x, z], yaw })),
   ],

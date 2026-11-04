@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.4';
+    public const CORE_VERSION = 'm0.5';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -27,6 +27,11 @@ final class Sim
     /** R-RISE-1: rise is accepted from 51 ticks after the death; rising tops the lantern up to 50 points. */
     public const RISE_TICKS = 51;
     public const RISE_OIL = 50 * 30000;
+    /** R-TOOL-2 cooldowns (ticks), R-PEB-1 pouch, R-PEB-4 pick-up radius. */
+    public const PROBE_CD = 21;
+    public const PEBBLE_CD = 15;
+    public const PEBBLE_MAX = 12;
+    public const PICKUP_MM = 750;
 
     public const BTN_STRIKE = 1 << 0;
     public const BTN_HOOD = 1 << 1;
@@ -94,12 +99,19 @@ final class Sim
                 'vx' => 0, 'vz' => 0, 'rx' => 0, 'rz' => 0,
                 'yaw' => 0, 'pitch' => 0,
                 'hp' => 100, 'oil' => 100 * self::OIL_UNIT, 'hooded' => false,
+                'flasks' => 1, 'pebbles' => 10, 'probeCd' => 0, 'pebbleCd' => 0, // R-OIL-3, R-PEB-1, R-TOOL-2
             ],
             'doors' => array_map(static fn (): array => ['open' => false, 't' => 0], $world->doors), // R-DOOR-2
             'deaths' => 0,
             'dead' => null,       // R-DEATH-1
             'sprung' => [],       // R-CP-3 lessons
             'pits' => [],
+            'marked' => [],
+            'bridge' => [],
+            'floor' => [],        // R-PEB-3
+            'flying' => [],       // R-PEB-2
+            'taken' => [],        // R-ITEM-2
+            'eyes' => array_map(static fn (): int => 0, $world->eyes), // R-EYES-1
             'checkpoints' => [],  // R-CP-1
             'cp' => 0,
             'prevButtons' => 0,
@@ -120,8 +132,9 @@ final class Sim
     {
         $p = $state['player'];
         return [
-            'hp' => $p['hp'], 'oil' => $p['oil'], 'hooded' => $p['hooded'],
+            'hp' => $p['hp'], 'oil' => $p['oil'], 'hooded' => $p['hooded'], 'flasks' => $p['flasks'], 'pebbles' => $p['pebbles'],
             'doors' => array_map(static fn (array $d): bool => $d['open'], $state['doors']),
+            'floor' => $state['floor'], 'taken' => $state['taken'],
         ];
     }
 
@@ -154,6 +167,7 @@ final class Sim
         } else {
             self::live($world, $state, $input, $pressed, $events);
         }
+        self::landPebbles($world, $state, $events);
 
         $state['prevButtons'] = $input['buttons'];
         $state['tick'] += 1;
@@ -187,11 +201,27 @@ final class Sim
         $p = &$state['player'];
         $p['yaw'] = $input['yaw'];
         $p['pitch'] = $input['pitch'];
+        // R-TOOL-1: tool presses, in button order, from where the player stood before moving.
+        if ($pressed & self::BTN_HOOD) {
+            if ($p['oil'] > 0) { // R-OIL-2
+                $p['hooded'] = !$p['hooded'];
+                $events[] = ['e' => 'hood', 'on' => $p['hooded']];
+            } else {
+                $events[] = ['e' => 'msg', 'k' => 'lanternOut'];
+            }
+        }
         unset($p);
-
-        // R-ACT-1: interact with the target entity, from where the player stood before moving.
+        if ($pressed & self::BTN_PROBE) {
+            self::probe($world, $state, $events);
+        }
+        if ($pressed & self::BTN_PEBBLE) {
+            self::throwPebble($world, $state, $events);
+        }
+        if ($pressed & self::BTN_OIL) {
+            self::pourOil($state['player'], $events);
+        }
         if (($pressed & self::BTN_INTERACT) && $input['target'] !== 0) {
-            self::interact($world, $state, $input['target'], $events);
+            self::interact($world, $state, $input['target'], $events); // R-ACT-1
         }
         $p = &$state['player'];
 
@@ -229,16 +259,13 @@ final class Sim
             self::die($state, $cause, $events);
             return;
         }
-        $p = &$state['player'];
-
-        if ($pressed & self::BTN_HOOD) {
-            if ($p['oil'] > 0) {
-                $p['hooded'] = !$p['hooded'];
-                $events[] = ['e' => 'hood', 'on' => $p['hooded']];
-            } else {
-                $events[] = ['e' => 'msg', 'k' => 'lanternOut'];
-            }
+        if (self::wakeEyes($world, $state, $events)) {
+            self::die($state, 'eyes', $events);
+            return;
         }
+        self::pickPebbles($state);
+        $p = &$state['player'];
+        // R-OIL-1/2: the lantern burns; at 0 it goes out and un-hoods.
         if ($p['oil'] > 0) {
             $p['oil'] = max(0, $p['oil'] - ($p['hooded'] ? self::OIL_BURN_HOODED : self::OIL_BURN_OPEN));
             if ($p['oil'] === 0) {
@@ -246,7 +273,335 @@ final class Sim
                 $events[] = ['e' => 'msg', 'k' => 'lanternOut'];
             }
         }
+        // R-TOOL-2: cooldowns.
+        if ($p['probeCd'] > 0) {
+            $p['probeCd'] -= 1;
+        }
+        if ($p['pebbleCd'] > 0) {
+            $p['pebbleCd'] -= 1;
+        }
         unset($p);
+    }
+
+    /**
+     * R-TOOL-1: the point at distance d (mm) ahead of the player, for yaw sine/cosine sy, cy.
+     *
+     * @param array<string,mixed> $p
+     * @return array{int,int}
+     */
+    private static function ahead(array $p, int $sy, int $cy, int $d): array
+    {
+        // |sy·d| <= 2^14 · 8600 < 2^28 (R-INT-2)
+        return [$p['x'] + IntMath::idiv(-$sy * $d, SineTable::TRIG_ONE), $p['z'] + IntMath::idiv(-$cy * $d, SineTable::TRIG_ONE)];
+    }
+
+    /**
+     * A slab from the GDF or a plate sprung during play, at (i, j); false outside the grid.
+     *
+     * @param array<string,mixed> $state
+     */
+    private static function slabOrSprung(World $world, array $state, int $i, int $j): bool
+    {
+        if ($i < 0 || $j < 0 || $i >= $world->w || $j >= $world->h) {
+            return false;
+        }
+        $k = $j * $world->w + $i;
+        return $world->slabAt($k) || in_array($k, $state['sprung'], true);
+    }
+
+    /**
+     * R-PROBE-1, R-PROBE-2
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function probe(World $world, array &$state, array &$events): void
+    {
+        $p = $state['player'];
+        if ($p['probeCd'] > 0) {
+            return;
+        }
+        $state['player']['probeCd'] = self::PROBE_CD;
+        $sy = SineTable::sin($p['yaw']);
+        $cy = SineTable::cos($p['yaw']);
+        $pi = IntMath::fdiv($p['x'], self::CELL_MM);
+        $pj = IntMath::fdiv($p['z'], self::CELL_MM);
+        $r = 2050;
+        [$tx, $tz] = self::ahead($p, $sy, $cy, $r);
+        if (IntMath::fdiv($tx, self::CELL_MM) === $pi && IntMath::fdiv($tz, self::CELL_MM) === $pj) {
+            $r = 2600;
+            [$tx, $tz] = self::ahead($p, $sy, $cy, $r);
+        }
+        for ($s = 1; $s <= 8; $s++) {
+            [$qx, $qz] = self::ahead($p, $sy, $cy, IntMath::idiv($r * $s, 8)); // r·s <= 2600·8
+            $a = IntMath::fdiv($qx, self::CELL_MM);
+            $b = IntMath::fdiv($qz, self::CELL_MM);
+            if ($world->solidCell($state, $a, $b) && !self::slabOrSprung($world, $state, $a, $b)) {
+                $events[] = ['e' => 'probe', 'k' => 'wall'];
+                return;
+            }
+        }
+        $i = IntMath::fdiv($tx, self::CELL_MM);
+        $j = IntMath::fdiv($tz, self::CELL_MM);
+        $k = $j * $world->w + $i;
+        $code = $world->cellCode($i, $j);
+        $what = 'stone';
+        if ($code === World::PLATE) {
+            if (self::slabOrSprung($world, $state, $i, $j)) {
+                $what = 'slab';
+            } elseif (in_array($k, $state['marked'], true)) {
+                $what = 'plateKnown';
+            } else {
+                $state['marked'][] = $k;
+                $what = 'plate';
+            }
+        } elseif ($code === World::HPIT) {
+            if (in_array($k, $state['pits'], true)) {
+                $what = 'pitKnown';
+            } else {
+                $state['pits'][] = $k;
+                $what = 'pit';
+            }
+        } elseif ($code === World::VOID) {
+            $what = 'void';
+        } elseif ($code === World::BRIDGE) {
+            if (!in_array($k, $state['bridge'], true)) {
+                $state['bridge'][] = $k;
+            }
+            $what = 'bridge';
+        } elseif ($code === World::VENT) {
+            $what = 'vent';
+        } elseif ($code === World::ALCOVE) {
+            $what = 'alcove';
+        }
+        $events[] = ['e' => 'probe', 'k' => $what];
+    }
+
+    /**
+     * R-PEB-1, R-PEB-2
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function throwPebble(World $world, array &$state, array &$events): void
+    {
+        $p = $state['player'];
+        if ($p['pebbleCd'] > 0) {
+            return;
+        }
+        if ($p['pebbles'] <= 0) {
+            $events[] = ['e' => 'msg', 'k' => 'pouchEmpty'];
+            return;
+        }
+        $state['player']['pebbles'] -= 1;
+        $state['player']['pebbleCd'] = self::PEBBLE_CD;
+        $want = IntMath::clamp(6200 + IntMath::idiv(6000 * $p['pitch'], 127), 1600, 8500);
+        $sy = SineTable::sin($p['yaw']);
+        $cy = SineTable::cos($p['yaw']);
+        $d = 400;
+        $lx = $p['x'];
+        $lz = $p['z'];
+        while ($d < $want) {
+            [$nx, $nz] = self::ahead($p, $sy, $cy, $d);
+            $i = IntMath::fdiv($nx, self::CELL_MM);
+            $j = IntMath::fdiv($nz, self::CELL_MM);
+            if (self::slabOrSprung($world, $state, $i, $j)) {
+                $lx = $nx;
+                $lz = $nz;
+                break;
+            }
+            if ($world->solidCell($state, $i, $j)) {
+                break;
+            }
+            $lx = $nx;
+            $lz = $nz;
+            $d += 120;
+        }
+        $flight = IntMath::idiv(21000 + 3 * $d + 1999, 2000);
+        $state['flying'][] = ['x' => $lx, 'z' => $lz, 'at' => $state['tick'] + $flight - 1];
+        $events[] = ['e' => 'throw'];
+    }
+
+    /**
+     * R-PEB-3: pebbles due this tick land, in list order.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function landPebbles(World $world, array &$state, array &$events): void
+    {
+        if ($state['flying'] === []) {
+            return;
+        }
+        $keep = [];
+        foreach ($state['flying'] as $f) {
+            if ($f['at'] !== $state['tick']) {
+                $keep[] = $f;
+                continue;
+            }
+            $i = IntMath::fdiv($f['x'], self::CELL_MM);
+            $j = IntMath::fdiv($f['z'], self::CELL_MM);
+            $k = $j * $world->w + $i;
+            $code = $world->cellCode($i, $j);
+            $what = 'floor';
+            $rests = true;
+            if (self::slabOrSprung($world, $state, $i, $j)) {
+                $what = 'slab';
+            } elseif ($code === World::PLATE) {
+                $state['sprung'][] = $k;
+                $what = 'plate';
+                $rests = false;
+            } elseif ($code === World::HPIT) {
+                if (!in_array($k, $state['pits'], true)) {
+                    $state['pits'][] = $k;
+                }
+                $what = 'pit';
+                $rests = false;
+            } elseif ($code === World::VOID) {
+                $what = 'void';
+                $rests = false;
+            } elseif ($code === World::BRIDGE) {
+                if (!in_array($k, $state['bridge'], true)) {
+                    $state['bridge'][] = $k;
+                }
+                $what = 'bridge';
+            }
+            if ($rests) {
+                $state['floor'][] = ['x' => $f['x'], 'z' => $f['z']];
+            }
+            $events[] = ['e' => 'land', 'k' => $what];
+        }
+        $state['flying'] = $keep;
+    }
+
+    /**
+     * R-PEB-4
+     *
+     * @param array<string,mixed> $state
+     */
+    private static function pickPebbles(array &$state): void
+    {
+        for ($n = count($state['floor']) - 1; $n >= 0; $n--) {
+            $f = $state['floor'][$n];
+            $dx = $f['x'] - $state['player']['x'];
+            $dz = $f['z'] - $state['player']['z'];
+            if ($state['player']['pebbles'] >= self::PEBBLE_MAX || $dx * $dx + $dz * $dz > self::PICKUP_MM * self::PICKUP_MM) {
+                continue;
+            }
+            array_splice($state['floor'], $n, 1);
+            $state['player']['pebbles'] += 1;
+        }
+    }
+
+    /**
+     * R-OIL-3
+     *
+     * @param array<string,mixed> $p
+     * @param list<array<string,mixed>> $events
+     */
+    private static function pourOil(array &$p, array &$events): void
+    {
+        if ($p['flasks'] <= 0) {
+            $events[] = ['e' => 'msg', 'k' => 'noFlasks'];
+            return;
+        }
+        if ($p['oil'] >= 96 * self::OIL_UNIT) {
+            $events[] = ['e' => 'msg', 'k' => 'lanternFull'];
+            return;
+        }
+        $relit = $p['oil'] === 0;
+        $p['flasks'] -= 1;
+        $p['oil'] = min(100 * self::OIL_UNIT, $p['oil'] + 60 * self::OIL_UNIT);
+        $events[] = ['e' => 'oil', 'relit' => $relit];
+    }
+
+    /**
+     * R-EYES-2: returns true if any eyes meter reached its wake time.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function wakeEyes(World $world, array &$state, array &$events): bool
+    {
+        if ($world->eyes === []) {
+            return false;
+        }
+        $p = $state['player'];
+        $z = $world->zoneAt(IntMath::fdiv($p['z'], self::CELL_MM) * $world->w + IntMath::fdiv($p['x'], self::CELL_MM));
+        $lit = $p['oil'] > 0 && !$p['hooded'];
+        foreach ($world->eyes as $n => $ey) {
+            if ($z === $ey['zone'] && $lit) {
+                if ($state['eyes'][$n] === 0) {
+                    $events[] = ['e' => 'eyes', 'id' => $ey['id']];
+                }
+                $state['eyes'][$n] += 5;
+            } else {
+                $state['eyes'][$n] = max(0, $state['eyes'][$n] - 7);
+            }
+        }
+        foreach ($world->eyes as $n => $ey) {
+            if ($state['eyes'][$n] >= 5 * $ey['wake']) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * R-LOS-1
+     *
+     * @param array<string,mixed> $state
+     */
+    private static function lineOfSight(World $world, array $state, int $ix, int $iz): bool
+    {
+        // R-INT-2: every coordinate lies in the 64·2400 mm grid, so |ex|, |vx| < 2^18: squares < 2^36; |v·s| < 2^18 · n.
+        $px = $state['player']['x'];
+        $pz = $state['player']['z'];
+        $ex = $ix - $px;
+        $ez = $iz - $pz;
+        $e = IntMath::isqrt($ex * $ex + $ez * $ez);
+        $ax = $e > 0 ? $ix - IntMath::idiv($ex * 300, $e) : $ix;
+        $az = $e > 0 ? $iz - IntMath::idiv($ez * 300, $e) : $iz;
+        $vx = $ax - $px;
+        $vz = $az - $pz;
+        $n = IntMath::idiv(IntMath::isqrt($vx * $vx + $vz * $vz) + 599, 600);
+        for ($s = 1; $s < $n; $s++) {
+            $i = IntMath::fdiv($px + IntMath::idiv($vx * $s, $n), self::CELL_MM);
+            $j = IntMath::fdiv($pz + IntMath::idiv($vz * $s, $n), self::CELL_MM);
+            if ($world->sightBlocked($state, $i, $j)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * R-ITEM-2
+     *
+     * @param array<string,mixed> $state
+     * @param array{id:string,kind:string,k:int,x:int,z:int,reach:int} $it
+     * @param list<array<string,mixed>> $events
+     */
+    private static function takeItem(World $world, array &$state, int $n, array $it, array &$events): void
+    {
+        $p = $state['player'];
+        if ($it['kind'] === 'rubble' ? $p['pebbles'] >= self::PEBBLE_MAX : in_array($n, $state['taken'], true)) {
+            return;
+        }
+        $dx = $p['x'] - $it['x'];
+        $dz = $p['z'] - $it['z'];
+        if ($dx * $dx + $dz * $dz > $it['reach'] * $it['reach'] || !self::lineOfSight($world, $state, $it['x'], $it['z'])) {
+            return;
+        }
+        if ($it['kind'] === 'rubble') {
+            $state['player']['pebbles'] = self::PEBBLE_MAX;
+        } else {
+            $state['taken'][] = $n;
+            if ($it['kind'] === 'flask') {
+                $state['player']['flasks'] += 1;
+            }
+        }
+        $events[] = ['e' => 'item', 'id' => $it['id'], 'kind' => $it['kind']];
     }
 
     /**
@@ -384,6 +739,8 @@ final class Sim
         $p['hp'] = 100;
         $p['oil'] = max($life['oil'], self::RISE_OIL);
         $p['hooded'] = $life['hooded'];
+        $p['flasks'] = $life['flasks'];
+        $p['pebbles'] = $life['pebbles'];
         $p['x'] = $c['x'];
         $p['z'] = $c['z'];
         $p['yaw'] = $c['yaw'];
@@ -393,6 +750,10 @@ final class Sim
         $p['rx'] = 0;
         $p['rz'] = 0;
         unset($p);
+        $state['floor'] = $life['floor'];
+        $state['taken'] = $life['taken'];
+        $state['flying'] = [];
+        $state['eyes'] = array_map(static fn (): int => 0, $state['eyes']);
         $state['dead'] = null;
         $events[] = ['e' => 'rise', 'zone' => $c['zone'] >= 0 ? $world->zones[$c['zone']]['id'] : null];
     }
@@ -406,6 +767,10 @@ final class Sim
     private static function interact(World $world, array &$state, int $n, array &$events): void
     {
         $ref = $world->entityRef($n);
+        if ($ref !== null && $ref['type'] === 'item') {
+            self::takeItem($world, $state, $n, $world->items[$ref['item']], $events);
+            return;
+        }
         if ($ref === null || $ref['type'] !== 'door') {
             return;
         }

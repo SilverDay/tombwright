@@ -29,9 +29,12 @@ const KEYS = {
   door: ['id', 'type', 'cell', 'style', 'opens'], doorMask: ['id', 'type', 'cell', 'style', 'opens', 'face'],
   slab: ['id', 'type', 'cell'], prop: ['id', 'type', 'kind', 'pos', 'yaw'],
   vent: ['id', 'type', 'cells', 'period', 'phase', 'warn', 'fire'],
+  item: ['id', 'type', 'kind', 'cell'], treasure: ['id', 'type', 'kind', 'cell', 'value'],
+  eyes: ['id', 'type', 'zone', 'wake'],
   zone: ['id', 'name', 'rects', 'ceil'], zoneCp: ['id', 'name', 'rects', 'ceil', 'checkpoint'],
   cp: ['cell', 'yaw'], cpReach: ['cell', 'yaw', 'reach'],
 };
+const ITEM_KINDS = ['flask', 'rubble', 'treasure'];
 const DOOR_STYLES = ['stone', 'grate', 'mask'], DOOR_OPENS = ['interact', 'trigger'], MASK_FACES = ['weep', 'laugh', 'sleep', 'blank'];
 
 // The decoded grid and entity tables of each genuine world. Kept out of the frozen world object so
@@ -152,7 +155,7 @@ function worldFrom(gdf) {
   if (sk !== CELL.ROOM && sk !== CELL.CORR) throw new RangeError('start.cell is not floor');
   const startK = sj * w + si;
   const zs = loadZones(gdf.zones, grid, w, h);
-  const ents = loadEntities(gdf.entities, grid, w, h, startK, zs.cpCells);
+  const ents = loadEntities(gdf.entities, grid, w, h, startK, zs.cpCells, zs.zoneIds);
   // R-ZONE-2: checkpoint cells hold no door or slab (props were checked in loadEntities).
   for (const k of zs.cpCells) if (ents.doorAt[k] >= 0 || ents.slab[k]) throw new RangeError('checkpoint cell taken');
   // R-WORLD-3: world id = first 16 bytes of SHA-256 over the canonical GDF, as hex.
@@ -215,15 +218,15 @@ function loadZones(list, grid, w, h) {
     }
     zones.push(Object.freeze({ id: z.id, cp }));
   });
-  return { zoneOf, zones: Object.freeze(zones), cpCells };
+  return { zoneOf, zones: Object.freeze(zones), cpCells, zoneIds: zones.map((z) => z.id) };
 }
 
 /** R-ENT-*, R-DOOR-1, R-SLAB-1, R-PROP-*, R-VENT-1: validate the entity list and build the collision tables. */
-function loadEntities(list, grid, w, h, startK, cpCells) {
+function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
   if (list === undefined) list = [];
   if (!Array.isArray(list) || list.length > MAX_ENTITIES) throw new RangeError('entities');
   const ids = new Set(), doorAt = new Int16Array(w * h).fill(-1), slab = new Uint8Array(w * h);
-  const doors = [], props = [], refs = [], vents = [], ventAt = new Int16Array(w * h).fill(-1);
+  const doors = [], props = [], refs = [], vents = [], ventAt = new Int16Array(w * h).fill(-1), items = [], eyes = [];
   for (const e of list) {
     if (!isObj(e) || typeof e.id !== 'string' || !ID_RE.test(e.id)) throw new RangeError('entity id');
     if (ids.has(e.id)) throw new RangeError('duplicate entity id');
@@ -277,8 +280,26 @@ function loadEntities(list, grid, w, h, startK, cpCells) {
       }
       vents.push(Object.freeze({ period, phase, warn, fire }));
       refs.push({ type: 'vent' });
+    } else if (e.type === 'item') {
+      if (!hasExactKeys(e, e.kind === 'treasure' ? KEYS.treasure : KEYS.item)) throw new RangeError('item keys');
+      if (!ITEM_KINDS.includes(e.kind)) throw new RangeError('item kind');
+      if (e.kind === 'treasure' && (!isInt(e.value) || e.value < 1 || e.value > 100000)) throw new RangeError('item value');
+      const k = cellIndex(e.cell, w, h);
+      if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR && grid[k] !== CELL.BRIDGE) throw new RangeError('item cell');
+      const [ci, cj] = e.cell, off = e.kind === 'rubble' ? 300 : 0;
+      refs.push({ type: 'item', item: items.length });
+      items.push(Object.freeze({ id: e.id, kind: e.kind, k, x: ci * CELL_MM + CELL_MM / 2 - off, z: cj * CELL_MM + CELL_MM / 2 - off, reach: e.kind === 'rubble' ? 1600 : 1700 }));
+    } else if (e.type === 'eyes') {
+      if (!hasExactKeys(e, KEYS.eyes)) throw new RangeError('eyes keys');
+      const zi = typeof e.zone === 'string' ? zoneIds.indexOf(e.zone) : -1;
+      if (zi < 0 || eyes.some((x) => x.zone === zi)) throw new RangeError('eyes zone');
+      if (!isInt(e.wake) || e.wake < 18 || e.wake > 1800) throw new RangeError('eyes wake');
+      refs.push({ type: 'eyes' });
+      eyes.push(Object.freeze({ id: e.id, zone: zi, wake: e.wake }));
     } else throw new RangeError('unknown entity type');
   }
+  // R-ITEM-1: no item on a door or slab cell (checked after the loop, whatever the order).
+  for (const it of items) if (doorAt[it.k] >= 0 || slab[it.k]) throw new RangeError('item cell taken');
   // R-VENT-1: every vent cell belongs to a vent.
   for (let k = 0; k < w * h; k++) if (grid[k] === CELL.VENT && ventAt[k] < 0) throw new RangeError('vent cell without a vent');
   // R-PROP-2: every cell under the footprint's bounds is inside the grid and free floor.
@@ -291,7 +312,7 @@ function loadEntities(list, grid, w, h, startK, cpCells) {
       if (grid[k] === CELL.WALL || doorAt[k] >= 0 || slab[k] || k === startK || cpCells.includes(k)) throw new RangeError('prop footprint blocked');
     }
   }
-  return { doorAt, slab, ventAt, vents: Object.freeze(vents), doors: Object.freeze(doors), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
+  return { doorAt, slab, ventAt, vents: Object.freeze(vents), items: Object.freeze(items), eyes: Object.freeze(eyes), doors: Object.freeze(doors), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
 }
 
 /** Throws unless world came from loadWorld (not a look-alike object). */
@@ -331,6 +352,19 @@ export function ventAt(world, k) { const W = GRIDS.get(world), v = W.ventAt[k]; 
 export function zoneAt(world, k) { return GRIDS.get(world).zoneOf[k]; }
 export function worldZones(world) { return GRIDS.get(world).zones; }
 export function startZone(world) { return GRIDS.get(world).startZone; }
+
+/** R-ITEM-*, R-EYES-*: the items and eyes, in entity order (frozen). */
+export function worldItems(world) { return GRIDS.get(world).items; }
+export function worldEyes(world) { return GRIDS.get(world).eyes; }
+
+/** R-LOS-1: blocks sight: wall, or a door cell while R-DOOR-4 holds. Outside the grid blocks. */
+export function sightBlocked(world, state, i, j) {
+  if (i < 0 || j < 0 || i >= world.w || j >= world.h) return true;
+  const W = GRIDS.get(world), k = j * world.w + i;
+  if (W.grid[k] === CELL.WALL) return true;
+  const d = W.doorAt[k];
+  return d >= 0 && 20 * state.doors[d].t < 17 * DOOR_FULL;
+}
 
 /** R-ENT-3: the entity with number n (1-based), or undefined. */
 export function entityRef(world, n) { return n >= 1 ? GRIDS.get(world).refs[n - 1] : undefined; }

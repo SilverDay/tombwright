@@ -1,6 +1,6 @@
 {
  "name": "0006-traps-fuzz",
- "core": "m0.4",
+ "core": "m0.5",
  "seed": 5,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIAAQEBAwIBAQMCAQEFAgEBBgEBAgAMAQIADAECAAwBAgAEAQEEAgEBBwIBAQgBAQIABwEBBwQBDwA=\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,3,7]],\"ceil\":4200},{\"id\":\"b\",\"name\":\"B\",\"rects\":[[4,1,3,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[5,4],\"yaw\":3072}},{\"id\":\"c\",\"name\":\"C\",\"rects\":[[7,1,3,4],[7,5,3,3]],\"ceil\":6500,\"checkpoint\":{\"cell\":[8,4],\"yaw\":3072,\"reach\":\"enter\"}},{\"id\":\"d\",\"name\":\"D\",\"rects\":[[10,1,3,7]],\"ceil\":3000,\"checkpoint\":{\"cell\":[11,4],\"yaw\":1024,\"reach\":\"effect\"}}],\"entities\":[{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[2,2]},{\"id\":\"v1\",\"type\":\"vent\",\"cells\":[[8,6],[8,7]],\"period\":60,\"phase\":10,\"warn\":15,\"fire\":20}]}",
@@ -5534,42 +5534,42 @@
  "ticks": 9005,
  "hashEvery": 300,
  "hashes": {
-  "0": "4bba62ac64bcf9b571a2e41cb44f048c",
-  "300": "ac8a378605382a3f390efddbc5424163",
-  "600": "04293a50256b93c95aa902675a6d48d7",
-  "900": "01126de21d68e86ad540298c118e0f16",
-  "1200": "da99ab0f67c597f4133d746738c86477",
-  "1500": "8a961b4229394f2aff8d3ff6cf55bb2b",
-  "1800": "628b2372c777052431da1c95130dd5c3",
-  "2100": "cfff66fd32ec72989c814822b44b23d2",
-  "2400": "e39fcf350880e905c3244f204e96d66d",
-  "2700": "49fef1b2b6310742916b65cc51e2f29d",
-  "3000": "9e939191a0a90f90ec46adbefcb2835f",
-  "3300": "7eb72888e6f8d4fcaf7da75a9cbc1e2d",
-  "3600": "6b66ee9f7439cc39f2af5090055c7d0f",
-  "3900": "a6c3d7ed7a04526398cea8c5c1eb2add",
-  "4200": "a67edc18761c93b1153a82457a9ee072",
-  "4500": "7f1e23772860f59915273cdf1908ef60",
-  "4800": "1807e4159af0f2f81e64619d3bf09fae",
-  "5100": "bed4e54a0b9ec8a112c0af4744eaed07",
-  "5400": "383cbadf244ea107159b3cbc5f48a8b0",
-  "5700": "0fe92ad917bb699b344c95c55df7ed25",
-  "6000": "7421629179030b6983105569b6f2e2cc",
-  "6300": "c9e94b30afcff8087482d71aa32281b4",
-  "6600": "0a5fe706260bb5eb95af8a03105d7044",
-  "6900": "9d61b3e5cab9ab9a004c422e3fc3ecf3",
-  "7200": "c48cc2288f86b8483c88e2b9e61f1a07",
-  "7500": "2b54b1c598c8f6afb971aa8ca16fe682",
-  "7800": "0791d7493f887d400b6e64968779ca2a",
-  "8100": "79be4a4b0f3f187cd4b79430b6fab5e7",
-  "8400": "e38b3f9ffc4419543b0ad8d2c6fa71b3",
-  "8700": "94f0f26ad4e257a2fef101b27dd8da7b",
-  "9000": "805cdb6c9fae11626d3d8ad5000d6a2a"
+  "0": "c900420c67961505f6d32fc38e9eb00f",
+  "300": "65c50a281c10472551dcc9cd91bee3a0",
+  "600": "68dce6f1e90e7fd4cbc80ff4b50b0fde",
+  "900": "661e92ef10e20a3248aa4354ab854c57",
+  "1200": "bd5b3be61398b284be63a829dbc48551",
+  "1500": "dc167ff40079ca1fdbe002a34ec847b3",
+  "1800": "ba9f0634e549d98f6e25828f8f1e91da",
+  "2100": "737b7929a19b901d4b960747c9beae16",
+  "2400": "b1f2d396c3a8dcb0b3467b83ae611f91",
+  "2700": "3e9d93a23f3bd76601248ff15d5ead54",
+  "3000": "79db2a63ce93c39fda65aa4a12c83ade",
+  "3300": "3f4abf0bcf6b52f2d51aaaff87df9165",
+  "3600": "60288d248cb475c7912584cddaf35f90",
+  "3900": "619e35e7efa3e2fe318774c96785c124",
+  "4200": "d4b40cee0ca52cf875acf9d4f4153c50",
+  "4500": "aa957de5cf627a7f0c86e337782cb82d",
+  "4800": "ea9c415f59f6d0c99d5b2e54bbc1ad38",
+  "5100": "4210f6b429154814cd4d8450cc17b9c2",
+  "5400": "23f4548f6833edcff7016cd09ecee93c",
+  "5700": "2d9ed7b64097b5ecd1bb2a5d5f415d9f",
+  "6000": "908ee932159ab58311f815f80e9af82c",
+  "6300": "1a6a9142c522d1d84857e49e22b1b107",
+  "6600": "ee0e7905127de54ddeb88d5ec2ebc62b",
+  "6900": "41aeb51f5f207b774d6797a63d3f7a59",
+  "7200": "8ea7fdd641a3ae3694ddb4cb45736593",
+  "7500": "780670f4161421ef366a41a00161a44c",
+  "7800": "429fc998239bac6bea2f0fc264666a3e",
+  "8100": "7adc580433680dadf01127cde44f1b42",
+  "8400": "42cb6c585651e11a180d0105c30093d6",
+  "8700": "a687eced19e5aeff0f59079a48b178af",
+  "9000": "62992e6d2a65e323e41abe82479f57d3"
  },
- "final": "91e68bcf157eb20cd2ea4b4aca1ef490",
+ "final": "dfddb515cd3aada7f9b4c259c86649c6",
  "finalState": {
   "v": 1,
-  "core": "m0.4",
+  "core": "m0.5",
   "world": "3105c26a5fe9b85dd09aca967c41891f",
   "mode": "delve",
   "tick": 9005,
@@ -5589,16 +5589,67 @@
    "yaw": 1519,
    "pitch": 110,
    "hp": 100,
-   "oil": 2820935,
-   "hooded": true
+   "oil": 2946645,
+   "hooded": true,
+   "flasks": 0,
+   "pebbles": 0,
+   "probeCd": 0,
+   "pebbleCd": 0
   },
   "doors": [],
   "deaths": 8,
   "dead": null,
-  "sprung": [],
+  "sprung": [
+   33
+  ],
   "pits": [
    89
   ],
+  "marked": [],
+  "bridge": [
+   39
+  ],
+  "floor": [
+   {
+    "x": 19161,
+    "z": 17351
+   },
+   {
+    "x": 17226,
+    "z": 16123
+   },
+   {
+    "x": 28973,
+    "z": 9251
+   },
+   {
+    "x": 28861,
+    "z": 2432
+   },
+   {
+    "x": 26303,
+    "z": 8728
+   },
+   {
+    "x": 28691,
+    "z": 2462
+   },
+   {
+    "x": 31171,
+    "z": 11492
+   },
+   {
+    "x": 27099,
+    "z": 9248
+   },
+   {
+    "x": 19806,
+    "z": 13189
+   }
+  ],
+  "flying": [],
+  "taken": [],
+  "eyes": [],
   "checkpoints": [
    {
     "zone": 0,
@@ -5609,7 +5660,11 @@
      "hp": 100,
      "oil": 3000000,
      "hooded": false,
-     "doors": []
+     "flasks": 1,
+     "pebbles": 10,
+     "doors": [],
+     "floor": [],
+     "taken": []
     }
    },
    {
@@ -5621,7 +5676,11 @@
      "hp": 100,
      "oil": 2998735,
      "hooded": false,
-     "doors": []
+     "flasks": 1,
+     "pebbles": 9,
+     "doors": [],
+     "floor": [],
+     "taken": []
     }
    },
    {
@@ -5633,7 +5692,11 @@
      "hp": 100,
      "oil": 2995695,
      "hooded": false,
-     "doors": []
+     "flasks": 1,
+     "pebbles": 9,
+     "doors": [],
+     "floor": [],
+     "taken": []
     }
    }
   ],

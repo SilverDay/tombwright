@@ -59,7 +59,7 @@ const walls = [
 const X = B.interact;
 const doors = [
   [1, I([0, 0], 0, X, 0, 1)], [1, I()], [110, I([127, 0])],
-  [1, I([127, 0], 0, X, 0, 2)], [1, I([127, 0])], [1, I([127, 0], 0, X, 0, 10)], [1, I([127, 0])],
+  [1, I([127, 0], 0, X, 0, 2)], [1, I([127, 0])], [1, I([127, 0], 0, X, 0, 25)], [1, I([127, 0])],
   [1, I([127, 0], 0, X, 0, 999)], [1, I([127, 0])], [6, I([127, 0], 0, X, 0, 1)], [100, I([127, 0])],
   [60, I([127, 0], 3072)], [25, I([127, 0])], [75, I([127, 0], 1024, B.run)], [80, I([127, 0], 3072, B.run)],
 ];
@@ -124,6 +124,72 @@ const hall = [
 // on the death tick: step refuses the state afterwards (R-DEATH-3).
 const ironman = [[66, I([127, 0], 3072)], [38, I([127, 0], 0)]];
 
+// Tools and items (R-TOOL-*, R-PROBE-*, R-PEB-*, R-OIL-3, R-ITEM-*, R-LOS-1, R-EYES-*). A 14x9 room split by a wall
+// at i = 6 with an interact door at (6, 4). West, zone a (start 2, 4): plate (4, 2), pit (4, 6), a flask, rubble and
+// a treasure. East, zone g (checkpoint 7, 4) watched by eyes (wake 18): bridge, void, vent, alcove, pit, a plate,
+// an old slab on a plate, a treasure.
+export function toolRoom(start = [2, 4], eyes = true) {
+  const w = 14, h = 9, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  for (let j = 1; j < h - 1; j++) set(6, j, 0);
+  set(6, 4, 2); set(4, 2, 3); set(4, 6, 4);
+  set(8, 2, 6); set(9, 2, 5); set(10, 6, 7); set(12, 6, 8); set(8, 6, 4); set(11, 2, 3); set(12, 2, 3);
+  return JSON.stringify({
+    gdf: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: start },
+    zones: [
+      { id: 'a', name: 'A', rects: [[1, 1, 5, 7]], ceil: 4200 },
+      { id: 'g', name: 'G', rects: [[7, 1, 6, 7]], ceil: 3600, checkpoint: { cell: [7, 4], yaw: 3072 } },
+    ],
+    entities: [
+      { id: 'd1', type: 'door', cell: [6, 4], style: 'stone', opens: 'interact' },
+      { id: 'f1', type: 'item', kind: 'flask', cell: [3, 3] },
+      { id: 'r1', type: 'item', kind: 'rubble', cell: [2, 6] },
+      { id: 't1', type: 'item', kind: 'treasure', cell: [1, 1], value: 100 },
+      { id: 't2', type: 'item', kind: 'treasure', cell: [12, 4], value: 250 },
+      { id: 'b1', type: 'item', kind: 'treasure', cell: [8, 2], value: 7 },
+      ...(eyes ? [{ id: 'e1', type: 'eyes', zone: 'g', wake: 18 }] : []),
+      { id: 'v1', type: 'vent', cells: [[10, 6]], period: 90, phase: 0, warn: 20, fire: 30 },
+      { id: 's1', type: 'slab', cell: [12, 2] },
+    ],
+  });
+}
+
+// The tool room by hand: take the flask, throw a pebble onto the plate (4, 2) (it springs, nobody dies), refill
+// at the rubble, probe the pit (4, 6) and walk into it anyway (flask, pebbles and taken roll back), rise, open the
+// door, hood, cross into the eyes' room (checkpoint g, still hooded), probe, un-hood and burn (18 ticks), rise at g.
+const tools = [
+  [25, I([127,0], 3584, 0, 0, 0)],
+  [1, I([0,0], 3584, X, 0, 2)],
+  [1, I([0,0], 3584, 0, 0, 0)],
+  [1, I([0,0], 3584, B.pebble, -60, 0)],
+  [20, I([0,0], 3584, 0, 0, 0)],
+  [60, I([127,0], 2048, 0, 0, 0)],
+  [12, I([127,0], 1024, 0, 0, 0)],
+  [10, I([0,0], 1024, 0, 0, 0)],
+  [1, I([0,0], 1024, X, 0, 3)],
+  [1, I([0,0], 1024, 0, 0, 0)],
+  [15, I([127,0], 3072, 0, 0, 0)],
+  [1, I([0,0], 3072, B.probe, 0, 0)],
+  [5, I([0,0], 3072, 0, 0, 0)],
+  [30, I([127,0], 3072, 0, 0, 0)],
+  [55, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, B.rise, 0, 0)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [75, I([127,0], 3072, 0, 0, 0)],
+  [1, I([0,0], 3072, X, 0, 1)],
+  [1, I([0,0], 3072, B.hood, 0, 0)],
+  [40, I([0,0], 3072, 0, 0, 0)],
+  [60, I([127,0], 3072, 0, 0, 0)],
+  [1, I([0,0], 3072, X, 0, 5)],
+  [1, I([0,0], 0, B.probe, 0, 0)],
+  [20, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, B.hood, 0, 0)],
+  [30, I([0,0], 0, 0, 0, 0)],
+  [55, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, B.rise, 0, 0)],
+  [3, I([0,0], 0, 0, 0, 0)],
+];
+
 // Vectors carry the GDF as its exact text: Sim.load takes bytes (R-GDF-0).
 export const GLOAMHOLLOW = readFileSync(ROOT + 'dungeons/gloamhollow.gdf.json', 'utf8');
 const utf8 = (s) => new TextEncoder().encode(s);
@@ -137,6 +203,11 @@ const VECTORS = {
   '0007-practice-fuzz': { gdf: trapRoom(), seed: 6, mode: 'practice', inputs: fuzz(0xC4EC, 9000, 6) },
   '0008-hall-plate': { gdf: GLOAMHOLLOW, seed: 8, mode: 'delve', inputs: hall },
   '0009-ironman': { gdf: trapRoom(), seed: 9, mode: 'ironman', inputs: ironman },
+  '0010-tools': { gdf: toolRoom(), seed: 10, mode: 'delve', inputs: tools },
+  '0011-tools-fuzz': { gdf: toolRoom(), seed: 11, mode: 'delve', inputs: fuzz(0x7001, 9000, 11) },
+  '0012-tools-practice-fuzz': { gdf: toolRoom(), seed: 12, mode: 'practice', inputs: fuzz(0x51DE, 9000, 11) },
+  '0013-eyes-fuzz': { gdf: toolRoom([10, 4]), seed: 13, mode: 'delve', inputs: fuzz(0xE7E5, 9000, 11) },
+  '0014-east-fuzz': { gdf: toolRoom([10, 4], false), seed: 14, mode: 'practice', inputs: fuzz(0xEA57, 12000, 11) },
 };
 
 export function replay(gdf, seed, mode, rle, each) {
@@ -188,7 +259,7 @@ function gdfCases() {
     raw('not an object', utf8('[1,2]')), raw('null', utf8('null')), raw('trailing garbage', utf8(text(r) + 'x')),
     raw('too large', utf8(text(r).replace('"gdf":1', '"gdf":1,"pad":"' + 'a'.repeat(262144) + '"'))),
   ];
-  cases.push(...entityCases(raw), ...zoneCases(raw));
+  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw));
   return cases.map((c) => { try { return { ...c, ok: true, id: Sim.load(b64decodeBytes(c.bytes)).id }; } catch { return { ...c, ok: false }; } });
 }
 
@@ -285,6 +356,33 @@ function zoneCases(raw) {
     one('vents: phase = period', vt({ phase: 60 })), one('vents: phase -1', vt({ phase: -1 })), one('vents: warn 0', vt({ warn: 0 })),
     one('vents: fire 0', vt({ fire: 0 })), one('vents: fire 60 %', vt({ period: 60, warn: 0, fire: 36 })), one('vents: fire over 60 %', vt({ period: 60, warn: 0, fire: 37 })),
     one('vents: warn + fire > period', vt({ period: 10, warn: 5, fire: 6 })), one('vents: timing string', vt({ fire: '20' })),
+  ];
+}
+
+// Items and eyes (R-ITEM-1, R-EYES-1): edits of the tool room, which loads as it stands.
+function itemCases(raw) {
+  const base = JSON.parse(toolRoom());
+  const one = (name, f) => { const g = structuredClone(base); f(g); return raw(name, utf8(JSON.stringify(g))); };
+  const ent = (id) => (g) => g.entities.find((e) => e.id === id);
+  const set = (id, o) => (g) => Object.assign(ent(id)(g), o);
+  const add = (e) => (g) => { g.entities.push(e); };
+  return [
+    one('items: tool room', () => {}),
+    one('items: flask with value', set('f1', { value: 5 })), one('items: treasure without value', (g) => { delete ent('t1')(g).value; }),
+    one('items: value 0', set('t1', { value: 0 })), one('items: value 100000', set('t1', { value: 100000 })), one('items: value 100001', set('t1', { value: 100001 })),
+    one('items: value string', set('t1', { value: '100' })), one('items: kind key', set('f1', { kind: 'key' })), one('items: kind number', set('f1', { kind: 1 })),
+    one('items: no kind', (g) => { delete ent('f1')(g).kind; }), one('items: extra key', set('f1', { name: 'oil' })),
+    one('items: on wall', set('f1', { cell: [6, 2] })), one('items: on plate', set('f1', { cell: [4, 2] })), one('items: on pit', set('f1', { cell: [4, 6] })),
+    one('items: on void', set('f1', { cell: [9, 2] })), one('items: on vent', set('f1', { cell: [10, 6] })), one('items: on alcove', set('f1', { cell: [12, 6] })),
+    one('items: on bridge ok', set('f1', { cell: [8, 2] })), one('items: on corridor door', set('f1', { cell: [6, 4] })),
+    one('items: on start ok', set('f1', { cell: [2, 4] })), one('items: on checkpoint ok', set('f1', { cell: [7, 4] })),
+    one('items: two on one cell ok', set('r1', { cell: [3, 3] })), // f1 lies on (3, 3)
+    one('items: rubble with value', set('r1', { value: 1 })),
+    one('eyes: no zone', (g) => { delete ent('e1')(g).zone; }), one('eyes: unknown zone', set('e1', { zone: 'x' })), one('eyes: zone number', set('e1', { zone: 1 })),
+    one('eyes: second on zone', add({ id: 'e2', type: 'eyes', zone: 'g', wake: 30 })), one('eyes: second zone ok', add({ id: 'e2', type: 'eyes', zone: 'a', wake: 30 })),
+    one('eyes: wake 17', set('e1', { wake: 17 })), one('eyes: wake 1800', set('e1', { wake: 1800 })), one('eyes: wake 1801', set('e1', { wake: 1801 })),
+    one('eyes: extra key', set('e1', { glow: true })), one('eyes: zone before zones listed ok', (g) => { g.entities.unshift(g.entities.splice(g.entities.findIndex((e) => e.id === 'e1'), 1)[0]); }),
+    one('eyes: no zones', (g) => { delete g.zones; }),
   ];
 }
 

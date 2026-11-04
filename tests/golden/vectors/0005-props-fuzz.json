@@ -1,6 +1,6 @@
 {
  "name": "0005-props-fuzz",
- "core": "m0.4",
+ "core": "m0.5",
  "seed": 11,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":12,\"h\":10,\"cells\":\"DQACAQECBAEBAgIBAgAKAQIACgECAAoBAgAKAQIACAEBAwEBAgAKAQIACgENAA==\"},\"start\":{\"cell\":[5,7]},\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[3,1],\"style\":\"stone\",\"opens\":\"interact\"},{\"id\":\"d2\",\"type\":\"door\",\"cell\":[8,1],\"style\":\"mask\",\"opens\":\"trigger\",\"face\":\"blank\"},{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[9,6]},{\"id\":\"p1\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[6000,10800],\"yaw\":1024},{\"id\":\"p2\",\"type\":\"prop\",\"kind\":\"stele\",\"pos\":[11100,8600],\"yaw\":3770},{\"id\":\"p3\",\"type\":\"prop\",\"kind\":\"tree\",\"pos\":[15600,10800],\"yaw\":0},{\"id\":\"p4\",\"type\":\"prop\",\"kind\":\"post\",\"pos\":[17100,6000],\"yaw\":0},{\"id\":\"p5\",\"type\":\"prop\",\"kind\":\"plinth\",\"pos\":[22800,8400],\"yaw\":0},{\"id\":\"p6\",\"type\":\"prop\",\"kind\":\"lectern\",\"pos\":[8400,15600],\"yaw\":2048},{\"id\":\"p7\",\"type\":\"prop\",\"kind\":\"sarcophagus\",\"pos\":[18000,15600],\"yaw\":1024},{\"id\":\"p8\",\"type\":\"prop\",\"kind\":\"sarcophagus\",\"pos\":[24000,20000],\"yaw\":0}]}",
@@ -3818,32 +3818,32 @@
  "ticks": 6011,
  "hashEvery": 300,
  "hashes": {
-  "0": "576af4b1651e43c10455f5d684f251e8",
-  "300": "5d5b98137b3a1748902059442c21ff64",
-  "600": "84190718fc6ab9418ead23fe1a467f8e",
-  "900": "0a5b3384f31d3d466a4b0288227dabe4",
-  "1200": "8e044b519eb8ec79902b050b791813ed",
-  "1500": "f4d81319e9d99d8380dac698697132fe",
-  "1800": "a090b6a87cb5e2e72003bc345f45fd48",
-  "2100": "ae99031c128c90355b59ab7a434369c0",
-  "2400": "4f0cbb6a309fff902678480b2c7999a7",
-  "2700": "17aae8550f7dc1574517db5bf3fe4761",
-  "3000": "0f6a56039eb5f1562f4bc01ad83f9789",
-  "3300": "9adc3e26ac458cd287410ebdc4ce3072",
-  "3600": "2959934c92f8c4b5baf41922bf6d4473",
-  "3900": "f9f86fcc520625dfcc2a16b220868377",
-  "4200": "b44345038822d0798b3488e5067ce691",
-  "4500": "2222f7f48d93a8d76c248d0003f5b07d",
-  "4800": "0cb49e622d3ba72250460478278a4224",
-  "5100": "0599c3c6629807cb8c57d972f1286a0a",
-  "5400": "1cbe5bc4ff83b20f0881943be0d7a2a3",
-  "5700": "d6bb7e40466ff699531371929f886904",
-  "6000": "06e81ac1d06ae173818da72113d01024"
+  "0": "0a28e6c6c52b01891a9262f887d7da48",
+  "300": "1f90e2fba6550a00ebf41f7f3e144628",
+  "600": "64fea57a9fad2a6fb83249b01047d90e",
+  "900": "1f30fb71410f305715d02515a0e055ec",
+  "1200": "5b17df00a095332284ba062ec2ad4818",
+  "1500": "6bbc4916373c76ff535c14fe47ea4160",
+  "1800": "644ea6b250a1cdff6597dd84aa50ab30",
+  "2100": "2eb03c6aeebc1cf08d5f6b56fff2e6a3",
+  "2400": "69b76fb1d0b857830fbc056a9417838a",
+  "2700": "1145d20495f7bdab23735d0150272b50",
+  "3000": "ff775eebd276d083e4e8fddb0876e998",
+  "3300": "43a83bdb0cb869d354c63f85ca8b543e",
+  "3600": "31730248f703ae18e9c7921ddfaaee8e",
+  "3900": "092a4ee0af08d251b9e552c3ea726ebf",
+  "4200": "2d0bd5475a238b9fbf58c0169cdcad4c",
+  "4500": "052b5f45a48915d1b5bce5741c2238cf",
+  "4800": "49a7a16f8d38c6325b03ec12d0df7454",
+  "5100": "b705c73ea3a003a32adbc58b6a4a27ec",
+  "5400": "2998d6dfdb645c7715ff7ec75e18f4f8",
+  "5700": "d18327826ad6e22127b0f515a2a435e5",
+  "6000": "d20510cb19b166c4e4f37fad2e856ce2"
  },
- "final": "f7479935040ea023993453c820cea8bd",
+ "final": "8e48ff17b17d6f4b0e6fc815d15b14f0",
  "finalState": {
   "v": 1,
-  "core": "m0.4",
+  "core": "m0.5",
   "world": "2cd11d250d4a991ae1a5d9283803c59b",
   "mode": "practice",
   "tick": 6011,
@@ -3863,8 +3863,12 @@
    "yaw": 1312,
    "pitch": 64,
    "hp": 100,
-   "oil": 2710520,
-   "hooded": true
+   "oil": 2832680,
+   "hooded": true,
+   "flasks": 0,
+   "pebbles": 0,
+   "probeCd": 0,
+   "pebbleCd": 0
   },
   "doors": [
    {
@@ -3880,6 +3884,53 @@
   "dead": null,
   "sprung": [],
   "pits": [],
+  "marked": [],
+  "bridge": [],
+  "floor": [
+   {
+    "x": 16931,
+    "z": 9514
+   },
+   {
+    "x": 20272,
+    "z": 4839
+   },
+   {
+    "x": 9533,
+    "z": 4871
+   },
+   {
+    "x": 5637,
+    "z": 6509
+   },
+   {
+    "x": 14254,
+    "z": 4519
+   },
+   {
+    "x": 11996,
+    "z": 7169
+   },
+   {
+    "x": 11215,
+    "z": 10981
+   },
+   {
+    "x": 11946,
+    "z": 16666
+   },
+   {
+    "x": 3468,
+    "z": 17068
+   },
+   {
+    "x": 4786,
+    "z": 14939
+   }
+  ],
+  "flying": [],
+  "taken": [],
+  "eyes": [],
   "checkpoints": [
    {
     "zone": -1,
@@ -3890,10 +3941,14 @@
      "hp": 100,
      "oil": 3000000,
      "hooded": false,
+     "flasks": 1,
+     "pebbles": 10,
      "doors": [
       false,
       false
-     ]
+     ],
+     "floor": [],
+     "taken": []
     }
    }
   ],
