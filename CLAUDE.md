@@ -4,7 +4,7 @@ Server-based successor to *Gloamhollow*: players build trap-filled tombs in a br
 
 - Spec: `docs/spec.md` (v0.3). Decisions taken since then: `docs/decisions.md`. Normative game rules: `docs/sim-rules.md`.
 - Porting reference: `reference/gloamhollow/Gloamhollow.html` (the original single-file game); checklist in `docs/gloamhollow-port-notes.md`.
-- Current milestone: **M0, engine split** (spec §16).
+- Current milestone: **M1, PHP core** (spec §16). M0 (engine split) is done: Gloamhollow plays on the sim core and its walkthrough passes.
 
 ## Ground rules
 
@@ -29,10 +29,11 @@ npm run golden:regen                     # regenerate vectors after an intention
 node bin/build-gloamhollow-gdf.mjs       # rebuild dungeons/gloamhollow.gdf.json from the original's map data
 php bin/migrate.php status|up [--test]   # migrations (migrate user, not the app user)
 composer lint                            # php -l over the tree
-npm run e2e                              # Playwright: the Gloamhollow walkthrough (M0 exit criterion)
+npm run e2e                              # Playwright: both walkthroughs (reference game and the Tombwright port)
 ```
 
-The walkthrough (`tests/e2e/gloamhollow-walkthrough.spec.mjs`, driver in `tests/e2e/lib/`) plays `reference/gloamhollow/Gloamhollow.html` through its `window.__gh` hook in fixed 1/30 s ticks with rendering off. When the renderer moves onto the Tombwright sim core, the same route and checks must still pass.
+Two walkthroughs play Gloamhollow from the stair to daylight in fixed 1/30 s ticks with rendering off:
+`tests/e2e/gloamhollow-walkthrough.spec.mjs` plays the reference (`reference/gloamhollow/Gloamhollow.html`, through its `window.__gh` hook), and `tests/e2e/tombwright-walkthrough.spec.mjs` plays the Tombwright client at `/` (served by `php -S` with `tests/e2e/lib/dev-router.php`) through `window.__tw`, which the client installs only when `window.__twTest` is set before boot (driver: `tests/e2e/lib/tombwright-driver.js`, checks read the sim state). The page's CSP refuses injected `<script>` tags, so test code goes in with `page.evaluate`. The game client is `public/js/game/` (renderer, UI, sound); it reads sim state and never writes it.
 
 Cloud sessions: `.claude/hooks/session-start.sh` installs and starts MariaDB, creates `tombwright` and `tombwright_test` with random dev credentials in `config/local.env`, and runs composer and npm installs. Playwright's Chromium is pre-installed (`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`). Don't run `playwright install`.
 

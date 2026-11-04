@@ -8,6 +8,15 @@ export default defineConfig({
   timeout: 10 * 60 * 1000,
   fullyParallel: false,
   reporter: [['list']],
+  // The Tombwright client is served by PHP's built-in server through the front controller (spec §5.4).
+  webServer: {
+    command: 'php -S 127.0.0.1:8765 -t public tests/e2e/lib/dev-router.php',
+    url: 'http://127.0.0.1:8765/healthz',
+    reuseExistingServer: true,
+    stdout: 'ignore',
+    stderr: 'pipe',
+    timeout: 30 * 1000,
+  },
   use: {
     ...devices['Desktop Chrome'],
     reducedMotion: 'reduce',
