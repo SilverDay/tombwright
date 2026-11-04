@@ -9,6 +9,7 @@ import { b64encode, b64decode as b64decodeBytes, rleEncode } from '../../public/
 import { rngSeed, rngNext, rngBelow, fmix32 } from '../../public/js/sim/rng.js';
 import { canonical } from '../../public/js/sim/canon.js';
 import { sha256Hex } from '../../public/js/sim/sha256.js';
+import { makeDriver } from '../fuzz/driver.mjs';
 import { isin } from '../../public/js/sim/sine.js';
 
 loadCore();
@@ -534,6 +535,54 @@ export function powerRoom(start = [4, 4], only = null) {
   });
 }
 
+// Thieves and tricks (R-THIEF-*, R-GUARD-1, R-FORGET-1, R-MIMIC-1, step 7c): treasure to steal, a leprechaun and a nymph,
+// an orc guarding the far treasure, a wraith over marked plates and a bridge, a phantom, and two disguised xerocs;
+// budget 4+4+4+9+16+9+9 = 55.
+export function thiefRoom(start = [3, 4]) {
+  const w = 16, h = 9, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  set(6, 2, 3); set(7, 2, 3); set(6, 6, 5); set(7, 6, 6); set(8, 6, 5);
+  return JSON.stringify({
+    gdf: 1, bestiary: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: start },
+    zones: [{ id: 'a', name: 'A', rects: [[1, 1, 9, 7]], ceil: 4200, checkpoint: { cell: [2, 4], yaw: 0 } }, { id: 'b', name: 'B', rects: [[10, 1, 5, 7]], ceil: 4200 }],
+    entities: [
+      { id: 't1', type: 'item', kind: 'treasure', cell: [3, 3], value: 50 }, { id: 't2', type: 'item', kind: 'treasure', cell: [4, 5], value: 200 },
+      { id: 't3', type: 'item', kind: 'treasure', cell: [13, 2], value: 500 }, { id: 'f1', type: 'item', kind: 'flask', cell: [2, 6] },
+      { id: 'lep', type: 'foe', kind: 'leprechaun', cell: [8, 4], start: 'idle' },
+      { id: 'nym', type: 'foe', kind: 'nymph', cell: [8, 3], start: 'asleep' },
+      { id: 'orc', type: 'foe', kind: 'orc', cell: [11, 6], start: 'idle' },
+      { id: 'wra', type: 'foe', kind: 'wraith', cell: [5, 6], start: 'hunting' },
+      { id: 'pha', type: 'foe', kind: 'phantom', cell: [12, 4], start: 'asleep' },
+      { id: 'xe1', type: 'foe', kind: 'xeroc', cell: [5, 2], start: 'asleep', disguise: 'treasure' },
+      { id: 'xe2', type: 'foe', kind: 'xeroc', cell: [2, 2], start: 'asleep', disguise: 'chest' },
+    ],
+  });
+}
+
+// A wraith and a disguised xeroc beside marked plates (R-FORGET-1, R-MIMIC-1): probe the plate east (marked), probe the
+// xeroc south (revealed safely), then stand and strike while the wraith works on your memory.
+export function trickRoom() {
+  const w = 8, h = 8, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  set(3, 2, 3); set(4, 2, 3); set(5, 4, 3); set(5, 5, 6);
+  return JSON.stringify({
+    gdf: 1, bestiary: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: [2, 2] },
+    zones: [{ id: 'r', name: 'R', rects: [[1, 1, 6, 6]], ceil: 4200 }],
+    entities: [
+      { id: 'xe', type: 'foe', kind: 'xeroc', cell: [2, 3], start: 'asleep', disguise: 'flask' },
+      { id: 'wr', type: 'foe', kind: 'wraith', cell: [2, 6], start: 'hunting' },
+    ],
+  });
+}
+
+// Inputs chosen while the case plays (tests/fuzz/driver.mjs), recorded in the vector like any other.
+function driven(gdf, seed, mode, ticks, rseed) {
+  const world = Sim.load(utf8(gdf)), st = Sim.init(world, seed, mode), drive = makeDriver(rngSeed(rseed), gdf), rle = [];
+  let t = 0;
+  try { while (t < ticks) { const [n, inp] = drive(st); rle.push([n, inp]); for (let k = 0; k < n; k++, t++) Sim.step(world, st, inp); } } catch { /* the run ended */ }
+  return rle;
+}
+
 // The awake cap, the wake queue and a mixed group (R-FOE-4, R-FOE-8): the foe room with ten dormant crawlers in group
 // all, spawned on tick 0 (two must wait), and group mix (an asleep warden and a dormant crawler, never spawned).
 export function crowdRoom() {
@@ -663,6 +712,11 @@ const VECTORS = {
   '0041-powers-practice-fuzz': { gdf: powerRoom([11, 4]), seed: 41, mode: 'practice', inputs: fuzz(0x90E6, 9000, 10, 60) },
   // Seized by the flytrap alone (R-POW-4): held 150 ticks, freed, immune 90, struck down; then rise and kill it while held.
   '0042-seize': { gdf: powerRoom([4, 3], ['fly']), seed: 42, mode: 'practice', inputs: [[8, I([127, 0], 3072)], [340, I([0, 0], 3072)], [1, I([0, 0], 3072, B.rise)], [8, I([127, 0], 3072)], [400, I([0, 0], 3072, B.strike)]] },
+  '0043-thieves-driven': { gdf: thiefRoom(), seed: 43, mode: 'practice', inputs: driven(thiefRoom(), 43, 'practice', 6000, 0x7E1F) },
+  '0044-thieves-driven-2': { gdf: thiefRoom([12, 4]), seed: 44, mode: 'delve', inputs: driven(thiefRoom([12, 4]), 44, 'delve', 6000, 0x7E20) },
+  '0045-thieves-fuzz': { gdf: thiefRoom(), seed: 45, mode: 'practice', inputs: fuzz(0x7E21, 9000, 14, 60) },
+  '0046-tricks': { gdf: trickRoom(), seed: 46, mode: 'practice', inputs: [[1, I([0, 0], 3072, B.probe)], [25, I([0, 0], 3072)], [1, I([0, 0], 3072, B.probe)], [25, I([0, 0], 3072)],
+    [1, I([0, 0], 2048, B.probe)], [30, I([0, 0], 2048)], [900, I([0, 0], 2048)], [1, I([0, 0], 2048, B.rise)], [600, I([0, 0], 0, B.strike)]] },
   '0022-mirrors-practice-fuzz': { gdf: mirrorRoom([1, 3]), seed: 22, mode: 'practice', inputs: fuzz(0x3171, 9000, 4, 30) }, // slow, near the hook
 };
 
@@ -973,7 +1027,10 @@ function foeCases(raw) {
   const set = (id, o) => (g) => Object.assign(ent(id)(g), o);
   const many = (n, start) => (g) => { g.entities = Array.from({ length: n }, (_, k) => ({ id: 'q' + k, type: 'foe', kind: 'crawler', cell: [1 + (k % 6), 1 + ((k / 6) | 0)], start })); g.links = []; };
   return [
-    one('foes: room', () => {}), one('foes: kind unknown', set('f1', { kind: 'basilisk' })), one('foes: dragon ok', set('f1', { kind: 'dragon' })),
+    one('foes: room', () => {}), one('foes: kind unknown', set('f1', { kind: 'basilisk' })),
+    one('foes: xeroc disguised ok', set('f3', { kind: 'xeroc', disguise: 'chest' })), one('foes: disguise on a warden', set('f3', { disguise: 'chest' })),
+    one('foes: disguised xeroc idle', set('f1', { kind: 'xeroc', disguise: 'flask' })), one('foes: disguise bad', set('f3', { kind: 'xeroc', disguise: 'door' })),
+    one('foes: disguise null', set('f3', { kind: 'xeroc', disguise: null })), one('foes: xeroc plain ok', set('f3', { kind: 'xeroc' })), one('foes: dragon ok', set('f1', { kind: 'dragon' })),
     one('foes: four dragons ok (100)', (g) => { g.entities = Array.from({ length: 4 }, (_, k) => ({ id: 'q' + k, type: 'foe', kind: 'dragon', cell: [9 + k, 2], start: 'asleep' })); g.links = []; }),
     one('foes: four dragons and a bat (101)', (g) => { g.entities = [...Array.from({ length: 4 }, (_, k) => ({ id: 'q' + k, type: 'foe', kind: 'dragon', cell: [9 + k, 2], start: 'asleep' })), { id: 'b', type: 'foe', kind: 'bat', cell: [2, 2], start: 'asleep' }]; g.links = []; }),
     one('foes: flier on void (start cell rule)', (g) => { g.entities = [{ id: 'b', type: 'foe', kind: 'bat', cell: [5, 5], start: 'idle' }]; g.links = []; }), one('foes: kind __proto__', set('f1', { kind: '__proto__' })),

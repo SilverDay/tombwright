@@ -371,7 +371,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
         x = ci * CELL_MM + CELL_MM / 2 - off; z = cj * CELL_MM + CELL_MM / 2 - off;
       }
       refs.push({ type: 'item', item: items.length });
-      items.push({ id: e.id, n: refs.length, kind: e.kind, hidden, k, x, z, reach: e.kind === 'rubble' ? 1600 : 1700, chestName: inChest ? e.in : null });
+      items.push({ id: e.id, n: refs.length, kind: e.kind, hidden, k, x, z, reach: e.kind === 'rubble' ? 1600 : 1700, chestName: inChest ? e.in : null, value: e.kind === 'treasure' ? e.value : 0 });
     } else if (e.type === 'eyes') {
       if (!hasExactKeys(e, KEYS.eyes)) throw new RangeError('eyes keys');
       const zi = typeof e.zone === 'string' ? zoneIds.indexOf(e.zone) : -1;
@@ -404,11 +404,13 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       refs.push({ type: 'chest', chest: chests.length });
       chests.push({ id: e.id, k, x: x + 250 * di, z: z + 250 * dj, reach: 2200, needles: e.trap === 'needles', contents: [] });
     } else if (e.type === 'foe') {
-      const grouped = Object.hasOwn(e, 'group');
-      if (!hasExactKeys(e, grouped ? [...KEYS.foe, 'group'] : KEYS.foe)) throw new RangeError('foe keys');
+      const grouped = Object.hasOwn(e, 'group'), disguised = Object.hasOwn(e, 'disguise');
+      if (!hasExactKeys(e, [...KEYS.foe, ...(grouped ? ['group'] : []), ...(disguised ? ['disguise'] : [])])) throw new RangeError('foe keys');
       const kind = foeKind(e.kind);
       if (kind === undefined) throw new RangeError('foe kind');
       if (!FOE_STARTS.includes(e.start)) throw new RangeError('foe start');
+      // R-MIMIC-1: only a mimic may be disguised, and it starts asleep.
+      if (disguised && (kind.power !== 'mimic' || e.start !== 'asleep' || !['treasure', 'flask', 'chest'].includes(e.disguise))) throw new RangeError('foe disguise');
       if (grouped && (typeof e.group !== 'string' || !ID_RE.test(e.group))) throw new RangeError('foe group');
       const k = cellIndex(e.cell, w, h);
       if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR && grid[k] !== CELL.BRIDGE) throw new RangeError('foe cell');
@@ -419,7 +421,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       if (e.start !== 'dormant') groups[g].dormant = false;
       const [ci, cj] = e.cell;
       refs.push({ type: 'foe', foe: foes.length });
-      foes.push({ id: e.id, k, x: ci * CELL_MM + CELL_MM / 2, z: cj * CELL_MM + CELL_MM / 2, kind, start: e.start, group: g });
+      foes.push({ id: e.id, k, x: ci * CELL_MM + CELL_MM / 2, z: cj * CELL_MM + CELL_MM / 2, kind, start: e.start, group: g, disguise: disguised ? e.disguise : null });
     } else if (e.type === 'brazier') {
       if (!hasExactKeys(e, KEYS.brazier)) throw new RangeError('brazier keys');
       if (typeof e.lit !== 'boolean') throw new RangeError('brazier lit');

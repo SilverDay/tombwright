@@ -76,6 +76,10 @@ export class UI {
         case 'won': this.onWin(); break;
         case 'power': ({ douse: () => sfx.smoke(), freeze: () => sfx.frost(), seize: () => sfx.thud(), confuse: () => sfx.blink(), poison: () => sfx.dart(), drain: () => sfx.steal() })[ev.k]?.(); break;
         case 'relit': sfx.ignite(); break;
+        case 'steal': sfx.steal(); break;
+        case 'loot': sfx.gold(); break;
+        case 'forget': sfx.blink(); break;
+        case 'reveal': sfx.boss(); break;
         case 'free': sfx.hood(); break;
         default: break;
       }

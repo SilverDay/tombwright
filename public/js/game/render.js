@@ -430,8 +430,18 @@ export class TombView {
       const s = this.makeSprite(tx, hgt);
       s.material.transparent = true; s.material.alphaTest = 0.05; s.visible = false;
       let glow = null; if (crawler) { glow = new THREE.Sprite(M.eyeGlow.clone()); glow.material.opacity = 0.55; glow.scale.set(0.22, 0.22, 1); this.ents.add(glow); }
-      const fly = this.T.bestiary(f.kind)?.mover === 'fly';
-      E.foes.push({ def: f, s, glow, h: hgt, min: crawler ? 0.22 : 0.3, crawler, fly, ph: f.cell[0] * 1.3 + f.cell[1], flash: 0, hp: -1, deadT: -1 });
+      const fly = this.T.bestiary(f.kind)?.mover === 'fly', invisible = this.T.bestiary(f.kind)?.power === 'invisible';
+      // R-MIMIC-1: a disguised xeroc looks like what it pretends to be until it is found out.
+      let disg = null;
+      if (f.disguise === 'chest') {
+        disg = new THREE.Group(); disg.position.set(cx(f.cell[0]), 0, cx(f.cell[1]));
+        this.mesh(new THREE.BoxGeometry(1.1, 0.6, 0.7), M.plainChest, 0, 0.3, 0, disg); this.mesh(new THREE.BoxGeometry(1.12, 0.16, 0.72), M.plainChest, 0, 0.68, 0, disg);
+        this.world.add(disg);
+      } else if (f.disguise) {
+        disg = this.makeSprite(this.TEXS[f.disguise === 'flask' ? 'i_flask' : 'i_coins'], f.disguise === 'flask' ? 0.34 : 0.3);
+        disg.position.set(cx(f.cell[0]), 0.16, cx(f.cell[1]));
+      }
+      E.foes.push({ def: f, s, glow, h: hgt, min: crawler ? 0.22 : 0.3, crawler, fly, invisible, disg, ph: f.cell[0] * 1.3 + f.cell[1], flash: 0, hp: -1, deadT: -1 });
     }
     const bd = this.byType('boss')[0];
     if (bd) {
@@ -540,7 +550,7 @@ export class TombView {
     E.chests.forEach((c, n) => { const open = st.chests[n].open; c.anim = open ? (info.fresh ? 1 : Math.min(1, c.anim + dt / 0.5)) : 0; c.lid.rotation.x = -1.9 * easeOut(c.anim); });
     E.braziers.forEach((b, n) => { b.f.material.opacity = st.braziers[n] ? 1 : 0; if (st.braziers[n]) { const s = red ? 1 : 1 + 0.1 * Math.sin(t * 12 + b.def.cell[0]); b.f.scale.set(1.2 * s, 1.6 * s, 1); } });
     for (const [id, it] of E.items) {
-      const num = this.num.get(id), taken = st.taken.includes(num), hidden = it.def.hidden && !st.revealed.includes(num);
+      const num = this.num.get(id), taken = st.taken.includes(num) || st.foes.some((f) => f.loot === num) || st.loot.some((l) => l.n === num), hidden = it.def.hidden && !st.revealed.includes(num);
       it.s.visible = it.rubble ? true : !taken && !hidden;
       if (!it.rubble && it.s.visible) { it.s.position.y = it.y + (red ? 0 : Math.sin(t * 2.2 + it.ph) * 0.05); it.s.material.color.setScalar(Math.max(0.5, this.lightAt(it.s.position.x, 0.4, it.s.position.z))); }
     }
@@ -553,6 +563,7 @@ export class TombView {
     }
     // pebbles on the floor and in flight
     this.syncPebbles(st, prev, alpha);
+    this.syncLoot(st);
     // the mirror beam
     this.syncBeam(info.beam);
     // the tomb's own glows
@@ -610,6 +621,20 @@ export class TombView {
     }
   }
 
+  /** R-THIEF-4: loot dropped by killed thieves, as sprites where it lies. */
+  syncLoot(st) {
+    this.lootSprites ??= [];
+    const key = st.loot.map((l) => `${l.x},${l.z},${l.n},${l.f},${l.p}`).join(';');
+    if (key === this.lootKey) return;
+    this.lootKey = key;
+    for (const s of this.lootSprites) this.ents.remove(s);
+    this.lootSprites = st.loot.map((l) => {
+      const item = l.n > 0 ? this.T.gdf.entities[l.n - 1] : null, icon = item ? this.T.text.items?.[item.id]?.icon ?? 'coins' : null;
+      const s = this.makeSprite(icon ? this.TEXS['i_' + icon] : l.f > 0 ? this.TEXS.i_flask : this.TEXS.rubble, l.p > 0 && !icon && l.f === 0 ? 0.12 : 0.3);
+      s.position.set(l.x * MM, 0.12, l.z * MM); return s;
+    });
+  }
+
   syncPebbles(st, prev, alpha) {
     const want = st.floor.length;
     while (this.pebbles.length < want) this.pebbles.push(this.makeSprite(this.TEXS.rubble, 0.09));
@@ -656,7 +681,8 @@ export class TombView {
     const t = this.time;
     this.E.foes.forEach((F, n) => {
       const f = st.foes[n], q = prev.foes[n], s = F.s;
-      if (f.st === 'dormant') { s.visible = false; if (F.glow) F.glow.visible = false; F.deadT = -1; return; }
+      if (F.disg) F.disg.visible = f.st === 'disguised';
+      if (f.st === 'dormant' || f.st === 'gone' || f.st === 'disguised') { s.visible = false; if (F.glow) F.glow.visible = false; F.deadT = -1; return; } // R-THIEF-3, R-MIMIC-1
       if (f.st === 'dead') {
         if (q.st !== 'dead' && F.deadT < 0) F.deadT = 0;
         if (F.deadT < 0 || F.deadT > 0.8) { s.visible = false; if (F.glow) F.glow.visible = false; return; }
@@ -677,6 +703,8 @@ export class TombView {
       const b = Math.max(F.min, this.lightAt(x, 0.9, z));
       if (F.flash > 0) s.material.color.setRGB(2.2, 0.8, 0.7); else if (wind) s.material.color.setRGB(b * 1.35, b * 1.1, b); else s.material.color.setScalar(b);
       if (f.st === 'asleep') s.material.color.setScalar(b * 0.8);
+      // Spec §4.9.3: the phantom is invisible, but for a faint ghostlight while your lantern is dark.
+      if (F.invisible) { s.material.opacity = 0.35 * this.hoodMix; s.material.color.setRGB(0.6, 0.85, 1.0); }
       if (F.glow) { F.glow.position.set(s.position.x, 0.42, s.position.z); F.glow.material.opacity = 0.5 + 0.2 * Math.sin(t * 3 + F.ph); }
     });
   }

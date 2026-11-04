@@ -1,6 +1,6 @@
 {
  "name": "0036-delve-fight",
- "core": "m0.13",
+ "core": "m0.14",
  "seed": 36,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAOAQIACgEBAwMBAgAOAQIADgECAAUBBAUFAQIADgECAAsBAQQCAQIADgERAA==\"},\"start\":{\"cell\":[3,4]},\"zones\":[{\"id\":\"d\",\"name\":\"D\",\"rects\":[[1,1,14,8]],\"ceil\":5000}],\"entities\":[{\"id\":\"bat\",\"type\":\"foe\",\"kind\":\"bat\",\"cell\":[8,2],\"start\":\"hunting\"},{\"id\":\"kes\",\"type\":\"foe\",\"kind\":\"kestrel\",\"cell\":[12,4],\"start\":\"idle\"},{\"id\":\"tro\",\"type\":\"foe\",\"kind\":\"troll\",\"cell\":[13,2],\"start\":\"asleep\"},{\"id\":\"gri\",\"type\":\"foe\",\"kind\":\"griffin\",\"cell\":[13,7],\"start\":\"idle\"},{\"id\":\"fly\",\"type\":\"foe\",\"kind\":\"flytrap\",\"cell\":[4,4],\"start\":\"idle\"},{\"id\":\"sna\",\"type\":\"foe\",\"kind\":\"snake\",\"cell\":[2,7],\"start\":\"asleep\"},{\"id\":\"zom\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,8],\"start\":\"dormant\",\"group\":\"dead\"},{\"id\":\"emu\",\"type\":\"foe\",\"kind\":\"emu\",\"cell\":[2,2],\"start\":\"idle\"}],\"links\":[{\"id\":1,\"when\":{\"foesDefeated\":\"fly\"},\"do\":[{\"spawnFoes\":\"dead\"},{\"message\":\"the flytrap falls\"}]}]}",
@@ -87,17 +87,17 @@
  "ticks": 1601,
  "hashEvery": 300,
  "hashes": {
-  "0": "f69c02d952ca8d8d620591437899f9fa",
-  "300": "ff26f366bda2a13b644682d235a56d13",
-  "600": "9444be72de849f0392746605bd5d3213",
-  "900": "c0ce8f081ae13c3f8314bd09ffc91046",
-  "1200": "0488ef7ff55a72c9ed498fd1b6720585",
-  "1500": "611531664f208353d976e2ac83b8021f"
+  "0": "ab6eab0af5543fdad6bb1f58310eaa4c",
+  "300": "0fe5f7247c16e0ffbe66225ab59c0c4b",
+  "600": "a15ffddc449ccf590a3159456bb38ba6",
+  "900": "3967f0bde55adb9c758143bae017647b",
+  "1200": "3a506b5e49ac26ae09ffdaa3d296c0d3",
+  "1500": "0bfa65d5cbbcfbfe6387a731c3a89642"
  },
- "final": "1f1cdf407541e113e08bd0254516c2a0",
+ "final": "36951a51efca7ca41fb015335b013da3",
  "finalState": {
   "v": 1,
-  "core": "m0.13",
+  "core": "m0.14",
   "world": "fe93e81c67a5a6ec091b917b8c05f3f0",
   "mode": "practice",
   "tick": 1601,
@@ -149,6 +149,7 @@
   "marked": [],
   "bridge": [],
   "floor": [],
+  "loot": [],
   "flying": [],
   "taken": [],
   "eyes": [],
@@ -172,7 +173,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 3,
-    "fa": 2617
+    "fa": 2617,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dead",
@@ -187,7 +191,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "asleep",
@@ -202,7 +209,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dead",
@@ -217,7 +227,10 @@
     "gz": -1,
     "rg": 168,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dead",
@@ -232,7 +245,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "asleep",
@@ -247,7 +263,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -262,7 +281,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -277,7 +299,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    }
   ],
   "groups": [
@@ -336,6 +361,7 @@
      "boss": null,
      "doors": [],
      "floor": [],
+     "loot": [],
      "taken": [],
      "bellSets": [],
      "links": [
@@ -348,6 +374,48 @@
         -1
        ]
       }
+     ],
+     "foes": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
      ]
     }
    }

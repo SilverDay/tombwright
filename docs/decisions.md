@@ -69,6 +69,13 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 62 | 2026-11-04 | **Mixed groups** (spec §4.9.5, picked at publish time) come with publishing in M3; M1 has only explicitly placed foes. | Owner |
 | 63 | 2026-11-04 | **Vampire drain heal:** a draining bite heals the vampire 1 strike (Lantern Delve's average bite of 7 hp on 55 hp, converted by §4.9.1), never above its strikes. | Owner |
 | 64 | 2026-11-04 | **Vampire drain stacking:** each draining bite takes 5 more off the player's maximum health, down to 50 hp; health above the new maximum is cut to it; a rise or a newly reached checkpoint restores 100. | Owner |
+| 65 | 2026-11-04 | **Thieves' loot:** what a leprechaun or nymph carries drops where it dies, as a pick-up lying at that spot (new sim state `state.loot`), taken with Interact like an item. | Owner |
+| 66 | 2026-11-04 | **Vanished thieves** reappear at their spawn point 20 s later **idle**, still carrying the loot. | Owner |
+| 67 | 2026-11-04 | **Disguised xeroc** ignores noise and sight; only the pole (safe), your reach (Interact: a free hit) or a strike reveal it. | Owner |
+| 68 | 2026-11-04 | **Wraith's forgetting** picks one of the chamber's marked plates and found bridge cells at random, on the run's generator. | Owner |
+| 69 | 2026-11-04 | **No second theft:** a thief already carrying loot doesn't steal again; kill it to get the first loot back. | Owner |
+| 70 | 2026-11-04 | **Thieves' loot and checkpoints:** the checkpoint's life records what each thief carries; after a rise the thief is back at its spawn still carrying it. | Owner |
+| 71 | 2026-11-04 | **Xeroc and the awake cap:** a xeroc that is found out while 8 foes are awake counts as revealed at once (no more free hits or reveal events) and joins the wake queue, waking when a slot frees. | Owner |
 
 ## Still open (spec §17)
 

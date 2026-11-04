@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.13';
+    public const CORE_VERSION = 'm0.14';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -128,6 +128,7 @@ final class Sim
             'marked' => [],
             'bridge' => [],
             'floor' => [],        // R-PEB-3
+            'loot' => [],         // R-THIEF-4
             'flying' => [],       // R-PEB-2
             'taken' => [],        // R-ITEM-2
             'eyes' => array_map(static fn (): int => 0, $world->eyes), // R-EYES-1
@@ -170,8 +171,9 @@ final class Sim
             'braziers' => $state['braziers'],
             'boss' => $state['boss'] === null ? null : ($state['boss']['st'] === 'asleep' ? 'asleep' : ($state['boss']['st'] === 'dead' ? 'dead' : 'awake')),
             'doors' => array_map(static fn (array $d): bool => $d['open'], $state['doors']),
-            'floor' => $state['floor'], 'taken' => $state['taken'],
+            'floor' => $state['floor'], 'loot' => $state['loot'], 'taken' => $state['taken'],
             'bellSets' => $state['bellSets'], 'links' => $state['links'],
+            'foes' => array_map(static fn (array $f): array => [$f['loot'], $f['lf'], $f['lp']], $state['foes']), // R-CP-3: carried loot (decision #70)
         ];
     }
 
@@ -698,6 +700,14 @@ final class Sim
         $i = IntMath::fdiv($tx, self::CELL_MM);
         $j = IntMath::fdiv($tz, self::CELL_MM);
         $k = $j * $world->w + $i;
+        foreach ($state['foes'] as $m => $mf) { // R-MIMIC-1: the pole finds it out, safely
+            if ($mf['st'] === 'disguised' && IntMath::fdiv($mf['x'], self::CELL_MM) === $i && IntMath::fdiv($mf['z'], self::CELL_MM) === $j) {
+                self::requestWake($world, $state, $m, $events);
+                $events[] = ['e' => 'probe', 'k' => 'mimic'];
+                $events[] = ['e' => 'reveal', 'id' => $world->foes[$m]['id'], 'safe' => true];
+                return;
+            }
+        }
         $code = $world->cellCode($i, $j);
         $what = 'stone';
         if ($code === World::PLATE) {
@@ -961,7 +971,7 @@ final class Sim
     private static function takeItem(World $world, array &$state, int $n, array $it, array &$events, array &$batch): void
     {
         $p = $state['player'];
-        if ($it['kind'] === 'rubble' ? $p['pebbles'] >= self::PEBBLE_MAX : in_array($n, $state['taken'], true)) {
+        if ($it['kind'] === 'rubble' ? $p['pebbles'] >= self::PEBBLE_MAX : self::away($state, $n)) { // R-THIEF-4: a stolen one isn't back
             return;
         }
         if ($it['hidden'] && !in_array($n, $state['revealed'], true)) { // R-ITEM-1
@@ -1251,6 +1261,7 @@ final class Sim
         $p['rz'] = 0;
         unset($p);
         $state['floor'] = $life['floor'];
+        $state['loot'] = $life['loot']; // R-THIEF-4
         $state['taken'] = $life['taken'];
         $state['flying'] = [];
         $state['groups'] = $life['groups'];
@@ -1268,6 +1279,13 @@ final class Sim
         $state['foes'] = [];
         foreach ($world->foes as $def) {
             $state['foes'][] = self::freshFoe($def, $state['groups'][$def['group']] === 'defeated' ? 'dead' : $def['start']);
+        }
+        foreach ($life['foes'] as $n => [$loot, $lf, $lp]) { // R-FOE-8: carried loot survives the rise (decision #70)
+            if ($state['foes'][$n]['st'] !== 'dead') {
+                $state['foes'][$n]['loot'] = $loot;
+                $state['foes'][$n]['lf'] = $lf;
+                $state['foes'][$n]['lp'] = $lp;
+            }
         }
         foreach ($world->foes as $n => $def) {
             if ($state['foes'][$n]['st'] !== 'dormant' || $state['groups'][$def['group']] !== 'spawned') {
@@ -1293,7 +1311,15 @@ final class Sim
      */
     private static function interact(World $world, array &$state, int $n, array &$events, array &$batch): void
     {
+        if ($n >= 1000) { // R-THIEF-4
+            self::takeLoot($world, $state, $n - 1000, $events);
+            return;
+        }
         $ref = $world->entityRef($n);
+        if ($ref !== null && $ref['type'] === 'foe') { // R-MIMIC-1
+            self::reachMimic($world, $state, $ref['foe'], $events);
+            return;
+        }
         if ($ref !== null && $ref['type'] === 'item') {
             self::takeItem($world, $state, $n, $world->items[$ref['item']], $events, $batch);
             return;
@@ -1573,7 +1599,10 @@ final class Sim
      */
     private static function freshFoe(array $def, string $st): array
     {
-        return ['st' => $st, 'x' => $def['x'], 'z' => $def['z'], 'hp' => $def['kind']['strikes'], 't' => 0, 'atk' => $def['kind']['firstAttack'], 'stun' => 0, 'wake' => false, 'gx' => -1, 'gz' => -1, 'rg' => 0, 'ft' => 0, 'fa' => 0];
+        if ($st === 'asleep' && $def['disguise'] !== null) {
+            $st = 'disguised'; // R-MIMIC-1
+        }
+        return ['st' => $st, 'x' => $def['x'], 'z' => $def['z'], 'hp' => $def['kind']['strikes'], 't' => 0, 'atk' => $def['kind']['firstAttack'], 'stun' => 0, 'wake' => false, 'gx' => -1, 'gz' => -1, 'rg' => 0, 'ft' => 0, 'fa' => 0, 'loot' => 0, 'lf' => 0, 'lp' => 0];
     }
 
     private static function isAwake(string $st): bool
@@ -1602,10 +1631,13 @@ final class Sim
     private static function requestWake(World $world, array &$state, int $n, array &$events): void
     {
         $st = $state['foes'][$n]['st'];
-        if ($st !== 'asleep' && $st !== 'dormant') {
+        if ($st !== 'asleep' && $st !== 'dormant' && $st !== 'disguised') { // R-MIMIC-1: revealed like waking
             return;
         }
         if (self::awakeCount($state) >= World::MAX_AWAKE) {
+            if ($st === 'disguised') { // R-MIMIC-1: found out over the cap (decision #71)
+                $state['foes'][$n]['st'] = 'asleep';
+            }
             $state['foes'][$n]['wake'] = true;
             return;
         }
@@ -1673,7 +1705,7 @@ final class Sim
         $best = -1;
         $bd = 0;
         foreach ($state['foes'] as $n => $f) {
-            if ($f['st'] !== 'asleep' && $f['st'] !== 'idle' && $f['st'] !== 'hunting') {
+            if ($f['st'] !== 'asleep' && $f['st'] !== 'idle' && $f['st'] !== 'hunting' && $f['st'] !== 'disguised') { // R-MIMIC-1
                 continue;
             }
             $dx = $f['x'] - $p['x'];
@@ -1943,12 +1975,12 @@ final class Sim
     private static function landBlow(World $world, array &$state, int $n, array &$events, array &$batch): void
     {
         $def = $world->foes[$n];
-        if ($state['foes'][$n]['st'] === 'dead') {
-            return;
+        if ($state['foes'][$n]['st'] === 'dead' || $state['foes'][$n]['st'] === 'gone') {
+            return; // R-STRIKE-2: a gone thief can't be struck
         }
         $state['foes'][$n]['hp'] -= 1;
         $state['foes'][$n]['stun'] = self::STUN;
-        if ($state['foes'][$n]['st'] === 'asleep') {
+        if ($state['foes'][$n]['st'] === 'asleep' || $state['foes'][$n]['st'] === 'disguised') {
             self::requestWake($world, $state, $n, $events);
         }
         $f = $state['foes'][$n];
@@ -1968,6 +2000,13 @@ final class Sim
         $state['foes'][$n]['st'] = 'dead';
         $state['foes'][$n]['wake'] = false;
         $events[] = ['e' => 'foeDead', 'id' => $def['id']];
+        $df = $state['foes'][$n];
+        if ($df['loot'] > 0 || $df['lf'] > 0 || $df['lp'] > 0) { // R-THIEF-4
+            $state['loot'][] = ['x' => $df['x'], 'z' => $df['z'], 'n' => $df['loot'], 'f' => $df['lf'], 'p' => $df['lp']];
+            $state['foes'][$n]['loot'] = 0;
+            $state['foes'][$n]['lf'] = 0;
+            $state['foes'][$n]['lp'] = 0;
+        }
         if ($state['player']['held'] === $n) { // R-POW-4
             $state['player']['held'] = -1;
             $state['player']['holdImm'] = 60;
@@ -2134,11 +2173,204 @@ final class Sim
                     $took = true;
                 }
                 break;
+            case 'steal': // R-THIEF-1
+                unset($p);
+                $fc = $state['foes'][$n];
+                if ($fc['loot'] > 0 || $fc['lf'] > 0 || $fc['lp'] > 0) {
+                    return; // no second theft (decision #69)
+                }
+                $best = -1;
+                $bestV = -1;
+                foreach ($state['taken'] as $k => $num) {
+                    $it = self::itemByNum($world, $num);
+                    if ($it !== null && $it['kind'] === 'treasure' && $it['value'] > $bestV) {
+                        $best = $k;
+                        $bestV = $it['value'];
+                    }
+                }
+                if ($best >= 0) {
+                    $num = $state['taken'][$best];
+                    $state['foes'][$n]['loot'] = $num;
+                    array_splice($state['taken'], $best, 1);
+                    self::vanish($state, $n);
+                    $events[] = ['e' => 'steal', 'id' => $def['id'], 'item' => self::itemByNum($world, $num)['id'] ?? null];
+                }
+                return;
+            case 'pilfer': // R-THIEF-2
+                $fc = $state['foes'][$n];
+                if ($fc['loot'] > 0 || $fc['lf'] > 0 || $fc['lp'] > 0) {
+                    unset($p);
+                    return; // no second theft (decision #69)
+                }
+                if ($p['flasks'] > 0) {
+                    $p['flasks'] -= 1;
+                    $state['foes'][$n]['lf'] = 1;
+                } elseif ($p['pebbles'] >= 2) {
+                    $lp = intdiv($p['pebbles'], 2);
+                    $state['foes'][$n]['lp'] = $lp;
+                    $p['pebbles'] -= $lp;
+                } else {
+                    unset($p);
+                    return;
+                }
+                unset($p);
+                self::vanish($state, $n);
+                $events[] = ['e' => 'steal', 'id' => $def['id'], 'flasks' => $state['foes'][$n]['lf'], 'pebbles' => $state['foes'][$n]['lp']];
+                return;
+            case 'forget': // R-FORGET-1
+                unset($p);
+                if (Rng::below($state['rng'], 100) >= 20) {
+                    return;
+                }
+                $pl = $state['player'];
+                $z = $world->zoneAt(IntMath::fdiv($pl['z'], self::CELL_MM) * $world->w + IntMath::fdiv($pl['x'], self::CELL_MM));
+                if ($z < 0) {
+                    return;
+                }
+                $cands = [];
+                foreach (['marked', 'bridge'] as $list) {
+                    foreach ($state[$list] as $k) {
+                        if ($world->zoneAt($k) === $z) {
+                            $cands[] = [$list, $k];
+                        }
+                    }
+                }
+                if ($cands === []) {
+                    return;
+                }
+                [$list, $k] = $cands[Rng::below($state['rng'], count($cands))];
+                array_splice($state[$list], (int) array_search($k, $state[$list], true), 1);
+                $events[] = ['e' => 'forget', 'k' => $k];
+                return;
         }
         unset($p);
         if ($took) {
             $events[] = ['e' => 'power', 'k' => $kind['power'], 'id' => $def['id']];
         }
+    }
+
+    /** R-THIEF-4: item n is no longer where the GDF put it: taken, carried by a thief, or lying as dropped loot. @param array<string,mixed> $state */
+    private static function away(array $state, int $n): bool
+    {
+        if (in_array($n, $state['taken'], true)) {
+            return true;
+        }
+        foreach ($state['foes'] as $f) {
+            if ($f['loot'] === $n) {
+                return true;
+            }
+        }
+        foreach ($state['loot'] as $l) {
+            if ($l['n'] === $n) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** R-THIEF-3 @param array<string,mixed> $state */
+    private static function vanish(array &$state, int $n): void
+    {
+        $state['foes'][$n]['st'] = 'gone';
+        $state['foes'][$n]['t'] = 600;
+        $state['foes'][$n]['wake'] = false;
+        $state['foes'][$n]['gx'] = -1;
+        $state['foes'][$n]['gz'] = -1;
+    }
+
+    /** The world item with entity number $num, or null. @return array<string,mixed>|null */
+    private static function itemByNum(World $world, int $num): ?array
+    {
+        foreach ($world->items as $it) {
+            if ($it['n'] === $num) {
+                return $it;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * R-GUARD-1: the treasure an idle guard goes for (its point), or null.
+     *
+     * @param array<string,mixed> $state
+     * @param array<string,mixed> $f
+     * @return array{int,int}|null
+     */
+    private static function guardTarget(World $world, array $state, int $n, array $f): ?array
+    {
+        $z = $world->zoneAt($world->foes[$n]['k']);
+        if ($z < 0) {
+            return null;
+        }
+        $best = null;
+        $bd = 0;
+        foreach ($world->items as $it) {
+            if ($it['kind'] !== 'treasure' || $it['k'] < 0 || $world->zoneAt($it['k']) !== $z || self::away($state, $it['n']) || ($it['hidden'] && !in_array($it['n'], $state['revealed'], true))) {
+                continue;
+            }
+            $dx = $it['x'] - $f['x'];
+            $dz = $it['z'] - $f['z'];
+            $d2 = $dx * $dx + $dz * $dz; // < 2^36
+            if ($best === null || $d2 < $bd) {
+                $best = [$it['x'], $it['z']];
+                $bd = $d2;
+            }
+        }
+        return $best;
+    }
+
+    /**
+     * R-THIEF-4: pick up dropped loot k.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function takeLoot(World $world, array &$state, int $k, array &$events): void
+    {
+        $l = $state['loot'][$k] ?? null;
+        if ($l === null) {
+            return;
+        }
+        $dx = $state['player']['x'] - $l['x'];
+        $dz = $state['player']['z'] - $l['z'];
+        if ($dx * $dx + $dz * $dz > 1700 * 1700 || !self::lineOfSight($world, $state, $l['x'], $l['z'])) {
+            return;
+        }
+        if ($l['n'] > 0) {
+            $state['taken'][] = $l['n'];
+        }
+        $state['player']['flasks'] += $l['f'];
+        $state['player']['pebbles'] = min(self::PEBBLE_MAX, $state['player']['pebbles'] + $l['p']);
+        array_splice($state['loot'], $k, 1);
+        $events[] = ['e' => 'loot', 'n' => $l['n'] > 0 ? (self::itemByNum($world, $l['n'])['id'] ?? null) : null, 'f' => $l['f'], 'p' => $l['p']];
+    }
+
+    /**
+     * R-MIMIC-1: reaching for a disguised foe: a free hit, then it is revealed.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function reachMimic(World $world, array &$state, int $n, array &$events): void
+    {
+        $f = $state['foes'][$n];
+        $def = $world->foes[$n];
+        if ($f['st'] !== 'disguised') {
+            return;
+        }
+        $dx = $state['player']['x'] - $f['x'];
+        $dz = $state['player']['z'] - $f['z'];
+        if ($dx * $dx + $dz * $dz > 1700 * 1700 || !self::lineOfSight($world, $state, $f['x'], $f['z'])) {
+            return;
+        }
+        if ($def['kind']['damage'] > 0) {
+            self::hurt($state, $def['kind']['damage'], $events, 'beast');
+            if ($state['dead'] !== null) {
+                return;
+            }
+        }
+        self::requestWake($world, $state, $n, $events);
+        $events[] = ['e' => 'reveal', 'id' => $def['id'], 'safe' => false];
     }
 
     /** R-FOE-6, R-FOE-10. @param array<string,mixed> $f @param array{int,int}|null $flit */
@@ -2227,7 +2459,16 @@ final class Sim
         foreach ($defs as $n => $def) {
             $kind = $def['kind'];
             $f = $state['foes'][$n];
-            if ($f['st'] === 'dormant' || $f['st'] === 'dead' || $f['st'] === 'asleep') {
+            if ($f['st'] === 'gone') { // R-THIEF-3: back after 20 s, idle at its cell
+                if ($f['t'] > 1) {
+                    $state['foes'][$n]['t'] -= 1;
+                } elseif (self::awakeCount($state) < World::MAX_AWAKE) {
+                    $state['foes'][$n] = ['st' => 'idle', 't' => 0, 'x' => $def['x'], 'z' => $def['z'], 'atk' => $kind['firstAttack'], 'stun' => 0, 'gx' => -1, 'gz' => -1] + $f;
+                    $events[] = ['e' => 'foe', 'id' => $def['id'], 'st' => 'idle'];
+                }
+                continue;
+            }
+            if ($f['st'] === 'dormant' || $f['st'] === 'dead' || $f['st'] === 'asleep' || $f['st'] === 'disguised') {
                 continue;
             }
             if ($f['st'] === 'rising') {
@@ -2332,6 +2573,14 @@ final class Sim
                     $events[] = ['e' => 'foe', 'id' => $def['id'], 'st' => 'hunting'];
                 } elseif ($still) {
                     // no goal: it never moves
+                } elseif ($kind['power'] === 'guard' && ($gt = self::guardTarget($world, $state, $n, $f)) !== null) { // R-GUARD-1
+                    [$gx, $gz] = $gt;
+                    $ex = $gx - $f['x'];
+                    $ez = $gz - $f['z'];
+                    if ($ex * $ex + $ez * $ez > 600 * 600) {
+                        self::walkTo($f, $kind['speed'], $gx, $gz, $flit);
+                        $moved = true;
+                    }
                 } elseif ($f['gx'] < 0) {
                     if ($f['t'] > 0) {
                         $f['t'] -= 1;
@@ -2376,7 +2625,7 @@ final class Sim
             // Separation from the other foes, then the walls and props.
             foreach ($defs as $m => $odef) {
                 $o = $state['foes'][$m];
-                if ($m === $n || $o['st'] === 'dormant' || $o['st'] === 'dead') {
+                if ($m === $n || $o['st'] === 'dormant' || $o['st'] === 'dead' || $o['st'] === 'gone' || $o['st'] === 'disguised') {
                     continue;
                 }
                 $ox = $f['x'] - $o['x'];

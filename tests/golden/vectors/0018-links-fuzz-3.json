@@ -1,6 +1,6 @@
 {
  "name": "0018-links-fuzz-3",
- "core": "m0.13",
+ "core": "m0.14",
  "seed": 18,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAEAQEAAwEBAAMBAgAEAQEAAwEBAAMBAgAEAQEAAwEBAAMBAgAEAQECAwEBAgMBAgAEAQEAAwEBAAMBAgAEAQECAwEBAgMBAgAEAQEAAwEBAAMBDwA=\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"z1\",\"name\":\"1\",\"rects\":[[1,1,4,7]],\"ceil\":4200},{\"id\":\"z2\",\"name\":\"2\",\"rects\":[[6,1,3,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[7,3],\"yaw\":0}},{\"id\":\"z3\",\"name\":\"3\",\"rects\":[[10,1,3,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[11,3],\"yaw\":0}}],\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[5,4],\"style\":\"stone\",\"opens\":\"interact\"},{\"id\":\"d2\",\"type\":\"door\",\"cell\":[9,4],\"style\":\"stone\",\"opens\":\"trigger\"},{\"id\":\"d3\",\"type\":\"door\",\"cell\":[9,6],\"style\":\"mask\",\"opens\":\"interact\",\"face\":\"blank\"},{\"id\":\"f1\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[2,2]},{\"id\":\"t1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[7,6],\"value\":10},{\"id\":\"t2\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[11,6],\"value\":20},{\"id\":\"b1\",\"type\":\"bell\",\"cell\":[3,6],\"size\":1,\"patina\":0,\"note\":300},{\"id\":\"b2\",\"type\":\"bell\",\"cell\":[7,1],\"size\":2,\"patina\":1,\"note\":200},{\"id\":\"b3\",\"type\":\"bell\",\"cell\":[11,1],\"size\":1,\"patina\":2,\"note\":100},{\"id\":\"set\",\"type\":\"bellSet\",\"bells\":[\"b1\",\"b2\",\"b3\"],\"order\":[0,1,2]}],\"links\":[{\"id\":10,\"when\":{\"sequence\":[{\"enterZone\":\"z3\"},{\"leaveZone\":\"z2\"},{\"interact\":\"b3\"}],\"strict\":true},\"do\":[{\"sealDoor\":\"d3\"},{\"openDoor\":\"d2\"},{\"damage\":8}]},{\"id\":13,\"when\":{\"atLeast\":[{\"hasItem\":\"f1\"},{\"any\":[{\"leaveZone\":\"z1\"},{\"hasItem\":\"t2\"},{\"doorOpen\":\"d2\"},{\"hasItem\":\"f1\"}]}],\"k\":1},\"do\":[{\"openDoor\":\"d3\"},{\"damage\":2}],\"repeat\":true},{\"id\":16,\"when\":{\"not\":{\"any\":[{\"hasItem\":\"t1\"},{\"inZone\":\"z1\"},{\"linkFired\":19},{\"hasItem\":\"f1\"}],\"within\":191}},\"do\":[{\"message\":\"m78\"},{\"damage\":6}],\"repeat\":true,\"delay\":9},{\"id\":19,\"when\":{\"doorOpen\":\"d1\"},\"do\":[{\"sealDoor\":\"d2\"},{\"message\":\"m74\"},{\"sealDoor\":\"d2\"}],\"repeat\":true,\"delay\":58},{\"id\":22,\"when\":{\"any\":[{\"doorOpen\":\"d2\"},{\"all\":[{\"leaveZone\":\"z2\"},{\"inZone\":\"z2\"},{\"hasItem\":\"t1\"}]},{\"interact\":\"b3\"}],\"within\":203},\"do\":[{\"message\":\"m55\"},{\"message\":\"m14\"},{\"closeDoor\":\"d1\"}],\"delay\":10},{\"id\":25,\"when\":{\"any\":[{\"sequence\":[{\"enterZone\":\"z3\"},{\"bellsWrong\":\"set\"},{\"itemTaken\":\"f1\"},{\"interact\":\"t2\"}],\"within\":216,\"strict\":true,\"onWrong\":[{\"openDoor\":\"d1\"},{\"sealDoor\":\"d1\"},{\"sealDoor\":\"d3\"}]},{\"bellsWrong\":\"set\"}],\"within\":169},\"do\":[{\"message\":\"m58\"}],\"undo\":[{\"openDoor\":\"d3\"}],\"repeat\":true},{\"id\":28,\"when\":{\"hasItem\":\"t2\"},\"do\":[{\"openDoor\":\"d1\"}],\"repeat\":true},{\"id\":31,\"when\":{\"not\":{\"all\":[{\"interact\":\"d2\"},{\"leaveZone\":\"z1\"}],\"within\":127}},\"do\":[{\"sealDoor\":\"d1\"},{\"openDoor\":\"d1\"},{\"message\":\"m62\"}],\"repeat\":true},{\"id\":34,\"when\":{\"not\":{\"not\":{\"inZone\":\"z2\"}}},\"do\":[{\"damage\":8},{\"openDoor\":\"d1\"},{\"message\":\"m21\"}],\"repeat\":true},{\"id\":37,\"when\":{\"sequence\":[{\"linkFired\":10},{\"interact\":\"t1\"},{\"leaveZone\":\"z1\"},{\"itemTaken\":\"t1\"}],\"strict\":true},\"do\":[{\"closeDoor\":\"d3\"},{\"openDoor\":\"d3\"},{\"openDoor\":\"d2\"}]},{\"id\":40,\"when\":{\"any\":[{\"any\":[{\"interact\":\"d3\"},{\"doorOpen\":\"d2\"},{\"leaveZone\":\"z1\"},{\"lanternHooded\":true}]},{\"bellsWrong\":\"set\"}]},\"do\":[{\"sealDoor\":\"d1\"},{\"damage\":5},{\"message\":\"m28\"}],\"undo\":[{\"damage\":9},{\"damage\":10}],\"delay\":35},{\"id\":43,\"when\":{\"lanternHooded\":false},\"do\":[{\"closeDoor\":\"d3\"}],\"repeat\":true,\"delay\":38}]}",
@@ -4897,38 +4897,38 @@
  "ticks": 8002,
  "hashEvery": 300,
  "hashes": {
-  "0": "55e6b33553f899d57516f15376590742",
-  "300": "328fdc2e384defafabfd01aadee688bf",
-  "600": "7e096fd3ebf5476a81998466ca941b2c",
-  "900": "6df3ce39558e88fec2488c5ed86c4a6b",
-  "1200": "d43c9c873a15dcdbc3c1aeb65d3762de",
-  "1500": "0e1bd702c874d594cefb1818a16f4e2d",
-  "1800": "feb23a46176680f2360c24d864a4d6fe",
-  "2100": "cb183fe0fb8f300ba2cfebd81c1f22bb",
-  "2400": "78268b626dc521e3561899020e69f55c",
-  "2700": "97e0e046bc26b685a2d31318da211caa",
-  "3000": "e1f923322c3e2a5958108af12e976d5c",
-  "3300": "2bf8788658916e267e08174f3fcfce59",
-  "3600": "fed6e4d723414ee9fb5bdd47611eff6e",
-  "3900": "2740317ac435f0e751abbf9835a614f6",
-  "4200": "39b5f390c1eea526b6d321f2a3bce777",
-  "4500": "5ff3457dd1e38542e45c3af645107ec1",
-  "4800": "964634abbf644ecf9b6e949f65221e04",
-  "5100": "640c8425983ed73c3c1e207ea57bba6d",
-  "5400": "68e8db9d340bc0b1585b76fe462b73f3",
-  "5700": "a086499cb24ac99eeec07aada389617d",
-  "6000": "fcde86a6b0effd9a6acf2b671736cddb",
-  "6300": "05621538d39f7d5dd3cf21ed9c3c5882",
-  "6600": "e78793252ca4a18f02ecaa6606dddecf",
-  "6900": "0e326ca4eeb93f1c253ff864e327f655",
-  "7200": "48a26408e2b71307b596177d931389f9",
-  "7500": "47d4b1e8aaf5003af0e9aa3207114c5b",
-  "7800": "d01dd90563a8377568d8d15debd99d1f"
+  "0": "39cd1022062253bcd4748389ded0f7ea",
+  "300": "e6ef0d544bb37f2f332192499ceb4c1f",
+  "600": "bc8e083886889d90d07126a6d7b0e169",
+  "900": "f9cc4fa08876cb1f0082467a37587751",
+  "1200": "0db16f16a70f2b959e76cb69b88f9a99",
+  "1500": "139a6d113c862cff517706dd9fad8512",
+  "1800": "c0e36c36fc663b1a8f920edf24d1c2d5",
+  "2100": "b1aba3ce950a935e33ef4a6fc12ca2f4",
+  "2400": "3f66892cf3c00ebe9d535a7fed9adbe8",
+  "2700": "7a06bb86ba5d7cfabdc537aa2489ea0a",
+  "3000": "9653c30b29d81f6c419faf5643f7fe23",
+  "3300": "2491973870f9de1d5a7e80b61ac47eb3",
+  "3600": "cd1dbd07a9fd8e99b5a70e38cf9afb66",
+  "3900": "582d561ee2af66d4c1b73f4b4bc460d7",
+  "4200": "454f36e1c7621f818e3a1be8c9e6255e",
+  "4500": "ba1ba502867395c94beac5aaa57c16df",
+  "4800": "ace14caf26d2a6b00a99846db0da5deb",
+  "5100": "562b9d28bb4b690acb8bd02bfe2e8d54",
+  "5400": "d25305e1b624908ab96a9dfec4bb09ad",
+  "5700": "0c498eda99114482dd0ff72f69410c44",
+  "6000": "90e250acd0b26a48f422ed05c5513a1e",
+  "6300": "80ce2fdbf703c2b4c7ed12d8e0fa9c4f",
+  "6600": "66160c41d465a5e563bad8d8a466afda",
+  "6900": "d345d657278acdc6df7f787bbf2f0c06",
+  "7200": "9d8fc55fd3efa0096acccb33e4860590",
+  "7500": "e5ee34cff743652ab485ea08b29eb3ca",
+  "7800": "6147ca2b81d965bda7d9aa7453d3dea0"
  },
- "final": "fac94937a3284ce99ad658c53b04f9fa",
+ "final": "55addffab5467fcf8d46f7a297a914c7",
  "finalState": {
   "v": 1,
-  "core": "m0.13",
+  "core": "m0.14",
   "world": "d8610bc358b90cf2081fb2736ca6e4be",
   "mode": "delve",
   "tick": 8002,
@@ -5031,6 +5031,7 @@
     "z": 11695
    }
   ],
+  "loot": [],
   "flying": [],
   "taken": [
    5
@@ -5194,6 +5195,7 @@
       false
      ],
      "floor": [],
+     "loot": [],
      "taken": [],
      "bellSets": [
       {
@@ -5313,7 +5315,8 @@
        "pend": [],
        "m": []
       }
-     ]
+     ],
+     "foes": []
     }
    },
    {
@@ -5377,6 +5380,7 @@
        "z": 8826
       }
      ],
+     "loot": [],
      "taken": [],
      "bellSets": [
       {
@@ -5496,7 +5500,8 @@
        "pend": [],
        "m": []
       }
-     ]
+     ],
+     "foes": []
     }
    }
   ],

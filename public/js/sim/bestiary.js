@@ -3,11 +3,11 @@
 import { sha256Hex } from './sha256.js';
 
 export const BESTIARY_VERSION = 1;
-export const BESTIARY_SHA256 = '9b0a23db005c50ec0d6a7f1e4955fd6a1f4495d32a3c28b2dcf5aaba43d790f9';
+export const BESTIARY_SHA256 = 'e839ddb77abda655bed53ccc5ba67a4ac2a082f6c8988d68821c28f4e2cf55fe';
 const FIELDS = ['tier', 'strikes', 'damage', 'speed', 'radius', 'reach', 'wind', 'cooldown', 'rise', 'firstAttack', 'regen', 'flit'];
 
 // R-FOE-1, R-POW-*: the powers the cores know.
-export const POWERS = ['', 'douse', 'freeze', 'seize', 'confuse', 'poison', 'drain'];
+export const POWERS = ['', 'douse', 'freeze', 'seize', 'confuse', 'poison', 'drain', 'steal', 'pilfer', 'guard', 'forget', 'invisible', 'mimic'];
 const BOSS_FIELDS = ['strikes', 'damage', 'oilHit', 'radius', 'speed', 'speed2', 'wakeAtk', 'wind', 'hitRange', 'windRange', 'seekWindRange',
   'stop', 'reel', 'feed', 'feed2', 'feedReach', 'feedCd', 'phase2Atk', 'phase2FeedCd', 'atk', 'atk2', 'tearWind', 'solidRange', 'drainRange', 'drain', 'drain2'];
 

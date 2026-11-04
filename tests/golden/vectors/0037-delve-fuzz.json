@@ -1,6 +1,6 @@
 {
  "name": "0037-delve-fuzz",
- "core": "m0.13",
+ "core": "m0.14",
  "seed": 37,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAOAQIACgEBAwMBAgAOAQIADgECAAUBBAUFAQIADgECAAsBAQQCAQIADgERAA==\"},\"start\":{\"cell\":[3,4]},\"zones\":[{\"id\":\"d\",\"name\":\"D\",\"rects\":[[1,1,14,8]],\"ceil\":5000}],\"entities\":[{\"id\":\"bat\",\"type\":\"foe\",\"kind\":\"bat\",\"cell\":[8,2],\"start\":\"hunting\"},{\"id\":\"kes\",\"type\":\"foe\",\"kind\":\"kestrel\",\"cell\":[12,4],\"start\":\"idle\"},{\"id\":\"tro\",\"type\":\"foe\",\"kind\":\"troll\",\"cell\":[13,2],\"start\":\"asleep\"},{\"id\":\"gri\",\"type\":\"foe\",\"kind\":\"griffin\",\"cell\":[13,7],\"start\":\"idle\"},{\"id\":\"fly\",\"type\":\"foe\",\"kind\":\"flytrap\",\"cell\":[4,4],\"start\":\"idle\"},{\"id\":\"sna\",\"type\":\"foe\",\"kind\":\"snake\",\"cell\":[2,7],\"start\":\"asleep\"},{\"id\":\"zom\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,8],\"start\":\"dormant\",\"group\":\"dead\"},{\"id\":\"emu\",\"type\":\"foe\",\"kind\":\"emu\",\"cell\":[2,2],\"start\":\"idle\"}],\"links\":[{\"id\":1,\"when\":{\"foesDefeated\":\"fly\"},\"do\":[{\"spawnFoes\":\"dead\"},{\"message\":\"the flytrap falls\"}]}]}",
@@ -5664,42 +5664,42 @@
  "ticks": 9006,
  "hashEvery": 300,
  "hashes": {
-  "0": "3fe899c2b94f9326b4c6e72beb97c3d8",
-  "300": "860c5349fc9037fd511e266c4ec7c874",
-  "600": "fa72eb01de37bfea2b3288642a10b8a6",
-  "900": "999228fb84782cf7603786f5e4f9496a",
-  "1200": "2882c555ec96542151aacd6ba0e62229",
-  "1500": "5240409a80773a1a108cb913b718c707",
-  "1800": "68b37e208b14ee87a75475a87b5d3f1e",
-  "2100": "5793a25360ac198f8728785eacc2fe90",
-  "2400": "afa492ee439d176f3a0e514ea184c34f",
-  "2700": "d39e868016c78594ebbe20a9aa2d53be",
-  "3000": "108305e003eb8044ef636b54c0ce62be",
-  "3300": "c3afe877a23b42b03c4bc404a574748a",
-  "3600": "7bba290f13f1925261dfebd9605ad662",
-  "3900": "e0b2b56e073e13a9f42484b3e2a74ab4",
-  "4200": "d4f857dba284d2804acd80975821af7d",
-  "4500": "441fbce7ba6ed9eb7e14f629469f9f86",
-  "4800": "d4f4ebdf7063229c7300a957f10fc073",
-  "5100": "0f840786fa7fd7c10e3a31c457aec43f",
-  "5400": "d6566703273151d1c0b18f831e5539db",
-  "5700": "1a9c2e9db6451b9b7929da1afaeb7f2f",
-  "6000": "95c02372f8de8f4f924cba3e856d65eb",
-  "6300": "44e358986e6c2c36122eac8a576ed697",
-  "6600": "7c5863c4981ebf8eb3453342122c823e",
-  "6900": "32b70c9794f0202d60954919da0c7dab",
-  "7200": "9e4b5e13da1c5dafd4b38a597f9a73b8",
-  "7500": "de45efc5256a334bd1e3481b95ff4753",
-  "7800": "e680baa4b5551f55df9668ebdbd86f2b",
-  "8100": "3cd76262c33cd4f1aa2d0ebb06504ae8",
-  "8400": "a67bdf5a45f235a6b20542aa837b5a03",
-  "8700": "2f62d04b979f65334e167e850dd00c91",
-  "9000": "120505da7e734b17b3f73337dd7c4e1a"
+  "0": "8e44515894afc07251f412bb4a1c8325",
+  "300": "43a8d9df2c8deb9b6f3e6b3bef2292e9",
+  "600": "1c1fad7e1f9a78b3d24784bb698c1c01",
+  "900": "3b80276c2f8190ffccb5c5665ca26902",
+  "1200": "2b6d497de53c0aa6e5866e8469670f53",
+  "1500": "6bd952f626865694371042794e0758de",
+  "1800": "3edc4c529b88b29041fa388fcfcd56c4",
+  "2100": "2f2e42889645927252a91cfb9ba2a6c3",
+  "2400": "9276fbbf42b274ead2ad36628d8c553a",
+  "2700": "456bea4e5afc9da0844d31325d04529e",
+  "3000": "cec796d3b21542edc25ab8d1de3dfcf0",
+  "3300": "f3172debf5d6f6a7286cccd8afe61593",
+  "3600": "6e7d3dadc9ab122424d2e93199aee8b6",
+  "3900": "4123a83d582e023740ed96db1b9e026e",
+  "4200": "596361393192e754d327b10179fd80d6",
+  "4500": "5d24156f98f6ac53caf6db3a2c2c6a1c",
+  "4800": "422927c179db6744a03789bb4fe2db1d",
+  "5100": "0053bddf3ff369d3a481b9235badfd7c",
+  "5400": "a30e43ff85333f6b57e469b0463ac138",
+  "5700": "0211976426bb014f38264b36f7d5d89f",
+  "6000": "ec7838a7dbf2f09130896eb1572c9367",
+  "6300": "6465f4e81a69a40df35b7e40e5c1e934",
+  "6600": "decf4a935bc6356fe32675e8a77a0f9b",
+  "6900": "2adf989fe09f23d6333f6b8eb76db230",
+  "7200": "7020e31e54ff28eb35753b7b37c3e989",
+  "7500": "2ba66d399c42a79448d2dac9d093ccc2",
+  "7800": "8ad8ac9f1a72e73a20e8f7f9bd61eced",
+  "8100": "17d10aeca2dc573b4f25cc4eabaf5858",
+  "8400": "2975d25d612514b2dd2619753cc8d673",
+  "8700": "0f834ecd4743207d7c97ed8c1024f69a",
+  "9000": "7824a84de914972c7bb1c34389551e2e"
  },
- "final": "e396e80960fbe39389a68253854b455a",
+ "final": "613b0df7b540b0004b405a5e8e82f653",
  "finalState": {
   "v": 1,
-  "core": "m0.13",
+  "core": "m0.14",
   "world": "fe93e81c67a5a6ec091b917b8c05f3f0",
   "mode": "delve",
   "tick": 9006,
@@ -5770,6 +5770,7 @@
     "z": 2405
    }
   ],
+  "loot": [],
   "flying": [],
   "taken": [],
   "eyes": [],
@@ -5793,7 +5794,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 12,
-    "fa": 3399
+    "fa": 3399,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dead",
@@ -5808,7 +5812,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -5823,7 +5830,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -5838,7 +5848,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -5853,7 +5866,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dead",
@@ -5868,7 +5884,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dormant",
@@ -5883,7 +5902,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dead",
@@ -5898,7 +5920,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    }
   ],
   "groups": [
@@ -5957,6 +5982,7 @@
      "boss": null,
      "doors": [],
      "floor": [],
+     "loot": [],
      "taken": [],
      "bellSets": [],
      "links": [
@@ -5969,6 +5995,48 @@
         -1
        ]
       }
+     ],
+     "foes": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
      ]
     }
    }

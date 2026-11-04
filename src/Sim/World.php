@@ -746,7 +746,7 @@ final class World
                 $refs[] = ['type' => 'item', 'item' => count($items)];
                 $items[] = [
                     'id' => $e['id'], 'n' => count($refs), 'kind' => $kind, 'hidden' => $hidden, 'k' => $k, 'x' => $x, 'z' => $z,
-                    'reach' => $kind === 'rubble' ? 1600 : 1700, 'chestName' => $inChest ? $e['in'] : null,
+                    'reach' => $kind === 'rubble' ? 1600 : 1700, 'chestName' => $inChest ? $e['in'] : null, 'value' => $kind === 'treasure' ? $e['value'] : 0,
                 ];
             } elseif ($type === 'eyes') {
                 if (!self::hasExactKeys($e, self::KEYS_EYES)) {
@@ -813,7 +813,8 @@ final class World
                 $chests[] = ['id' => $e['id'], 'k' => $k, 'x' => $x + 250 * $di, 'z' => $z + 250 * $dj, 'reach' => 2200, 'needles' => $e['trap'] === 'needles', 'contents' => []];
             } elseif ($type === 'foe') {
                 $grouped = array_key_exists('group', $e);
-                if (!self::hasExactKeys($e, $grouped ? array_merge(self::KEYS_FOE, ['group']) : self::KEYS_FOE)) {
+                $disguised = array_key_exists('disguise', $e);
+                if (!self::hasExactKeys($e, array_merge(self::KEYS_FOE, $grouped ? ['group'] : [], $disguised ? ['disguise'] : []))) {
                     throw new \RangeException('foe keys');
                 }
                 $kind = Bestiary::kind($e['kind']);
@@ -822,6 +823,10 @@ final class World
                 }
                 if (!in_array($e['start'], self::FOE_STARTS, true)) {
                     throw new \RangeException('foe start');
+                }
+                // R-MIMIC-1: only a mimic may be disguised, and it starts asleep.
+                if ($disguised && ($kind['power'] !== 'mimic' || $e['start'] !== 'asleep' || !in_array($e['disguise'], ['treasure', 'flask', 'chest'], true))) {
+                    throw new \RangeException('foe disguise');
                 }
                 if ($grouped && (!is_string($e['group']) || preg_match(self::ID_RE, $e['group']) !== 1)) {
                     throw new \RangeException('foe group');
@@ -845,7 +850,7 @@ final class World
                 $refs[] = ['type' => 'foe', 'foe' => count($foes)];
                 $foes[] = [
                     'id' => $e['id'], 'k' => $k, 'x' => $ci * self::CELL_MM + intdiv(self::CELL_MM, 2), 'z' => $cj * self::CELL_MM + intdiv(self::CELL_MM, 2),
-                    'kind' => $kind, 'start' => $e['start'], 'group' => $g,
+                    'kind' => $kind, 'start' => $e['start'], 'group' => $g, 'disguise' => $disguised ? $e['disguise'] : null,
                 ];
             } elseif ($type === 'brazier') {
                 if (!self::hasExactKeys($e, self::KEYS_BRAZIER)) {

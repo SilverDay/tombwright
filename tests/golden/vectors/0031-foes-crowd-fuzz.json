@@ -1,6 +1,6 @@
 {
  "name": "0031-foes-crowd-fuzz",
- "core": "m0.13",
+ "core": "m0.14",
  "seed": 31,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAHAQEABgECAAcBAQAGAQIABwEBAAIBAQMDAQIABwEBAAYBAgAEAQIEAQEBAAYBAgAHAQEABgECAA4BAgAOAREA\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"w\",\"name\":\"W\",\"rects\":[[1,1,7,8]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[8,7,1,2]],\"ceil\":3000},{\"id\":\"e\",\"name\":\"E\",\"rects\":[[9,1,6,8]],\"ceil\":4200,\"checkpoint\":{\"cell\":[10,6],\"yaw\":1024}}],\"entities\":[{\"id\":\"q0\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[9,1],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q1\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[10,1],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[11,1],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q3\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[12,1],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q4\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[13,1],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q5\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[9,2],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q6\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[10,2],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q7\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[11,2],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q8\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[12,2],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q9\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[13,2],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"m1\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[3,7],\"start\":\"asleep\",\"group\":\"mix\"},{\"id\":\"m2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[2,2],\"start\":\"dormant\",\"group\":\"mix\"}],\"links\":[{\"id\":1,\"when\":{\"inZone\":\"w\"},\"do\":[{\"spawnFoes\":\"all\"}]},{\"id\":2,\"when\":{\"foesDefeated\":\"all\"},\"do\":[{\"message\":\"all down\"}]}]}",
@@ -5742,42 +5742,42 @@
  "ticks": 9017,
  "hashEvery": 300,
  "hashes": {
-  "0": "8a8b99dde227703f871f474dc120bb57",
-  "300": "b79c8416d8d3ae839b16913384cf5333",
-  "600": "11980300c1d4b31f67143d5e7f5d7625",
-  "900": "5783a21bed98ae0a7ba1afe1b9e0419a",
-  "1200": "a6e9e9fb2fb2d30f664f389248900354",
-  "1500": "4ef3419e9f0922e813faf017af2cae6e",
-  "1800": "1fa18899791ff023203926a4d6db8368",
-  "2100": "8ff2d60e61149d4e61605efea3be2bf2",
-  "2400": "6fe10835734d13c65352373551428d9e",
-  "2700": "fb3fba420886d3312e221b0147112555",
-  "3000": "7bcfa89908a92b230eddb731a80482bd",
-  "3300": "a90217e392ac1347770a41cfde0d0fa2",
-  "3600": "b1940503fdef04906403bd70c4b0362b",
-  "3900": "5427c7fb71452c354754d29d057e6cec",
-  "4200": "16b4370d40eba6c596b4004dca508735",
-  "4500": "135d4e4581f8e605dd293bea47f78bf8",
-  "4800": "46fcb638427aa40e4b70bcb24632862a",
-  "5100": "f434e407072a10f27761565d65f55575",
-  "5400": "546c400d21e332b30a68a8a52dc0475c",
-  "5700": "08f9b2f201eb89c3393992ea021aa7c2",
-  "6000": "a773fd76632376aa4fb41e15ef61a3c5",
-  "6300": "35a3e07831179c4bde32bc003ced3a36",
-  "6600": "2b9496e91a8d88bf45c5bbc549dc0b88",
-  "6900": "70f1ff969e9a7fe56c53580db5359267",
-  "7200": "7ed09e8718d28b262144a5d6b34d24c9",
-  "7500": "daf66612f1f7c9f7d4c93fcef203826f",
-  "7800": "d4c0f205cac618ef0d05b745086fb20f",
-  "8100": "7b1ec1ccefcca39893dfa98cf4ee6f64",
-  "8400": "befb0d4c82ba265611e4792acffb41de",
-  "8700": "f70a78b9643f51fa647c8620c3936779",
-  "9000": "f025442fc1b9a48b539567326636d4ab"
+  "0": "30a873d5e2b797aa6b1f95199b200dc4",
+  "300": "c0087241b140ec2d3c6b94ba2078eadd",
+  "600": "6811f8f887307630ead8e2cc3b5220e7",
+  "900": "d16ccc2b60c1ed562a060430baeeb34e",
+  "1200": "bac18f8fbb92d9bf0bffdfb54ece77ae",
+  "1500": "940e877bd93b990ed07fe35ad889d21f",
+  "1800": "e9351a0555337a9c730a8284d87d5939",
+  "2100": "2ae2a8abaf1cd39d30b4c2ec45cd945e",
+  "2400": "8cc432ebd2fd3143cb9efcb793a59372",
+  "2700": "7e94f8ba129e2c1be25d50c60ac08350",
+  "3000": "bf6a563e52ff1b56170b872a36f61bd2",
+  "3300": "6e70d57bc6cad208a760d04c252ffad3",
+  "3600": "54a469bfe7f18919d2b6706e42527ff8",
+  "3900": "652b06000a92e453325772013580fe98",
+  "4200": "792c8f70ce539c9a7269b9299a050831",
+  "4500": "fedba92a67893250b20cbb3c5f6165f3",
+  "4800": "478bbd1e175f5c1bccd33fc1137fc0e3",
+  "5100": "08563b935811a4ec9cc87a25a499c647",
+  "5400": "7e1159826bdd6e7707663946761560ec",
+  "5700": "d7ee6acbf985fb2eb5760ecd79079161",
+  "6000": "4c83601d422cfea6d632d881c2b97dbf",
+  "6300": "aeae708f32cee0daa9c21e57d53c0d0c",
+  "6600": "1ff9f1fbdf6eccc766e6041a3767177d",
+  "6900": "ce4f6674fbac3d0b775e00d4520b8e4c",
+  "7200": "90dcf8645b5ac94ab12fb60fa0102ba7",
+  "7500": "9a43ca543b0a058799e13cc45fee59f9",
+  "7800": "6ef18adc2b74d71f4355dade3e214c8a",
+  "8100": "b770bb7048d1d37a67a971ac38ca3a54",
+  "8400": "e6f2d9271dd86a63eda09ceec689e779",
+  "8700": "c1d5fac8195dd0854be109cfab7098d4",
+  "9000": "a1d6ceac7a987679c6244a5ad21b292a"
  },
- "final": "b98397f28e0556aa9eed0b0ce5a139d8",
+ "final": "d5aafcbf2e8047a523bfb2a64024765d",
  "finalState": {
   "v": 1,
-  "core": "m0.13",
+  "core": "m0.14",
   "world": "d8393ae808047635bec41e0b6f6195b6",
   "mode": "practice",
   "tick": 9017,
@@ -5837,6 +5837,7 @@
     "z": 9120
    }
   ],
+  "loot": [],
   "flying": [],
   "taken": [],
   "eyes": [],
@@ -5860,7 +5861,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -5875,7 +5879,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -5890,7 +5897,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -5905,7 +5915,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -5920,7 +5933,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -5935,7 +5951,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -5950,7 +5969,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dormant",
@@ -5965,7 +5987,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dormant",
@@ -5980,7 +6005,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dormant",
@@ -5995,7 +6023,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -6010,7 +6041,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dormant",
@@ -6025,7 +6059,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    }
   ],
   "groups": [
@@ -6079,6 +6116,7 @@
      "boss": null,
      "doors": [],
      "floor": [],
+     "loot": [],
      "taken": [],
      "bellSets": [],
      "links": [
@@ -6098,6 +6136,68 @@
         -1
        ]
       }
+     ],
+     "foes": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
      ]
     }
    }

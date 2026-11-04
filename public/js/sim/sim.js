@@ -13,7 +13,7 @@ import {
 } from './world.js';
 import { runLinks, initLinkState, copyLinkState } from './links.js';
 
-export const CORE_VERSION = 'm0.13';
+export const CORE_VERSION = 'm0.14';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -92,6 +92,7 @@ export function init(world, seed, mode) {
     marked: [],             // R-CP-3 lessons: plates found with the probe
     bridge: [],             // R-CP-3 lessons: bridge cells found
     floor: [],              // R-PEB-3: pebbles lying on the floor, { x, z }
+    loot: [],               // R-THIEF-4: what killed thieves dropped, { x, z, n, f, p }
     flying: [],             // R-PEB-2: pebbles in flight, { x, z, at }
     taken: [],              // R-ITEM-2: entity numbers of items taken
     eyes: worldEyes(world).map(() => 0), // R-EYES-1
@@ -130,8 +131,9 @@ function lifeOf(state) {
     revealed: state.revealed.slice(), mirrors: state.mirrors.slice(),
     chests: state.chests.map((c) => ({ look: c.look, sprung: c.sprung, open: c.open })), groups: state.groups.slice(),
     braziers: state.braziers.slice(), boss: state.boss === null ? null : state.boss.st === 'asleep' ? 'asleep' : state.boss.st === 'dead' ? 'dead' : 'awake',
-    doors: state.doors.map((d) => d.open), floor: state.floor.map((f) => ({ x: f.x, z: f.z })), taken: state.taken.slice(),
+    doors: state.doors.map((d) => d.open), floor: state.floor.map((f) => ({ x: f.x, z: f.z })), loot: state.loot.map((l) => ({ ...l })), taken: state.taken.slice(),
     bellSets: copyBellSets(state.bellSets), links: copyLinkState(state.links),
+    foes: state.foes.map((f) => [f.loot, f.lf, f.lp]),  // R-CP-3: carried loot (decision #70)
   };
 }
 
@@ -142,7 +144,8 @@ function freshBoss(def) {
 
 /** R-FOE-3: a foe as it starts (or comes back, R-FOE-8). */
 function freshFoe(def, st) {
-  return { st, x: def.x, z: def.z, hp: def.kind.strikes, t: 0, atk: def.kind.firstAttack, stun: 0, wake: false, gx: -1, gz: -1, rg: 0, ft: 0, fa: 0 };
+  if (st === 'asleep' && def.disguise !== null) st = 'disguised'; // R-MIMIC-1
+  return { st, x: def.x, z: def.z, hp: def.kind.strikes, t: 0, atk: def.kind.firstAttack, stun: 0, wake: false, gx: -1, gz: -1, rg: 0, ft: 0, fa: 0, loot: 0, lf: 0, lp: 0 };
 }
 
 function copyBellSets(b) { return b.map((x) => ({ seq: x.seq.slice(), solved: x.solved })); }
@@ -400,6 +403,12 @@ function probe(world, state, events) {
     if (solidCell(world, state, a, b) && !slabOrSprung(world, state, a, b)) { events.push({ e: 'probe', k: 'wall' }); return; }
   }
   const i = fdiv(tx, CELL_MM), j = fdiv(tz, CELL_MM), k = j * world.w + i, code = cellCode(world, i, j);
+  const mimic = state.foes.findIndex((f) => f.st === 'disguised' && fdiv(f.x, CELL_MM) === i && fdiv(f.z, CELL_MM) === j);
+  if (mimic >= 0) {                                     // R-MIMIC-1: the pole finds it out, safely
+    requestWake(world, state, mimic, events);
+    events.push({ e: 'probe', k: 'mimic' }, { e: 'reveal', id: worldFoes(world)[mimic].id, safe: true });
+    return;
+  }
   let what = 'stone';
   if (code === CELL.PLATE) {
     if (slabOrSprung(world, state, i, j)) what = 'slab';
@@ -523,8 +532,8 @@ function foeEvent(world, n, st, events) { events.push({ e: 'foe', id: worldFoes(
 /** R-FOE-4: wake an asleep or dormant foe, or queue the wake while 8 are awake. */
 function requestWake(world, state, n, events) {
   const f = state.foes[n], kind = worldFoes(world)[n].kind;
-  if (f.st !== 'asleep' && f.st !== 'dormant') return;
-  if (awakeCount(state) >= MAX_AWAKE) { f.wake = true; return; }
+  if (f.st !== 'asleep' && f.st !== 'dormant' && f.st !== 'disguised') return; // R-MIMIC-1: revealed like waking
+  if (awakeCount(state) >= MAX_AWAKE) { if (f.st === 'disguised') f.st = 'asleep'; f.wake = true; return; } // R-MIMIC-1: found out over the cap (decision #71)
   f.wake = false;
   if (f.st === 'dormant' && kind.rise > 0) { f.st = 'rising'; f.t = kind.rise; } else { f.st = 'hunting'; f.t = 0; }
   foeEvent(world, n, f.st, events);
@@ -550,7 +559,7 @@ function swing(world, state, events) {
   events.push({ e: 'swing' });
   let best = -1, bd = 0;
   state.foes.forEach((f, n) => {
-    if (f.st !== 'asleep' && f.st !== 'idle' && f.st !== 'hunting') return;
+    if (f.st !== 'asleep' && f.st !== 'idle' && f.st !== 'hunting' && f.st !== 'disguised') return; // R-MIMIC-1
     const dx = f.x - p.x, dz = f.z - p.z, d = isqrt(dx * dx + dz * dz); // squares < 2^36
     // |dx·sy| < 2^18 · 2^14 = 2^32. d = 0 isn't in front (Gloamhollow `d || 1`).
     if (d === 0 || d > STRIKE_REACH + idiv(6 * defs[n].kind.radius, 10) || 2 * (dx * -sy + dz * -cy) < d * TRIG_ONE) return;
@@ -568,9 +577,9 @@ function swing(world, state, events) {
 /** R-STRIKE-2 */
 function landBlow(world, state, n, events, batch) {
   const f = state.foes[n], def = worldFoes(world)[n], p = state.player;
-  if (f.st === 'dead') return;
+  if (f.st === 'dead' || f.st === 'gone') return;      // R-STRIKE-2: a gone thief can't be struck
   f.hp -= 1; f.stun = STUN;
-  if (f.st === 'asleep') requestWake(world, state, n, events);
+  if (f.st === 'asleep' || f.st === 'disguised') requestWake(world, state, n, events);
   if (def.kind.speed > 0) {                             // R-STRIKE-2: the flytrap isn't knocked back
     const dx = f.x - p.x, dz = f.z - p.z, d = Math.max(1, isqrt(dx * dx + dz * dz)); // squares < 2^36
     f.x += idiv(dx * KNOCKBACK, d); f.z += idiv(dz * KNOCKBACK, d);
@@ -580,6 +589,7 @@ function landBlow(world, state, n, events, batch) {
   if (f.hp > 0) return;
   f.st = 'dead'; f.wake = false;
   events.push({ e: 'foeDead', id: def.id });
+  if (f.loot > 0 || f.lf > 0 || f.lp > 0) { state.loot.push({ x: f.x, z: f.z, n: f.loot, f: f.lf, p: f.lp }); f.loot = 0; f.lf = 0; f.lp = 0; } // R-THIEF-4
   if (p.held === n) { p.held = -1; p.holdImm = 60; events.push({ e: 'free' }); } // R-POW-4
   const g = def.group;
   if (worldGroups(world)[g].foes.every((m) => state.foes[m].st === 'dead')) { state.groups[g] = 'defeated'; batch.push(['foesDefeated', g]); }
@@ -649,7 +659,12 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
   const pi = fdiv(p.x, CELL_MM), pj = fdiv(p.z, CELL_MM);
   for (let n = 0; n < defs.length; n++) {
     const f = state.foes[n], kind = defs[n].kind;
-    if (f.st === 'dormant' || f.st === 'dead' || f.st === 'asleep') continue;
+    if (f.st === 'gone') {                              // R-THIEF-3: back after 20 s, idle at its cell
+      if (f.t > 1) f.t -= 1;
+      else if (awakeCount(state) < MAX_AWAKE) { f.st = 'idle'; f.t = 0; f.x = defs[n].x; f.z = defs[n].z; f.atk = kind.firstAttack; f.stun = 0; f.gx = -1; f.gz = -1; foeEvent(world, n, 'idle', events); }
+      continue;
+    }
+    if (f.st === 'dormant' || f.st === 'dead' || f.st === 'asleep' || f.st === 'disguised') continue;
     if (f.st === 'rising') { f.t -= 1; if (f.t === 0) { f.st = 'hunting'; foeEvent(world, n, 'hunting', events); } continue; }
     f.stun = Math.max(0, f.stun - 1); f.atk = Math.max(0, f.atk - 1);
     const dx = p.x - f.x, dz = p.z - f.z;                // squares < 2^36
@@ -696,10 +711,14 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
       }
     } else {                                              // idle
       const sx = f.x - p.x, sz = f.z - p.z, see = still ? kind.reach : sight; // R-FOE-7
+      let gt = null;
       if (sx * sx + sz * sz <= see * see && losFrom(world, state, f.x, f.z, p.x, p.z)) {
         f.st = 'hunting'; f.t = 0; f.gx = -1; f.gz = -1; foeEvent(world, n, 'hunting', events);
       } else if (still) {
         // no goal: it never moves
+      } else if (kind.power === 'guard' && (gt = guardTarget(world, state, n)) !== null) { // R-GUARD-1
+        const [gx, gz] = gt, ex = gx - f.x, ez = gz - f.z;
+        if (ex * ex + ez * ez > 600 * 600) { walkTo(f, kind.speed, gx, gz, flit); moved = true; }
       } else if (f.gx < 0) {
         if (f.t > 0) f.t -= 1;
         if (f.t === 0) {
@@ -719,7 +738,7 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
     // Separation from the other foes, then the walls and props.
     for (let m = 0; m < defs.length; m++) {
       const o = state.foes[m];
-      if (m === n || o.st === 'dormant' || o.st === 'dead') continue;
+      if (m === n || o.st === 'dormant' || o.st === 'dead' || o.st === 'gone' || o.st === 'disguised') continue;
       const ox = f.x - o.x, oz = f.z - o.z, rr = kind.radius + defs[m].kind.radius, od2 = ox * ox + oz * oz; // < 2^36
       if (od2 > 0 && od2 < rr * rr) { const od = isqrt(od2); f.x += idiv(ox * (rr - od), 2 * od); f.z += idiv(oz * (rr - od), 2 * od); } // |ox·(rr-od)| < 2^22
     }
@@ -743,15 +762,84 @@ function touch(world, state, n, events) {
     case 'drain':
       if (roll(35)) { p.maxHp = Math.max(1500, p.maxHp - 150); p.hp = Math.min(p.hp, p.maxHp); f.hp = Math.min(kind.strikes, f.hp + 1); took = true; }
       break;
+    case 'steal': {                                     // R-THIEF-1
+      if (f.loot > 0 || f.lf > 0 || f.lp > 0) return;   // no second theft (decision #69)
+      const items = worldItems(world);
+      let best = -1;
+      let bestV = -1;
+      state.taken.forEach((num, k) => { const it = items.find((q) => q.n === num); if (it !== undefined && it.kind === 'treasure' && it.value > bestV) { best = k; bestV = it.value; } });
+      if (best >= 0) { f.loot = state.taken[best]; state.taken.splice(best, 1); vanish(f); events.push({ e: 'steal', id: def.id, item: items.find((q) => q.n === f.loot).id }); }
+      return;
+    }
+    case 'pilfer':                                      // R-THIEF-2
+      if (f.loot > 0 || f.lf > 0 || f.lp > 0) return;   // no second theft (decision #69)
+      if (p.flasks > 0) { p.flasks -= 1; f.lf = 1; } else if (p.pebbles >= 2) { f.lp = idiv(p.pebbles, 2); p.pebbles -= f.lp; } else return;
+      vanish(f); events.push({ e: 'steal', id: def.id, flasks: f.lf, pebbles: f.lp });
+      return;
+    case 'forget': {                                    // R-FORGET-1
+      if (!roll(20)) return;
+      const z = zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM));
+      if (z < 0) return;
+      const cands = [...state.marked.map((k) => ['marked', k]), ...state.bridge.map((k) => ['bridge', k])].filter(([, k]) => zoneAt(world, k) === z);
+      if (cands.length === 0) return;
+      const [list, k] = cands[rngBelow(state.rng, cands.length)];
+      state[list].splice(state[list].indexOf(k), 1);
+      events.push({ e: 'forget', k });
+      return;
+    }
     default: break;
   }
   if (took) events.push({ e: 'power', k: kind.power, id: def.id });
 }
 
+/** R-THIEF-4: item n is no longer where the GDF put it: taken, carried by a thief, or lying as dropped loot. */
+function away(state, n) {
+  return state.taken.includes(n) || state.foes.some((f) => f.loot === n) || state.loot.some((l) => l.n === n);
+}
+
+/** R-THIEF-3 */
+function vanish(f) { f.st = 'gone'; f.t = 600; f.wake = false; f.gx = -1; f.gz = -1; }
+
+/** R-GUARD-1: the treasure an idle guard goes for (its point), or null. */
+function guardTarget(world, state, n) {
+  const def = worldFoes(world)[n], f = state.foes[n], z = zoneAt(world, def.k);
+  if (z < 0) return null;
+  let best = null, bd = 0;
+  for (const it of worldItems(world)) {
+    if (it.kind !== 'treasure' || it.k < 0 || zoneAt(world, it.k) !== z || away(state, it.n) || (it.hidden && !state.revealed.includes(it.n))) continue;
+    const dx = it.x - f.x, dz = it.z - f.z, d2 = dx * dx + dz * dz; // < 2^36
+    if (best === null || d2 < bd) { best = [it.x, it.z]; bd = d2; }
+  }
+  return best;
+}
+
+/** R-THIEF-4: pick up dropped loot k. */
+function takeLoot(world, state, k, events) {
+  const p = state.player, l = state.loot[k];
+  if (l === undefined) return;
+  const dx = p.x - l.x, dz = p.z - l.z; // squares < 2^36
+  if (dx * dx + dz * dz > 1700 * 1700 || !lineOfSight(world, state, l.x, l.z)) return;
+  if (l.n > 0) state.taken.push(l.n);
+  p.flasks += l.f; p.pebbles = Math.min(PEBBLE_MAX, p.pebbles + l.p);
+  state.loot.splice(k, 1);
+  events.push({ e: 'loot', n: l.n > 0 ? worldItems(world).find((q) => q.n === l.n).id : null, f: l.f, p: l.p });
+}
+
+/** R-MIMIC-1: reaching for a disguised foe: a free hit, then it is revealed. */
+function reachMimic(world, state, n, events) {
+  const p = state.player, f = state.foes[n], def = worldFoes(world)[n];
+  if (f.st !== 'disguised') return;
+  const dx = p.x - f.x, dz = p.z - f.z; // squares < 2^36
+  if (dx * dx + dz * dz > 1700 * 1700 || !lineOfSight(world, state, f.x, f.z)) return;
+  if (def.kind.damage > 0) { hurt(state, def.kind.damage, events, 'beast'); if (state.dead !== null) return; }
+  requestWake(world, state, n, events);
+  events.push({ e: 'reveal', id: def.id, safe: false });
+}
+
 /** R-ITEM-2 */
 function takeItem(world, state, n, it, events, batch) {
   const p = state.player;
-  if (it.kind === 'rubble' ? p.pebbles >= PEBBLE_MAX : state.taken.includes(n)) return;
+  if (it.kind === 'rubble' ? p.pebbles >= PEBBLE_MAX : away(state, n)) return; // R-THIEF-4: a stolen one isn't back
   if (it.hidden && !state.revealed.includes(n)) return; // R-ITEM-1
   if (it.k < 0) return;                                 // in a chest: R-CHEST-2
   const dx = p.x - it.x, dz = p.z - it.z; // squares < 2^36
@@ -843,6 +931,7 @@ function rise(world, state, target, events) {
   p.flasks = life.flasks;
   p.pebbles = life.pebbles;
   state.floor = life.floor.map((f) => ({ x: f.x, z: f.z }));
+  state.loot = life.loot.map((l) => ({ ...l }));        // R-THIEF-4
   state.taken = life.taken.slice();
   state.flying = [];
   state.groups = life.groups.slice();
@@ -857,6 +946,10 @@ function rise(world, state, target, events) {
   state.foes = worldFoes(world).map((def) => {
     const g = state.groups[def.group];
     return freshFoe(def, g === 'defeated' ? 'dead' : def.start);
+  });
+  life.foes.forEach(([loot, lf, lp], n) => {            // R-FOE-8: carried loot survives the rise (decision #70)
+    const f = state.foes[n];
+    if (f.st !== 'dead') { f.loot = loot; f.lf = lf; f.lp = lp; }
   });
   worldFoes(world).forEach((def, n) => {
     const f = state.foes[n];
@@ -873,7 +966,9 @@ function rise(world, state, target, events) {
 
 /** R-ACT-1: interact with a door, item or bell within reach. Anything else does nothing. */
 function interact(world, state, n, events, batch) {
+  if (n >= 1000) { takeLoot(world, state, n - 1000, events); return; } // R-THIEF-4
   const ref = entityRef(world, n);
+  if (ref && ref.type === 'foe') { reachMimic(world, state, ref.foe, events); return; } // R-MIMIC-1
   if (ref && ref.type === 'item') { takeItem(world, state, n, worldItems(world)[ref.item], events, batch); return; }
   if (ref && ref.type === 'bell') { ringBell(world, state, n, worldBells(world)[ref.bell], events, batch); return; }
   if (ref && ref.type === 'lampHook') { useHook(world, state, n, ref.hook, events, batch); return; }

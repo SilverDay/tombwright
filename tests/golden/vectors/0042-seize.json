@@ -1,6 +1,6 @@
 {
  "name": "0042-seize",
- "core": "m0.13",
+ "core": "m0.14",
  "seed": 42,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIADAECAAwBAgAMAQIADAECAAwBAgAMAQ8A\"},\"start\":{\"cell\":[4,3]},\"zones\":[{\"id\":\"p\",\"name\":\"P\",\"rects\":[[1,1,8,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[2,2],\"yaw\":0}},{\"id\":\"q\",\"name\":\"Q\",\"rects\":[[9,1,4,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[11,4],\"yaw\":0}}],\"entities\":[{\"id\":\"fly\",\"type\":\"foe\",\"kind\":\"flytrap\",\"cell\":[5,3],\"start\":\"idle\"},{\"id\":\"br\",\"type\":\"brazier\",\"cell\":[3,2],\"lit\":false},{\"id\":\"eye\",\"type\":\"eyes\",\"zone\":\"q\",\"wake\":60}]}",
@@ -74,14 +74,14 @@
  "ticks": 757,
  "hashEvery": 300,
  "hashes": {
-  "0": "1dfd23229c6f087c6a963913b0bc72ac",
-  "300": "38ce2fd3b6fa221d29e19d725213a195",
-  "600": "0c483cb35918f1120b96b5491503a96d"
+  "0": "5068166804788ec7f6241b2410644fa9",
+  "300": "4724f150cdd7fdc181fe1d72620759b9",
+  "600": "251164325b932efffa5296b52ab4a336"
  },
- "final": "be3da78a7055a299de8be4bcec277674",
+ "final": "0231213b95c15168ea11a15882ecbbd2",
  "finalState": {
   "v": 1,
-  "core": "m0.13",
+  "core": "m0.14",
   "world": "15c97c1761af33a7e78a1e6c86b73a45",
   "mode": "practice",
   "tick": 757,
@@ -130,6 +130,7 @@
   "marked": [],
   "bridge": [],
   "floor": [],
+  "loot": [],
   "flying": [],
   "taken": [],
   "eyes": [
@@ -155,7 +156,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    }
   ],
   "groups": [
@@ -194,9 +198,17 @@
      "boss": null,
      "doors": [],
      "floor": [],
+     "loot": [],
      "taken": [],
      "bellSets": [],
-     "links": []
+     "links": [],
+     "foes": [
+      [
+       0,
+       0,
+       0
+      ]
+     ]
     }
    }
   ],

@@ -1,0 +1,295 @@
+{
+ "name": "0046-tricks",
+ "core": "m0.14",
+ "seed": 46,
+ "mode": "practice",
+ "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":8,\"h\":8,\"cells\":\"CQAGAQIAAgECAwIBAgAGAQIABAEBAwEBAgAEAQEGAQECAAYBCQA=\"},\"start\":{\"cell\":[2,2]},\"zones\":[{\"id\":\"r\",\"name\":\"R\",\"rects\":[[1,1,6,6]],\"ceil\":4200}],\"entities\":[{\"id\":\"xe\",\"type\":\"foe\",\"kind\":\"xeroc\",\"cell\":[2,3],\"start\":\"asleep\",\"disguise\":\"flask\"},{\"id\":\"wr\",\"type\":\"foe\",\"kind\":\"wraith\",\"cell\":[2,6],\"start\":\"hunting\"}]}",
+ "inputs": [
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 4,
+    "target": 0
+   }
+  ],
+  [
+   25,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 4,
+    "target": 0
+   }
+  ],
+  [
+   25,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 4,
+    "target": 0
+   }
+  ],
+  [
+   30,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   900,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 128,
+    "target": 0
+   }
+  ],
+  [
+   600,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 1,
+    "target": 0
+   }
+  ]
+ ],
+ "ticks": 1584,
+ "hashEvery": 300,
+ "hashes": {
+  "0": "93b9074c83017222704f7f169372da91",
+  "300": "f4c14fbaeee8a6e32c97484c6a4b3ead",
+  "600": "0e6fcfcc3d1e46877184f814309ab070",
+  "900": "50ce3638998845960b633c2470c599d4",
+  "1200": "7778210c5da7f4a02d1c03f72236a897",
+  "1500": "767b0b2e5690ddf74791e29d9896b496"
+ },
+ "final": "56f9554a733f4a49c64b65544273dd2a",
+ "finalState": {
+  "v": 1,
+  "core": "m0.14",
+  "world": "968efc8ce7c113984bed9957ddb08c80",
+  "mode": "practice",
+  "tick": 1584,
+  "rng": [
+   806081010,
+   2237915956,
+   3291203751,
+   821022661
+  ],
+  "player": {
+   "x": 6000,
+   "z": 6000,
+   "vx": 0,
+   "vz": 0,
+   "rx": 0,
+   "rz": 0,
+   "yaw": 0,
+   "pitch": 0,
+   "hp": 0,
+   "calm": 0,
+   "oil": 2971200,
+   "hooded": false,
+   "hung": -1,
+   "flasks": 1,
+   "pebbles": 10,
+   "probeCd": 0,
+   "pebbleCd": 0,
+   "strikeCd": 4,
+   "busy": 0,
+   "busyOn": -1,
+   "doused": false,
+   "frozen": 0,
+   "freezeImm": 0,
+   "held": -1,
+   "heldT": 0,
+   "holdImm": 0,
+   "confused": 0,
+   "poison": 0,
+   "maxHp": 3000
+  },
+  "doors": [],
+  "deaths": 2,
+  "dead": {
+   "cause": "beast",
+   "at": 1343
+  },
+  "sprung": [],
+  "pits": [],
+  "marked": [],
+  "bridge": [],
+  "floor": [],
+  "loot": [],
+  "flying": [],
+  "taken": [],
+  "eyes": [],
+  "zone": 0,
+  "sealed": [],
+  "revealed": [],
+  "mirrors": [],
+  "chests": [],
+  "sealing": [],
+  "foes": [
+   {
+    "st": "disguised",
+    "x": 6000,
+    "z": 8400,
+    "hp": 4,
+    "t": 0,
+    "atk": 15,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
+   },
+   {
+    "st": "hunting",
+    "x": 6000,
+    "z": 7257,
+    "hp": 4,
+    "t": 0,
+    "atk": 0,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
+   }
+  ],
+  "groups": [
+   "awake",
+   "awake"
+  ],
+  "blows": [],
+  "braziers": [],
+  "boss": null,
+  "won": null,
+  "bellSets": [],
+  "links": [],
+  "checkpoints": [
+   {
+    "zone": 0,
+    "x": 6000,
+    "z": 6000,
+    "yaw": 0,
+    "life": {
+     "hp": 3000,
+     "oil": 3000000,
+     "hooded": false,
+     "hung": -1,
+     "flasks": 1,
+     "pebbles": 10,
+     "revealed": [],
+     "mirrors": [],
+     "chests": [],
+     "groups": [
+      "awake",
+      "awake"
+     ],
+     "braziers": [],
+     "boss": null,
+     "doors": [],
+     "floor": [],
+     "loot": [],
+     "taken": [],
+     "bellSets": [],
+     "links": [],
+     "foes": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ]
+    }
+   }
+  ],
+  "cp": 0,
+  "prevButtons": 1
+ }
+}

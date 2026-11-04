@@ -1,6 +1,6 @@
 {
  "name": "0029-foes-fuzz",
- "core": "m0.13",
+ "core": "m0.14",
  "seed": 29,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAHAQEABgECAAcBAQAGAQIABwEBAAIBAQMDAQIABwEBAAYBAgAEAQIEAQEBAAYBAgAHAQEABgECAA4BAgAOAREA\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"w\",\"name\":\"W\",\"rects\":[[1,1,7,8]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[8,7,1,2]],\"ceil\":3000},{\"id\":\"e\",\"name\":\"E\",\"rects\":[[9,1,6,8]],\"ceil\":4200,\"checkpoint\":{\"cell\":[10,6],\"yaw\":1024}}],\"entities\":[{\"id\":\"f1\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[12,2],\"start\":\"hunting\",\"group\":\"east\"},{\"id\":\"f2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[13,7],\"start\":\"idle\",\"group\":\"east\"},{\"id\":\"f3\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[3,7],\"start\":\"asleep\",\"group\":\"sleepy\"},{\"id\":\"f4\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[2,2],\"start\":\"dormant\",\"group\":\"late\"}],\"links\":[{\"id\":1,\"when\":{\"enterZone\":\"e\"},\"do\":[{\"spawnFoes\":\"late\"},{\"message\":\"late\"}]},{\"id\":2,\"when\":{\"foesDefeated\":\"east\"},\"do\":[{\"message\":\"east clear\"}]},{\"id\":3,\"when\":{\"not\":{\"foesAlive\":\"sleepy\"}},\"repeat\":true,\"do\":[{\"message\":\"sleepy gone\"}]}]}",
@@ -5690,42 +5690,42 @@
  "ticks": 9029,
  "hashEvery": 300,
  "hashes": {
-  "0": "64ede54154127b7ff185fbf0bb136d8d",
-  "300": "c093f47c4fc5cc6c6a7719ab45274f89",
-  "600": "a23119866d00eed6e95ee6e2a7defbe9",
-  "900": "56555d5237a4d5a20a30f48975c2b705",
-  "1200": "d665c7a70ead42d13b25f0623c2b92c4",
-  "1500": "ba7c802ee46e284d00a334f95533108e",
-  "1800": "a1cd29cb67b50e0435898e819012a60f",
-  "2100": "97268d5d6f3cd4dc1eacd0c7939f984e",
-  "2400": "edf7a2d76c81ecc77e32c8e900e02829",
-  "2700": "afbce8a4793caee7268ca1e7506c31cf",
-  "3000": "b10bb4f952f07579e52a1078bba6a57f",
-  "3300": "93a801fca92ad0543469e5f6c63ce30f",
-  "3600": "41d2b86eedae1710cd266f558b752634",
-  "3900": "a27bfd24ab2e98c3bee2d9adfe3b1d82",
-  "4200": "42950ab759a3f8ffc5b7d10a6b418475",
-  "4500": "19d741d4ac3cc6f2aed52275c9ac1cbc",
-  "4800": "d7ab90250b94dc235d6c1b78652fb97c",
-  "5100": "777afbef013c4391ac9d25927f7befeb",
-  "5400": "baf60676cbaa8d9a75a1ea71afe24495",
-  "5700": "fc7a3da8fa1dc050fac28d6cd8391ebf",
-  "6000": "b341549ce48400847395a49e47524ca8",
-  "6300": "6ac68e91c6c095bc81a9e6307151164e",
-  "6600": "2bf8f771b404288a99c35f3d9ea4e6be",
-  "6900": "64aa3191c6f371ff14dd9887403b0b08",
-  "7200": "a43362767bbb33b8f9d54a0dea47b3ef",
-  "7500": "f01e2fd0c30278c7a4a75a12cd53ff4d",
-  "7800": "a085aaafa82eda9b3f42e729fee58ded",
-  "8100": "9604738e2fd7f9ed227e4092e1b26b40",
-  "8400": "b5c0fc91726017ac990c16353123760d",
-  "8700": "efebfa2ba748efdd45b77f4bf2c64af0",
-  "9000": "2c60168b32fa513ca09a16145bbfeff5"
+  "0": "178574d74b28d196f7de46e9ff011080",
+  "300": "6a09b593aec2c8b05d964e68eb16a971",
+  "600": "4a05148d14768ed75910b3406f77986b",
+  "900": "0c7406b963d07786e6e97e9a64fb52c7",
+  "1200": "c91243f0240557208cbd29fb2f3cb8ba",
+  "1500": "a577a19c597e61eab1c19fac78dbae9d",
+  "1800": "3211b47a18ef6d3726c3d33b23a31ccf",
+  "2100": "1b2fe2f40b226d2d21ddf3841662ed4b",
+  "2400": "ded8c74445370fe11de3341f639a4941",
+  "2700": "f75c3656daf3fe5a93beb253f42fe490",
+  "3000": "d027215691bbfafbaca580007a5572cd",
+  "3300": "388d503765dd16c13b6da43c6c9fc463",
+  "3600": "436995503b544eb597848eafaf10d805",
+  "3900": "b01217d737da370708e86e511d74812f",
+  "4200": "815c3d7ecfc3b3ffe3814f6610079e0b",
+  "4500": "d44c607342b3ba7438555f525df5dda9",
+  "4800": "f2b0d51d4b25d0ca30a9393b89df5958",
+  "5100": "f0aa549ddc6b7a516571b9d2aa9cf82b",
+  "5400": "6f24b59900d261c71440bb5c50154221",
+  "5700": "a4afdca3a2baef2d48c8cfba81e21975",
+  "6000": "40398508ef4ec86e31a1afb4a7bd738e",
+  "6300": "5b06e80b1ca9be94f01bf6f8f5003b97",
+  "6600": "b68875401ab9e71d58b0a99d38642eb5",
+  "6900": "23384f251bc892345f485c68a502d3e0",
+  "7200": "32295e6a4c0c230219d8fab646c9634f",
+  "7500": "d9b3f18c46b93b4e9b277eba87963d7e",
+  "7800": "2aa523743fdd8ad4186c4daaceda6294",
+  "8100": "6618c98d4d8376ad0c7ed496f8a67868",
+  "8400": "b06ded8062c103db4a485a96416f984c",
+  "8700": "4ff92cd6af1fa789da8a21d285110fb0",
+  "9000": "c1a54c0723668384611a274128d6b5f7"
  },
- "final": "4a35a58caa49c84a8d7a9f1f26b671c3",
+ "final": "af38da793aa9e3e8d161d9a48b594be5",
  "finalState": {
   "v": 1,
-  "core": "m0.13",
+  "core": "m0.14",
   "world": "048035ae47f4729f40c65d9e91cfaca9",
   "mode": "delve",
   "tick": 9029,
@@ -5786,6 +5786,7 @@
     "z": 2467
    }
   ],
+  "loot": [],
   "flying": [],
   "taken": [],
   "eyes": [],
@@ -5809,7 +5810,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "idle",
@@ -5824,7 +5828,10 @@
     "gz": 3600,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -5839,7 +5846,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dormant",
@@ -5854,7 +5864,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    }
   ],
   "groups": [
@@ -5919,6 +5932,7 @@
      "boss": null,
      "doors": [],
      "floor": [],
+     "loot": [],
      "taken": [],
      "bellSets": [],
      "links": [
@@ -5947,6 +5961,28 @@
        "pend": [],
        "m": []
       }
+     ],
+     "foes": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
      ]
     }
    }

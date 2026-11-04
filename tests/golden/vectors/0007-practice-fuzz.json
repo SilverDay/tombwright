@@ -1,6 +1,6 @@
 {
  "name": "0007-practice-fuzz",
- "core": "m0.13",
+ "core": "m0.14",
  "seed": 6,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIAAQEBAwIBAQMCAQEFAgEBBgEBAgAMAQIADAECAAwBAgAEAQEEAgEBBwIBAQgBAQIABwEBBwQBDwA=\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,3,7]],\"ceil\":4200},{\"id\":\"b\",\"name\":\"B\",\"rects\":[[4,1,3,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[5,4],\"yaw\":3072}},{\"id\":\"c\",\"name\":\"C\",\"rects\":[[7,1,3,4],[7,5,3,3]],\"ceil\":6500,\"checkpoint\":{\"cell\":[8,4],\"yaw\":3072,\"reach\":\"enter\"}},{\"id\":\"d\",\"name\":\"D\",\"rects\":[[10,1,3,7]],\"ceil\":3000,\"checkpoint\":{\"cell\":[11,4],\"yaw\":1024,\"reach\":\"effect\"}}],\"entities\":[{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[2,2]},{\"id\":\"v1\",\"type\":\"vent\",\"cells\":[[8,6],[8,7]],\"period\":60,\"phase\":10,\"warn\":15,\"fire\":20}]}",
@@ -5456,42 +5456,42 @@
  "ticks": 9007,
  "hashEvery": 300,
  "hashes": {
-  "0": "06d27297cd1585079ca4f3e1cd023d90",
-  "300": "b8d8d52dabc1550899f6934241f653c0",
-  "600": "d0ba72799ec23074354a81b6be042429",
-  "900": "f575530c640f6d4e4832305f8014be25",
-  "1200": "a22ea98dfec3f03f06cd832ae1cabb58",
-  "1500": "5723f985aa3463b95f76eb5896c32340",
-  "1800": "3464bc9c3bd754f6cc704239a0e41fe8",
-  "2100": "397774671b68b2ea5a7024ee6bca9076",
-  "2400": "a3fde8d3922b0c4d0e0ff9e6c5dd0b3a",
-  "2700": "3d87995a86852ea0ebca2fb2bc5e3933",
-  "3000": "b5d9a175bebea132a77e0400d35cfad6",
-  "3300": "b398219dc7f5c7ab730da8b9a2e57a8e",
-  "3600": "b9ea48d0878ac2b94596aa5d82830275",
-  "3900": "5718865333ab5cfbe8ef6742b1451279",
-  "4200": "82338d9a9673afc45770204e3c1ab448",
-  "4500": "a19cc342b164c325c408a2cfd1e85551",
-  "4800": "e134242ee4eb3df79da51052658856a9",
-  "5100": "3f474cef733f62d130e2d889bc281884",
-  "5400": "a711639938e7519cae21496bc46ce5bd",
-  "5700": "0bfb5885bb6605ef603cd2286adbab95",
-  "6000": "c7d0700f74613cd5c6ed803a48bee99c",
-  "6300": "ce24c06af55c7739b518ad25af9d87fe",
-  "6600": "68cffba8d3f3f8ee447472f4f6db5e92",
-  "6900": "58bbe992dbc1a4662891028ee51fcfc4",
-  "7200": "1654f414ac1263982f492f6a72b9a0c6",
-  "7500": "eb391dd957c6fc391b8170e9574b8035",
-  "7800": "8b9db89c216317ca17d55fe9d4a2dc15",
-  "8100": "f81007d1a0ac8eaa4ac86cd413526489",
-  "8400": "5b75291281d9ba3953b5302dc124937f",
-  "8700": "28e3092e834d828b701b90ccde2e8a06",
-  "9000": "23112372705953808f6a8025bb2a577a"
+  "0": "9ae72c8d79758cc0d60f019e00d03b16",
+  "300": "325a4de9a2bddf5ad5aeda7d5622cb91",
+  "600": "3f34dac526e64da500f1323f5332e0bc",
+  "900": "e5701186ef559c7a1773214adccb4267",
+  "1200": "c13245a5487f2faf1accda02710b5b77",
+  "1500": "ae91b678f2e2ecf005add87132f3b421",
+  "1800": "d24d8c1ae3649e8050b9e8c3bf31ef6b",
+  "2100": "776b1fe23b04f8ee52c151cb504210f6",
+  "2400": "214299609411c96c6463136061d3e6e2",
+  "2700": "86e9846ba126c1d89f084894d4635958",
+  "3000": "9d5ca74b2c80616323f9828a666c1015",
+  "3300": "bc9b7c415c17942595809cfafdaf2e9f",
+  "3600": "97d05c9260ffa638c167608f02826000",
+  "3900": "54a412b028a75b0e17d38abdf32cd516",
+  "4200": "a4af6a7e8cfca6c6d13ade4031589119",
+  "4500": "e900d4792f4daebc7fe6d277d96702bf",
+  "4800": "7f04bc3dc0bbac15eb2a6f60d0941949",
+  "5100": "0a26302932259a8b07c225e3ea77539a",
+  "5400": "6cfbcad2dcc278806965864b5de2a0b4",
+  "5700": "207cad814611b76b71492b492cab11b0",
+  "6000": "a3ea40ff3719d9faa0f79ef343efce64",
+  "6300": "6df814c8853b226e730f9c09a5968efc",
+  "6600": "5616b9a7eed9479ac8d4bc288bdaee80",
+  "6900": "ccbcef2d03411e35b2371164e135fbb8",
+  "7200": "3a45500449b9661bd0fddef538298afb",
+  "7500": "21380bbd62944bd042be85761b90d305",
+  "7800": "40099a0da251f3803631d71ee06336fe",
+  "8100": "59bef3b4be2f68ae11048b96febb8e4f",
+  "8400": "7472e222f8ed31c8be0f2850a2b80756",
+  "8700": "bedda8b569316b5c2e8a4dd597910092",
+  "9000": "2a01e82af769e4e8ddfe669ab6487ccf"
  },
- "final": "31055b6efb1ce0c83629735420844d22",
+ "final": "5d9fda44b920771fec76ad3cdeee6f4a",
  "finalState": {
   "v": 1,
-  "core": "m0.13",
+  "core": "m0.14",
   "world": "3105c26a5fe9b85dd09aca967c41891f",
   "mode": "practice",
   "tick": 9007,
@@ -5588,6 +5588,7 @@
     "z": 8851
    }
   ],
+  "loot": [],
   "flying": [],
   "taken": [],
   "eyes": [],
@@ -5626,9 +5627,11 @@
      "boss": null,
      "doors": [],
      "floor": [],
+     "loot": [],
      "taken": [],
      "bellSets": [],
-     "links": []
+     "links": [],
+     "foes": []
     }
    },
    {
@@ -5684,9 +5687,11 @@
        "z": 16498
       }
      ],
+     "loot": [],
      "taken": [],
      "bellSets": [],
-     "links": []
+     "links": [],
+     "foes": []
     }
    },
    {
@@ -5746,9 +5751,11 @@
        "z": 8762
       }
      ],
+     "loot": [],
      "taken": [],
      "bellSets": [],
-     "links": []
+     "links": [],
+     "foes": []
     }
    }
   ],

@@ -1,6 +1,6 @@
 {
  "name": "0028-foes-death",
- "core": "m0.13",
+ "core": "m0.14",
  "seed": 28,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAHAQEABgECAAcBAQAGAQIABwEBAAIBAQMDAQIABwEBAAYBAgAEAQIEAQEBAAYBAgAHAQEABgECAA4BAgAOAREA\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"w\",\"name\":\"W\",\"rects\":[[1,1,7,8]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[8,7,1,2]],\"ceil\":3000},{\"id\":\"e\",\"name\":\"E\",\"rects\":[[9,1,6,8]],\"ceil\":4200,\"checkpoint\":{\"cell\":[10,6],\"yaw\":1024}}],\"entities\":[{\"id\":\"f1\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[12,2],\"start\":\"hunting\",\"group\":\"east\"},{\"id\":\"f2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[13,7],\"start\":\"idle\",\"group\":\"east\"},{\"id\":\"f3\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[3,7],\"start\":\"asleep\",\"group\":\"sleepy\"},{\"id\":\"f4\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[2,2],\"start\":\"dormant\",\"group\":\"late\"}],\"links\":[{\"id\":1,\"when\":{\"enterZone\":\"e\"},\"do\":[{\"spawnFoes\":\"late\"},{\"message\":\"late\"}]},{\"id\":2,\"when\":{\"foesDefeated\":\"east\"},\"do\":[{\"message\":\"east clear\"}]},{\"id\":3,\"when\":{\"not\":{\"foesAlive\":\"sleepy\"}},\"repeat\":true,\"do\":[{\"message\":\"sleepy gone\"}]}]}",
@@ -48,18 +48,18 @@
  "ticks": 1801,
  "hashEvery": 300,
  "hashes": {
-  "0": "a09dab2faf1a4bd5e48838f13031da25",
-  "300": "2b915d472e7e423be6c34dfdd1c6bc72",
-  "600": "92f818974a02bb45f3a07fc9c358f209",
-  "900": "0b164010842bd546cf7d2d6d544f58ea",
-  "1200": "2062ed587007b716d1c09f9755a10b53",
-  "1500": "f4cc5e7c27d2f0171b0855d0b8f71682",
-  "1800": "18b7a027cd87ba19f1981f8678047799"
+  "0": "59fe7179ff650a7352a875c2eef70556",
+  "300": "0c191bb94d56f617de4463b57ead2a61",
+  "600": "3b66183d4f6eeec9b45428241d972054",
+  "900": "a7c92a398c5d9158509468dcdf9d036f",
+  "1200": "5eea138c25850ae25f0af3515fb75170",
+  "1500": "4b5a241b678683c3984f0653786401f4",
+  "1800": "a2ff28c213edb81aeed8411eee340ae2"
  },
- "final": "4e5821a6c0a00f9c7bec54636951d4b6",
+ "final": "2ec46f7758d67a1326082bbbe17fcfb3",
  "finalState": {
   "v": 1,
-  "core": "m0.13",
+  "core": "m0.14",
   "world": "048035ae47f4729f40c65d9e91cfaca9",
   "mode": "delve",
   "tick": 1801,
@@ -108,6 +108,7 @@
   "marked": [],
   "bridge": [],
   "floor": [],
+  "loot": [],
   "flying": [],
   "taken": [],
   "eyes": [],
@@ -131,7 +132,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "hunting",
@@ -146,7 +150,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "asleep",
@@ -161,7 +168,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    },
    {
     "st": "dormant",
@@ -176,7 +186,10 @@
     "gz": -1,
     "rg": 0,
     "ft": 0,
-    "fa": 0
+    "fa": 0,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
    }
   ],
   "groups": [
@@ -241,6 +254,7 @@
      "boss": null,
      "doors": [],
      "floor": [],
+     "loot": [],
      "taken": [],
      "bellSets": [],
      "links": [
@@ -269,6 +283,28 @@
        "pend": [],
        "m": []
       }
+     ],
+     "foes": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
      ]
     }
    }

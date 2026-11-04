@@ -87,8 +87,14 @@ function buildInteractions(T) {
     const [i, j] = it.cell, n = num(it);
     if (it.kind === 'rubble') { IA.push({ n, pt: [cx(i) - 300, cx(j) - 300], r: 1600, cond: (st) => st.player.pebbles < Sim.PEBBLE_MAX, label: () => 'Gather pebbles from the rubble' }); continue; }
     const name = it.kind === 'flask' ? FLASK_NAME : T.text.items?.[it.id]?.name ?? 'it';
-    IA.push({ n, pt: [cx(i), cx(j)], r: 1700, pri: it.hidden ? 2 : 1, cond: (st) => !st.taken.includes(n) && (!it.hidden || st.revealed.includes(n)), label: () => `Take ${name}` });
+    IA.push({ n, pt: [cx(i), cx(j)], r: 1700, pri: it.hidden ? 2 : 1, cond: (st) => !st.taken.includes(n) && !st.foes.some((f) => f.loot === n) && !st.loot.some((l) => l.n === n) && (!it.hidden || st.revealed.includes(n)), label: () => `Take ${name}` });
   }
+  // R-MIMIC-1: a disguised xeroc offers what it pretends to be.
+  ents.forEach((f, k) => {
+    if (f.type !== 'foe' || !f.disguise) return;
+    const label = f.disguise === 'chest' ? 'Open the chest' : f.disguise === 'flask' ? `Take ${FLASK_NAME}` : 'Take a scatter of old coins';
+    IA.push({ n: k + 1, pt: [cx(f.cell[0]), cx(f.cell[1])], r: 1700, pri: 1, cond: (st) => st.foes[ents.filter((e) => e.type === 'foe').indexOf(f)].st === 'disguised', label: () => label });
+  });
   void w;
   return IA;
 }
@@ -188,6 +194,12 @@ class Game {
 
   applyLook(dx, dy) { this.look.yaw -= dx; this.look.pitch = clamp(this.look.pitch - dy, -1.2, 1.2); }
 
+  lootName(l) {
+    const T = this.T;
+    if (l.n > 0) { const it = T.gdf.entities[l.n - 1]; return T.text.items?.[it.id]?.name ?? 'the treasure'; }
+    return l.f > 0 ? FLASK_NAME : `${l.p} pebbles`;
+  }
+
   zoneAt(st = this.st) { const p = st.player, i = Math.floor(p.x / S), j = Math.floor(p.z / S); return this.Q.inB(i, j) ? this.Q.zoneOf[j * this.T.w + i] : -1; }
   zoneName(z) { return z >= 0 ? this.T.gdf.zones[z].name : null; }
 
@@ -206,6 +218,15 @@ class Game {
       const s = dot * 2 - (d / 1000) * 0.6 + (o.pri || 0) * 0.4;
       if (s > bs) { bs = s; best = o; }
     }
+    // R-THIEF-4: loot a thief dropped, target 1000 + its index.
+    st.loot.forEach((l, k) => {
+      const dx = l.x - p.x, dz = l.z - p.z, d = Math.hypot(dx, dz);
+      if (d > 1700) return;
+      const dot = d < 600 ? 1 : (dx * fx + dz * fz) / d;
+      if (dot < 0.45 || !this.Q.los(st, p.x, p.z, l.x - dx / (d || 1) * 300, l.z - dz / (d || 1) * 300)) return;
+      const sc = dot * 2 - (d / 1000) * 0.6 + 0.4;
+      if (sc > bs) { bs = sc; best = { n: 1000 + k, label: () => `Pick up ${this.lootName(l)}` }; }
+    });
     return best;
   }
 
@@ -300,6 +321,19 @@ class Game {
         break;
       }
       case 'free': this.say(SAY.free); break;
+      case 'steal': {                                   // R-THIEF-1, R-THIEF-2
+        const f = T.gdf.entities.find((e) => e.id === ev.id), who = DELVE_NAMES[f?.kind] ?? 'thief';
+        if (ev.item) { const it = T.gdf.entities.find((e) => e.id === ev.item); this.say(SAY.stealTreasure(who, T.text.items?.[it?.id]?.name ?? 'your treasure')); }
+        else if (ev.flasks > 0) this.say(SAY.stealFlask(who)); else this.say(SAY.stealPebbles(who, ev.pebbles));
+        break;
+      }
+      case 'loot': this.say(SAY.lootBack(ev.n ? T.text.items?.[ev.n]?.name ?? 'your treasure' : ev.f > 0 ? FLASK_NAME : `${ev.p} pebbles`)); break;
+      case 'forget': this.say(SAY.forget); break;
+      case 'reveal': {                                  // R-MIMIC-1
+        const f = T.gdf.entities.find((e) => e.id === ev.id), was = f?.disguise === 'chest' ? 'chest' : f?.disguise === 'flask' ? 'flask' : 'coins';
+        this.say(ev.safe ? SAY.mimicSafe(was) : SAY.mimic(was));
+        break;
+      }
       case 'relit': this.say(SAY.relit); break;
       case 'death': this.onDeath(ev.cause); break;
       case 'rise': this.say(SAY.rise(this.zoneName(this.zoneAt()) ?? 'the dark')); this.look = { yaw: yawRad(P.yaw), pitch: 0 }; this.fresh = true; this.lowOilWarned = false; break;

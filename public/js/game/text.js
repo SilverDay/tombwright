@@ -29,6 +29,7 @@ export const SAY = {
     tip: 'The floor of the alcove tips like a grinning jaw, nearly taking your pole with it, then swings back. The laughing door grinds shut.',
     needles: 'You nudge the gilded lid with the tip of your pole. Needles hiss from the ring of holes and patter across the floor where you would have knelt. Nothing else happens.',
     needlesSpent: 'The gilded chest’s needles are spent. The holes are empty now.',
+    mimic: null,
   },
   land: {
     floor: null,
@@ -69,6 +70,14 @@ export const SAY = {
     drain: () => 'The vampire\'s bite drains your vitality. (−5 max health)',
   },
   free: 'You tear free.',
+  // Thieves and tricks (R-THIEF-*, R-FORGET-1, R-MIMIC-1).
+  stealTreasure: (who, what) => `The ${who} snatches ${what} and vanishes!`,
+  stealFlask: (who) => `The ${who} stole a flask of lamp oil and vanished!`,
+  stealPebbles: (who, n) => `The ${who} stole ${n} of your pebbles and vanished!`,
+  lootBack: (what) => `You take back ${what}.`,
+  forget: 'Something you knew about this chamber slips from your mind.',
+  mimic: (was) => `The ${was} was a xeroc!`,
+  mimicSafe: (was) => `Your pole jabs the ${was}. It snarls and unfolds: a xeroc!`,
   relit: 'You strike your lantern alight again.',
   thawed: 'You can move again.',
   unconfused: 'You feel less confused now.',
