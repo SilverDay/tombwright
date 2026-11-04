@@ -2,7 +2,7 @@
 // Re-expresses Gloamhollow's hand-written map (reference/gloamhollow/Gloamhollow.html, lines 342-447)
 // as a GDF v1 file: dungeons/gloamhollow.gdf.json. M0 deliverable (spec §16).
 // Run after changing the map data below: node bin/build-gloamhollow-gdf.mjs
-// Entities and links (doors, bells, mirrors, foes, ...) are added as the sim core learns them.
+// Entities and links are added as the sim core learns them: doors, slabs and props so far; bells, mirrors, foes, ... later.
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { CELL, rleEncode, b64encode } from '../public/js/sim/world.js';
@@ -39,6 +39,31 @@ const VENTS = [29, 32, 35], VENT_ROWS = [24, 25, 26];
 const ALCOVES = [[9, 19], [11, 19]];  // weeping and laughing alcoves
 const STAIR = [34, 61];               // the sealed stair: solid (Gloamhollow K_STAIR)
 
+// Entities (R-ENT-*), in the order Gloamhollow builds them, which is also the order props push (R-MOVE-4).
+// Doors (Gloamhollow DOORS). The mask doors open through their faces' trick; the sleeping door's key comes with keys.
+const DOORS = [
+  { id: 'vest', cell: [34, 55], style: 'stone', opens: 'interact' },
+  { id: 'bell', cell: [23, 25], style: 'grate', opens: 'trigger' },
+  { id: 'vault', cell: [36, 11], style: 'stone', opens: 'trigger' },
+  { id: 'script', cell: [31, 4], style: 'stone', opens: 'interact' },
+  { id: 'mSleep', cell: [7, 18], style: 'mask', opens: 'trigger', face: 'sleep' },
+  { id: 'mWeep', cell: [9, 18], style: 'mask', opens: 'trigger', face: 'weep' },
+  { id: 'mLaugh', cell: [11, 18], style: 'mask', opens: 'trigger', face: 'laugh' },
+];
+const PRE_SLABS = [[32, 51], [35, 47]];  // plates sprung long ago, a skeleton under each
+// Props (Gloamhollow buildProps addCircle/addBox), positions in mm. cx/cz = cell centre.
+const MM = 2400, cx = (i) => i * MM + MM / 2;
+const PROPS = [
+  ...[49, 44, 41, 39].map((j) => ['statue', 32 * MM + 720, cx(j), 3 * Q]),   // kneelers facing east (-PI/2)
+  ...[51, 48, 45, 43].map((j) => ['statue', 37 * MM - 720, cx(j), Q]),       // kneelers facing west (PI/2)
+  ['stele', cx(36) + 300, cx(52) + 200, T - 326],                            // rotation.y -0.5 rad
+  ...[[15, 22], [21, 22], [15, 28], [21, 28]].map(([i, j]) => ['tree', cx(i), cx(j), 0]),
+  ['post', cx(17) - 1488, cx(25), 0], ['post', cx(19) + 1488, cx(25), 0], // the bell frame (S * 0.62 = 1.488 m)
+  ['plinth', cx(16), cx(28), 0],
+  ['lectern', cx(35), cx(4), 0],
+  ['sarcophagus', cx(7), cx(31), 0],
+];
+
 const cells = new Uint8Array(W * H).fill(CELL.WALL);
 const set = (i, j, c) => { cells[j * W + i] = c; };
 for (const z of ZONES) { const [x, y, w, h] = z.r; for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) set(i, j, z.corr ? CELL.CORR : CELL.ROOM); }
@@ -61,7 +86,11 @@ const gdf = {
   })),
   start: { cell: [34, 60] },
   exit: { cell: [7, 27], requires: 'bossDefeated' },
-  entities: [],
+  entities: [
+    ...DOORS.map((d) => ({ id: d.id, type: 'door', cell: d.cell, style: d.style, opens: d.opens, ...(d.face ? { face: d.face } : {}) })),
+    ...PRE_SLABS.map(([i, j], n) => ({ id: `slab${n + 1}`, type: 'slab', cell: [i, j] })),
+    ...PROPS.map(([kind, x, z, yaw], n) => ({ id: kind + PROPS.slice(0, n + 1).filter((p) => p[0] === kind).length, type: 'prop', kind, pos: [x, z], yaw })),
+  ],
   links: [],
 };
 writeFileSync(ROOT + 'dungeons/gloamhollow.gdf.json', JSON.stringify(gdf, null, 1) + '\n');

@@ -19,12 +19,11 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 12 | 2026-11-03 | `start.cell` is the spawn cell and must be floor. Gloamhollow's GDF starts at the Vestibule checkpoint (34, 60); the sealed stair (34, 61) is a wall cell (the spec §7.1 example's `[34,61]` was illustrative). Official tombs live in `dungeons/`. | Implementation |
 | 13 | 2026-11-03 | Work is committed straight to `main` once the tests pass. | Owner |
 | 14 | 2026-11-03 | The Gloamhollow walkthrough adds one deliberate death per trap kind (slab, eyes, pit, vent, needles, chasm) and checks what each death rolls back and what the tomb remembers: 112 checks, 6 deaths. Supersedes the counts in #8. | Owner |
+| 15 | 2026-11-04 | **Entities in the GDF:** decor that blocks walking is a `prop` from a fixed kind catalogue (`statue`, `stele`, `tree`, `post`, `plinth`, `lectern`, `sarcophagus`) with a position in mm and a yaw; the footprint per kind is fixed in `docs/sim-rules.md` (R-PROP-1), so authors can't place giant invisible walls. Slabs that were sprung before the run are `slab` entities on plate cells. The input's `target` = 1 + the entity's index in `entities` (0 = none); the sim re-checks reach only (2,600 mm, as in Gloamhollow), not facing. | Owner |
+| 16 | 2026-11-04 | **Touch-stick speed:** the client maps the stick onto `move` with run held (deflection · 127 · 8/9 ≈ Gloamhollow's 4.8 m/s, 12 % dead zone). No sim or input-format change. | Owner |
 
 ## Still open (spec §17)
 
 Q1 async only · Q3 guest play · Q4 breached-password check (external API or local list) · Q5 user content licence ·
 Q6 DSA scope (legal) · Q7 player rating · Q8 monetisation · Q9 name and domain · Q10 languages ·
 Q11 foes and traps · Q12 bestiary tuning.
-
-Raised during M0:
-- Touch-stick speed (see `docs/sim-rules.md`, Movement).

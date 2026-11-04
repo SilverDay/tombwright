@@ -1,7 +1,7 @@
 // The static world, built once from a GDF (rules R-GDF-*, R-WORLD-*). Immutable and never part of
 // sim state: the state only carries the world id, so a state can't be replayed against another tomb.
 // Mirror: src/Sim/World.php.
-import { assertInt } from './int.js';
+import { assertInt, fdiv } from './int.js';
 import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
 
@@ -11,9 +11,26 @@ export const MAX_CELL_CODE = 8;
 export const MAX_GRID = 64;
 export const MAX_GDF_BYTES = 262144; // spec §7.2: 256 KiB
 export const MAX_GDF_DEPTH = 12;     // spec §7.2: JSON nesting depth
+export const MAX_ENTITIES = 400;     // spec §7.2
+const CELL_MM = 2400;
+// R-DOOR-2..4: door travel t in [0, DOOR_FULL]; +DOOR_STEP per tick while opening (33 ticks, Gloamhollow 1.1 s);
+// solid while 20*t < 17*DOOR_FULL (Gloamhollow anim < 0.85).
+export const DOOR_FULL = 693;
+export const DOOR_STEP = 21;
+const ID_RE = /^[A-Za-z_][A-Za-z0-9_]{0,31}$/;
+// R-PROP-1: footprints per kind, in mm. Circles: r. Boxes: half-extents at yaw 0 (swap at 1024/3072).
+const PROP_KINDS = new Map([
+  ['statue', { r: 500 }], ['stele', { r: 550 }], ['tree', { r: 450 }], ['post', { r: 160 }],
+  ['plinth', { r: 500 }], ['lectern', { r: 500 }], ['sarcophagus', { hx: 750, hz: 1150 }],
+]);
+const KEYS = {
+  door: ['id', 'type', 'cell', 'style', 'opens'], doorMask: ['id', 'type', 'cell', 'style', 'opens', 'face'],
+  slab: ['id', 'type', 'cell'], prop: ['id', 'type', 'kind', 'pos', 'yaw'],
+};
+const DOOR_STYLES = ['stone', 'grate', 'mask'], DOOR_OPENS = ['interact', 'trigger'], MASK_FACES = ['weep', 'laugh', 'sleep', 'blank'];
 
-// The decoded grid of each genuine world. Kept out of the frozen world object so nothing can edit it
-// after load; doors, slabs and the like change state, never the world (R-WORLD-4).
+// The decoded grid and entity tables of each genuine world. Kept out of the frozen world object so
+// nothing can edit them after load; doors, slabs and the like change state, never the world (R-WORLD-4).
 const GRIDS = new WeakMap();
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -128,11 +145,89 @@ function worldFrom(gdf) {
   if (si < 0 || sj < 0 || si >= w || sj >= h) throw new RangeError('start.cell outside grid');
   const sk = grid[sj * w + si];
   if (sk !== CELL.ROOM && sk !== CELL.CORR) throw new RangeError('start.cell is not floor');
+  const ents = loadEntities(gdf.entities, grid, w, h, sj * w + si);
   // R-WORLD-3: world id = first 16 bytes of SHA-256 over the canonical GDF, as hex.
   const id = toHex(sha256(canonicalBytes(gdf)).subarray(0, 16));
   const world = Object.freeze({ id, w, h, start: Object.freeze({ i: si, j: sj }) });
-  GRIDS.set(world, grid);
+  GRIDS.set(world, { grid, ...ents });
   return world;
+}
+
+const isObj = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isInt = (v) => Number.isSafeInteger(v);
+
+function hasExactKeys(e, keys) {
+  const own = Object.keys(e);
+  return own.length === keys.length && keys.every((k) => Object.hasOwn(e, k));
+}
+
+/** R-ENT-2: [i, j] inside the grid -> cell index. */
+function cellIndex(v, w, h) {
+  if (!Array.isArray(v) || v.length !== 2 || !isInt(v[0]) || !isInt(v[1])) throw new RangeError('entity cell');
+  const [i, j] = v;
+  if (i < 0 || j < 0 || i >= w || j >= h) throw new RangeError('entity cell outside grid');
+  return j * w + i;
+}
+
+/** R-ENT-*, R-DOOR-1, R-SLAB-1, R-PROP-*: validate the entity list and build the collision tables. */
+function loadEntities(list, grid, w, h, startK) {
+  if (list === undefined) list = [];
+  if (!Array.isArray(list) || list.length > MAX_ENTITIES) throw new RangeError('entities');
+  const ids = new Set(), doorAt = new Int16Array(w * h).fill(-1), slab = new Uint8Array(w * h);
+  const doors = [], props = [], refs = [];
+  for (const e of list) {
+    if (!isObj(e) || typeof e.id !== 'string' || !ID_RE.test(e.id)) throw new RangeError('entity id');
+    if (ids.has(e.id)) throw new RangeError('duplicate entity id');
+    ids.add(e.id);
+    if (e.type === 'door') {
+      if (!hasExactKeys(e, e.style === 'mask' ? KEYS.doorMask : KEYS.door)) throw new RangeError('door keys');
+      if (!DOOR_STYLES.includes(e.style) || !DOOR_OPENS.includes(e.opens)) throw new RangeError('door style/opens');
+      if (e.style === 'mask' && !MASK_FACES.includes(e.face)) throw new RangeError('door face');
+      const k = cellIndex(e.cell, w, h);
+      if ((grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR) || k === startK) throw new RangeError('door cell');
+      if (doorAt[k] >= 0 || slab[k]) throw new RangeError('cell already taken');
+      doorAt[k] = doors.length;
+      refs.push({ type: 'door', door: doors.length });
+      const [ci, cj] = e.cell;
+      doors.push(Object.freeze({ id: e.id, k, cx: ci * CELL_MM + CELL_MM / 2, cz: cj * CELL_MM + CELL_MM / 2, interact: e.opens === 'interact' }));
+    } else if (e.type === 'slab') {
+      if (!hasExactKeys(e, KEYS.slab)) throw new RangeError('slab keys');
+      const k = cellIndex(e.cell, w, h);
+      if (grid[k] !== CELL.PLATE) throw new RangeError('slab not on a plate');
+      if (doorAt[k] >= 0 || slab[k]) throw new RangeError('cell already taken');
+      slab[k] = 1;
+      refs.push({ type: 'slab' });
+    } else if (e.type === 'prop') {
+      if (!hasExactKeys(e, KEYS.prop)) throw new RangeError('prop keys');
+      const fp = typeof e.kind === 'string' ? PROP_KINDS.get(e.kind) : undefined;
+      if (!fp) throw new RangeError('prop kind');
+      const pos = e.pos;
+      if (!Array.isArray(pos) || pos.length !== 2 || !isInt(pos[0]) || !isInt(pos[1])) throw new RangeError('prop pos');
+      if (!isInt(e.yaw) || e.yaw < 0 || e.yaw > 4095) throw new RangeError('prop yaw');
+      const [x, z] = pos;
+      if (x < 0 || z < 0 || x > w * CELL_MM || z > h * CELL_MM) throw new RangeError('prop pos outside grid');
+      let p;
+      if (fp.r !== undefined) p = { circle: true, x, z, r: fp.r, x0: x - fp.r, x1: x + fp.r, z0: z - fp.r, z1: z + fp.r };
+      else {
+        if (e.yaw % 1024 !== 0) throw new RangeError('box prop yaw');
+        const turned = e.yaw === 1024 || e.yaw === 3072, hx = turned ? fp.hz : fp.hx, hz = turned ? fp.hx : fp.hz;
+        p = { circle: false, x, z, r: 0, x0: x - hx, x1: x + hx, z0: z - hz, z1: z + hz };
+      }
+      props.push(Object.freeze(p));
+      refs.push({ type: 'prop' });
+    } else throw new RangeError('unknown entity type');
+  }
+  // R-PROP-2: every cell under the footprint's bounds is inside the grid and free floor.
+  // Checked after the loop, so a prop can't overlap a door or slab listed after it.
+  for (const p of props) {
+    const i0 = fdiv(p.x0, CELL_MM), i1 = fdiv(p.x1 - 1, CELL_MM), j0 = fdiv(p.z0, CELL_MM), j1 = fdiv(p.z1 - 1, CELL_MM);
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      if (i < 0 || j < 0 || i >= w || j >= h) throw new RangeError('prop outside grid');
+      const k = j * w + i;
+      if (grid[k] === CELL.WALL || doorAt[k] >= 0 || slab[k] || k === startK) throw new RangeError('prop footprint blocked');
+    }
+  }
+  return { doorAt, slab, doors: Object.freeze(doors), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
 }
 
 /** Throws unless world came from loadWorld (not a look-alike object). */
@@ -140,8 +235,23 @@ export function assertWorld(world) {
   if (!GRIDS.has(world)) throw new TypeError('not a loaded world');
 }
 
-/** R-MOVE-4: solid for collision. Outside the grid counts as solid. */
-export function solidCell(world, i, j) {
+/**
+ * R-MOVE-4: solid for collision. Outside the grid, wall, a door cell while R-DOOR-4 holds, a slab.
+ * doors = state.doors.
+ */
+export function solidCell(world, doors, i, j) {
   if (i < 0 || j < 0 || i >= world.w || j >= world.h) return true;
-  return GRIDS.get(world)[j * world.w + i] === CELL.WALL;
+  const W = GRIDS.get(world), k = j * world.w + i;
+  if (W.grid[k] === CELL.WALL || W.slab[k]) return true;
+  const d = W.doorAt[k];
+  return d >= 0 && 20 * doors[d].t < 17 * DOOR_FULL;
 }
+
+/** R-MOVE-4: the props, in entity order (frozen). */
+export function worldProps(world) { return GRIDS.get(world).props; }
+
+/** The doors, in entity order (frozen): { id, k, cx, cz, interact }. */
+export function worldDoors(world) { return GRIDS.get(world).doors; }
+
+/** R-ENT-3: the entity with number n (1-based), or undefined. */
+export function entityRef(world, n) { return n >= 1 ? GRIDS.get(world).refs[n - 1] : undefined; }

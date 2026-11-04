@@ -1,9 +1,9 @@
 {
  "name": "0002-fuzz",
- "core": "m0.2",
+ "core": "m0.3",
  "seed": 12648430,
  "mode": "ironman",
- "gdf": "{\n \"gdf\": 1,\n \"meta\": {\n  \"title\": \"Gloamhollow\",\n  \"lang\": \"en\",\n  \"authorId\": 0\n },\n \"grid\": {\n  \"w\": 44,\n  \"h\": 63,\n  \"cells\": \"OgACAQoFAgEEAAgBEgACAQoFAgEEAAgBEgACAQQFBAYCBQIBBAAIARIAAgEEBQEGAgUBBgIFAgEEAggBEgACAQIGAgUBBgIFAwYCAQQACAESAAIBAQUBBgIFAQYFBQIBBAAIARIAAgEBBQQGBQUCAQQACAESAAIBBAUDBgMFAgEIAAECFQACAQoFAgEIAAECFQABAhUAAQIVAAECFQABAhUAAQISAAkBCAAHAQEAAQISAAkBCAAHAQICEgAJAQgABwEUAAkBCAAHARQACQEIAAcBFAAJAQkAAQIBAAECAQABAhUACQEJAAECAQABCAEAAQgVAAkBCQABAhkACQEJAAECBgAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQCAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJARcACwEBAAkBFwALAQEACQEXAAsBBQABAhsACwEFAAECGwALAQUAAQIqAAMBAQQHAQEEBwEZAAcBAQQDAQEEBwEZAAMBAQQDAQEECwEqAAECKwABAisAAQIpAAIDAQECAycAAgMDAScABAMBAScAAwMCAScAAwMBAQEDJwACAwIBAQMnAAIDAQECAycAAwECAycAAQEEAycAAgEDAycAAQMBAQMDJwABAwIBAgMnAAIDAQECAycABQEpAAECKwABAisAAQIoAAcBJQAHASUABwElAAcBJQAHASUAAwEBAAMBMgA=\"\n },\n \"zones\": [\n  {\n   \"id\": \"vest\",\n   \"name\": \"the Vestibule\",\n   \"rects\": [\n    [\n     31,\n     56,\n     7,\n     6\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     60\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"hall\",\n   \"name\": \"the Hall of the Kneeling Bearers\",\n   \"rects\": [\n    [\n     32,\n     39,\n     5,\n     14\n    ]\n   ],\n   \"ceil\": 4600,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     52\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"mouth\",\n   \"name\": \"the Mouth of the Gallery\",\n   \"rects\": [\n    [\n     33,\n     33,\n     3,\n     3\n    ]\n   ],\n   \"ceil\": 3600,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     34\n    ],\n    \"yaw\": 1024\n   }\n  },\n  {\n   \"id\": \"gallery\",\n   \"name\": \"the Gallery of Waking Eyes\",\n   \"rects\": [\n    [\n     17,\n     33,\n     16,\n     3\n    ]\n   ],\n   \"ceil\": 3600\n  },\n  {\n   \"id\": \"bells\",\n   \"name\": \"the Garden of Bells\",\n   \"rects\": [\n    [\n     14,\n     21,\n     9,\n     9\n    ]\n   ],\n   \"ceil\": 5400,\n   \"checkpoint\": {\n    \"cell\": [\n     18,\n     28\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"breath\",\n   \"name\": \"the Breathing Hall\",\n   \"rects\": [\n    [\n     27,\n     24,\n     12,\n     3\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     27,\n     25\n    ],\n    \"yaw\": 3072\n   }\n  },\n  {\n   \"id\": \"vault\",\n   \"name\": \"the Mirror Vault\",\n   \"rects\": [\n    [\n     33,\n     12,\n     9,\n     9\n    ]\n   ],\n   \"ceil\": 4600,\n   \"checkpoint\": {\n    \"cell\": [\n     37,\n     19\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"script\",\n   \"name\": \"the Scriptorium\",\n   \"rects\": [\n    [\n     32,\n     1,\n     8,\n     7\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     36,\n     6\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"chasm\",\n   \"name\": \"the Chasm of the Unlit Road\",\n   \"rects\": [\n    [\n     14,\n     1,\n     14,\n     9\n    ]\n   ],\n   \"ceil\": 6500,\n   \"checkpoint\": {\n    \"cell\": [\n     26,\n     5\n    ],\n    \"yaw\": 1024\n   }\n  },\n  {\n   \"id\": \"masks\",\n   \"name\": \"the Antechamber of Masks\",\n   \"rects\": [\n    [\n     6,\n     13,\n     7,\n     5\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     10,\n     14\n    ],\n    \"yaw\": 2048\n   }\n  },\n  {\n   \"id\": \"way\",\n   \"name\": \"the Dreamer's Way\",\n   \"rects\": [\n    [\n     7,\n     19,\n     1,\n     3\n    ]\n   ],\n   \"ceil\": 3000,\n   \"checkpoint\": {\n    \"cell\": [\n     7,\n     19\n    ],\n    \"yaw\": 2048\n   }\n  },\n  {\n   \"id\": \"sanctum\",\n   \"name\": \"the Sanctum of the Candle-Eater\",\n   \"rects\": [\n    [\n     2,\n     22,\n     11,\n     11\n    ]\n   ],\n   \"ceil\": 6200,\n   \"checkpoint\": {\n    \"cell\": [\n     7,\n     24\n    ],\n    \"yaw\": 2048\n   }\n  }\n ],\n \"start\": {\n  \"cell\": [\n   34,\n   60\n  ]\n },\n \"exit\": {\n  \"cell\": [\n   7,\n   27\n  ],\n  \"requires\": \"bossDefeated\"\n },\n \"entities\": [],\n \"links\": []\n}\n",
+ "gdf": "{\n \"gdf\": 1,\n \"meta\": {\n  \"title\": \"Gloamhollow\",\n  \"lang\": \"en\",\n  \"authorId\": 0\n },\n \"grid\": {\n  \"w\": 44,\n  \"h\": 63,\n  \"cells\": \"OgACAQoFAgEEAAgBEgACAQoFAgEEAAgBEgACAQQFBAYCBQIBBAAIARIAAgEEBQEGAgUBBgIFAgEEAggBEgACAQIGAgUBBgIFAwYCAQQACAESAAIBAQUBBgIFAQYFBQIBBAAIARIAAgEBBQQGBQUCAQQACAESAAIBBAUDBgMFAgEIAAECFQACAQoFAgEIAAECFQABAhUAAQIVAAECFQABAhUAAQISAAkBCAAHAQEAAQISAAkBCAAHAQICEgAJAQgABwEUAAkBCAAHARQACQEIAAcBFAAJAQkAAQIBAAECAQABAhUACQEJAAECAQABCAEAAQgVAAkBCQABAhkACQEJAAECBgAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQCAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJARcACwEBAAkBFwALAQEACQEXAAsBBQABAhsACwEFAAECGwALAQUAAQIqAAMBAQQHAQEEBwEZAAcBAQQDAQEEBwEZAAMBAQQDAQEECwEqAAECKwABAisAAQIpAAIDAQECAycAAgMDAScABAMBAScAAwMCAScAAwMBAQEDJwACAwIBAQMnAAIDAQECAycAAwECAycAAQEEAycAAgEDAycAAQMBAQMDJwABAwIBAgMnAAIDAQECAycABQEpAAECKwABAisAAQIoAAcBJQAHASUABwElAAcBJQAHASUAAwEBAAMBMgA=\"\n },\n \"zones\": [\n  {\n   \"id\": \"vest\",\n   \"name\": \"the Vestibule\",\n   \"rects\": [\n    [\n     31,\n     56,\n     7,\n     6\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     60\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"hall\",\n   \"name\": \"the Hall of the Kneeling Bearers\",\n   \"rects\": [\n    [\n     32,\n     39,\n     5,\n     14\n    ]\n   ],\n   \"ceil\": 4600,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     52\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"mouth\",\n   \"name\": \"the Mouth of the Gallery\",\n   \"rects\": [\n    [\n     33,\n     33,\n     3,\n     3\n    ]\n   ],\n   \"ceil\": 3600,\n   \"checkpoint\": {\n    \"cell\": [\n     34,\n     34\n    ],\n    \"yaw\": 1024\n   }\n  },\n  {\n   \"id\": \"gallery\",\n   \"name\": \"the Gallery of Waking Eyes\",\n   \"rects\": [\n    [\n     17,\n     33,\n     16,\n     3\n    ]\n   ],\n   \"ceil\": 3600\n  },\n  {\n   \"id\": \"bells\",\n   \"name\": \"the Garden of Bells\",\n   \"rects\": [\n    [\n     14,\n     21,\n     9,\n     9\n    ]\n   ],\n   \"ceil\": 5400,\n   \"checkpoint\": {\n    \"cell\": [\n     18,\n     28\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"breath\",\n   \"name\": \"the Breathing Hall\",\n   \"rects\": [\n    [\n     27,\n     24,\n     12,\n     3\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     27,\n     25\n    ],\n    \"yaw\": 3072\n   }\n  },\n  {\n   \"id\": \"vault\",\n   \"name\": \"the Mirror Vault\",\n   \"rects\": [\n    [\n     33,\n     12,\n     9,\n     9\n    ]\n   ],\n   \"ceil\": 4600,\n   \"checkpoint\": {\n    \"cell\": [\n     37,\n     19\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"script\",\n   \"name\": \"the Scriptorium\",\n   \"rects\": [\n    [\n     32,\n     1,\n     8,\n     7\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     36,\n     6\n    ],\n    \"yaw\": 0\n   }\n  },\n  {\n   \"id\": \"chasm\",\n   \"name\": \"the Chasm of the Unlit Road\",\n   \"rects\": [\n    [\n     14,\n     1,\n     14,\n     9\n    ]\n   ],\n   \"ceil\": 6500,\n   \"checkpoint\": {\n    \"cell\": [\n     26,\n     5\n    ],\n    \"yaw\": 1024\n   }\n  },\n  {\n   \"id\": \"masks\",\n   \"name\": \"the Antechamber of Masks\",\n   \"rects\": [\n    [\n     6,\n     13,\n     7,\n     5\n    ]\n   ],\n   \"ceil\": 4200,\n   \"checkpoint\": {\n    \"cell\": [\n     10,\n     14\n    ],\n    \"yaw\": 2048\n   }\n  },\n  {\n   \"id\": \"way\",\n   \"name\": \"the Dreamer's Way\",\n   \"rects\": [\n    [\n     7,\n     19,\n     1,\n     3\n    ]\n   ],\n   \"ceil\": 3000,\n   \"checkpoint\": {\n    \"cell\": [\n     7,\n     19\n    ],\n    \"yaw\": 2048\n   }\n  },\n  {\n   \"id\": \"sanctum\",\n   \"name\": \"the Sanctum of the Candle-Eater\",\n   \"rects\": [\n    [\n     2,\n     22,\n     11,\n     11\n    ]\n   ],\n   \"ceil\": 6200,\n   \"checkpoint\": {\n    \"cell\": [\n     7,\n     24\n    ],\n    \"yaw\": 2048\n   }\n  }\n ],\n \"start\": {\n  \"cell\": [\n   34,\n   60\n  ]\n },\n \"exit\": {\n  \"cell\": [\n   7,\n   27\n  ],\n  \"requires\": \"bossDefeated\"\n },\n \"entities\": [\n  {\n   \"id\": \"vest\",\n   \"type\": \"door\",\n   \"cell\": [\n    34,\n    55\n   ],\n   \"style\": \"stone\",\n   \"opens\": \"interact\"\n  },\n  {\n   \"id\": \"bell\",\n   \"type\": \"door\",\n   \"cell\": [\n    23,\n    25\n   ],\n   \"style\": \"grate\",\n   \"opens\": \"trigger\"\n  },\n  {\n   \"id\": \"vault\",\n   \"type\": \"door\",\n   \"cell\": [\n    36,\n    11\n   ],\n   \"style\": \"stone\",\n   \"opens\": \"trigger\"\n  },\n  {\n   \"id\": \"script\",\n   \"type\": \"door\",\n   \"cell\": [\n    31,\n    4\n   ],\n   \"style\": \"stone\",\n   \"opens\": \"interact\"\n  },\n  {\n   \"id\": \"mSleep\",\n   \"type\": \"door\",\n   \"cell\": [\n    7,\n    18\n   ],\n   \"style\": \"mask\",\n   \"opens\": \"trigger\",\n   \"face\": \"sleep\"\n  },\n  {\n   \"id\": \"mWeep\",\n   \"type\": \"door\",\n   \"cell\": [\n    9,\n    18\n   ],\n   \"style\": \"mask\",\n   \"opens\": \"trigger\",\n   \"face\": \"weep\"\n  },\n  {\n   \"id\": \"mLaugh\",\n   \"type\": \"door\",\n   \"cell\": [\n    11,\n    18\n   ],\n   \"style\": \"mask\",\n   \"opens\": \"trigger\",\n   \"face\": \"laugh\"\n  },\n  {\n   \"id\": \"slab1\",\n   \"type\": \"slab\",\n   \"cell\": [\n    32,\n    51\n   ]\n  },\n  {\n   \"id\": \"slab2\",\n   \"type\": \"slab\",\n   \"cell\": [\n    35,\n    47\n   ]\n  },\n  {\n   \"id\": \"statue1\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    77520,\n    118800\n   ],\n   \"yaw\": 3072\n  },\n  {\n   \"id\": \"statue2\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    77520,\n    106800\n   ],\n   \"yaw\": 3072\n  },\n  {\n   \"id\": \"statue3\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    77520,\n    99600\n   ],\n   \"yaw\": 3072\n  },\n  {\n   \"id\": \"statue4\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    77520,\n    94800\n   ],\n   \"yaw\": 3072\n  },\n  {\n   \"id\": \"statue5\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    88080,\n    123600\n   ],\n   \"yaw\": 1024\n  },\n  {\n   \"id\": \"statue6\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    88080,\n    116400\n   ],\n   \"yaw\": 1024\n  },\n  {\n   \"id\": \"statue7\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    88080,\n    109200\n   ],\n   \"yaw\": 1024\n  },\n  {\n   \"id\": \"statue8\",\n   \"type\": \"prop\",\n   \"kind\": \"statue\",\n   \"pos\": [\n    88080,\n    104400\n   ],\n   \"yaw\": 1024\n  },\n  {\n   \"id\": \"stele1\",\n   \"type\": \"prop\",\n   \"kind\": \"stele\",\n   \"pos\": [\n    87900,\n    126200\n   ],\n   \"yaw\": 3770\n  },\n  {\n   \"id\": \"tree1\",\n   \"type\": \"prop\",\n   \"kind\": \"tree\",\n   \"pos\": [\n    37200,\n    54000\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"tree2\",\n   \"type\": \"prop\",\n   \"kind\": \"tree\",\n   \"pos\": [\n    51600,\n    54000\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"tree3\",\n   \"type\": \"prop\",\n   \"kind\": \"tree\",\n   \"pos\": [\n    37200,\n    68400\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"tree4\",\n   \"type\": \"prop\",\n   \"kind\": \"tree\",\n   \"pos\": [\n    51600,\n    68400\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"post1\",\n   \"type\": \"prop\",\n   \"kind\": \"post\",\n   \"pos\": [\n    40512,\n    61200\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"post2\",\n   \"type\": \"prop\",\n   \"kind\": \"post\",\n   \"pos\": [\n    48288,\n    61200\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"plinth1\",\n   \"type\": \"prop\",\n   \"kind\": \"plinth\",\n   \"pos\": [\n    39600,\n    68400\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"lectern1\",\n   \"type\": \"prop\",\n   \"kind\": \"lectern\",\n   \"pos\": [\n    85200,\n    10800\n   ],\n   \"yaw\": 0\n  },\n  {\n   \"id\": \"sarcophagus1\",\n   \"type\": \"prop\",\n   \"kind\": \"sarcophagus\",\n   \"pos\": [\n    18000,\n    75600\n   ],\n   \"yaw\": 0\n  }\n ],\n \"links\": []\n}\n",
  "inputs": [
   [
    39,
@@ -15,85 +15,72 @@
     "yaw": 3467,
     "pitch": 49,
     "buttons": 107,
-    "target": 0
+    "target": 1
+   }
+  ],
+  [
+   14,
+   {
+    "move": [
+     20,
+     -54
+    ],
+    "yaw": 389,
+    "pitch": 125,
+    "buttons": 226,
+    "target": 23
+   }
+  ],
+  [
+   34,
+   {
+    "move": [
+     3,
+     -49
+    ],
+    "yaw": 2334,
+    "pitch": 15,
+    "buttons": 69,
+    "target": 14
+   }
+  ],
+  [
+   16,
+   {
+    "move": [
+     -20,
+     -79
+    ],
+    "yaw": 1514,
+    "pitch": -46,
+    "buttons": 185,
+    "target": 22
+   }
+  ],
+  [
+   17,
+   {
+    "move": [
+     27,
+     -60
+    ],
+    "yaw": 955,
+    "pitch": 91,
+    "buttons": 139,
+    "target": 2
    }
   ],
   [
    2,
    {
     "move": [
-     -39,
-     20
+     -93,
+     -66
     ],
-    "yaw": 1185,
-    "pitch": 98,
-    "buttons": 24,
-    "target": 0
-   }
-  ],
-  [
-   40,
-   {
-    "move": [
-     63,
-     88
-    ],
-    "yaw": 2094,
-    "pitch": 18,
-    "buttons": 79,
-    "target": 0
-   }
-  ],
-  [
-   11,
-   {
-    "move": [
-     15,
-     -16
-    ],
-    "yaw": 1622,
-    "pitch": -79,
-    "buttons": 107,
-    "target": 0
-   }
-  ],
-  [
-   15,
-   {
-    "move": [
-     57,
-     -46
-    ],
-    "yaw": 2932,
-    "pitch": 27,
-    "buttons": 106,
-    "target": 0
-   }
-  ],
-  [
-   11,
-   {
-    "move": [
-     -68,
-     12
-    ],
-    "yaw": 3511,
-    "pitch": -119,
-    "buttons": 21,
-    "target": 0
-   }
-  ],
-  [
-   6,
-   {
-    "move": [
-     -66,
-     -75
-    ],
-    "yaw": 3746,
-    "pitch": 76,
-    "buttons": 55,
-    "target": 0
+    "yaw": 844,
+    "pitch": -72,
+    "buttons": 234,
+    "target": 25
    }
   ],
   [
@@ -106,85 +93,72 @@
     "yaw": 644,
     "pitch": 40,
     "buttons": 76,
-    "target": 0
+    "target": 15
    }
   ],
   [
-   19,
+   5,
    {
     "move": [
-     -101,
-     57
+     57,
+     13
     ],
-    "yaw": 2262,
-    "pitch": -80,
-    "buttons": 165,
-    "target": 0
+    "yaw": 2649,
+    "pitch": 38,
+    "buttons": 47,
+    "target": 20
    }
   ],
   [
-   26,
+   38,
    {
     "move": [
-     35,
-     113
+     120,
+     -118
     ],
-    "yaw": 3977,
-    "pitch": -29,
-    "buttons": 9,
-    "target": 0
+    "yaw": 1578,
+    "pitch": 42,
+    "buttons": 191,
+    "target": 11
    }
   ],
   [
-   30,
+   38,
    {
     "move": [
-     42,
-     -33
+     77,
+     -79
     ],
-    "yaw": 3814,
-    "pitch": -79,
-    "buttons": 205,
-    "target": 0
-   }
-  ],
-  [
-   29,
-   {
-    "move": [
-     -15,
-     -91
-    ],
-    "yaw": 4061,
-    "pitch": -88,
-    "buttons": 93,
-    "target": 0
+    "yaw": 2911,
+    "pitch": -91,
+    "buttons": 112,
+    "target": 31
    }
   ],
   [
    15,
    {
     "move": [
-     -61,
-     -6
+     -88,
+     -35
     ],
-    "yaw": 706,
-    "pitch": 86,
-    "buttons": 31,
-    "target": 0
+    "yaw": 1066,
+    "pitch": -84,
+    "buttons": 121,
+    "target": 3
    }
   ],
   [
-   1,
+   34,
    {
     "move": [
-     -74,
-     104
+     -122,
+     -74
     ],
-    "yaw": 589,
-    "pitch": -12,
-    "buttons": 19,
-    "target": 0
+    "yaw": 3713,
+    "pitch": -109,
+    "buttons": 36,
+    "target": 14
    }
   ],
   [
@@ -197,85 +171,72 @@
     "yaw": 2545,
     "pitch": 105,
     "buttons": 41,
-    "target": 0
+    "target": 4
    }
   ],
   [
-   6,
+   35,
    {
     "move": [
-     92,
-     -5
+     -5,
+     -71
     ],
-    "yaw": 903,
-    "pitch": 89,
-    "buttons": 202,
-    "target": 0
+    "yaw": 3240,
+    "pitch": -68,
+    "buttons": 217,
+    "target": 14
    }
   ],
   [
-   10,
+   1,
    {
     "move": [
-     -16,
-     -121
+     -17,
+     -83
     ],
-    "yaw": 1768,
-    "pitch": -87,
-    "buttons": 44,
-    "target": 0
-   }
-  ],
-  [
-   12,
-   {
-    "move": [
-     73,
-     25
-    ],
-    "yaw": 3713,
-    "pitch": -86,
-    "buttons": 167,
-    "target": 0
-   }
-  ],
-  [
-   15,
-   {
-    "move": [
-     -36,
-     -99
-    ],
-    "yaw": 91,
-    "pitch": -16,
-    "buttons": 207,
-    "target": 0
+    "yaw": 656,
+    "pitch": 73,
+    "buttons": 71,
+    "target": 19
    }
   ],
   [
    37,
    {
     "move": [
-     102,
-     84
+     40,
+     -86
     ],
-    "yaw": 261,
-    "pitch": 83,
-    "buttons": 171,
+    "yaw": 1501,
+    "pitch": -99,
+    "buttons": 91,
     "target": 0
    }
   ],
   [
-   16,
+   33,
    {
     "move": [
-     -92,
-     21
+     -16,
+     106
     ],
-    "yaw": 133,
-    "pitch": 62,
-    "buttons": 235,
-    "target": 0
+    "yaw": 3685,
+    "pitch": -111,
+    "buttons": 212,
+    "target": 21
+   }
+  ],
+  [
+   34,
+   {
+    "move": [
+     -26,
+     -92
+    ],
+    "yaw": 2385,
+    "pitch": 107,
+    "buttons": 8,
+    "target": 23
    }
   ],
   [
@@ -288,85 +249,72 @@
     "yaw": 3594,
     "pitch": -109,
     "buttons": 51,
-    "target": 0
+    "target": 9
    }
   ],
   [
-   12,
+   16,
    {
     "move": [
-     -30,
-     70
+     70,
+     -42
     ],
-    "yaw": 1377,
-    "pitch": -57,
-    "buttons": 155,
-    "target": 0
+    "yaw": 2485,
+    "pitch": 26,
+    "buttons": 70,
+    "target": 20
    }
   ],
   [
-   25,
+   29,
    {
     "move": [
-     33,
-     53
+     -109,
+     -62
     ],
-    "yaw": 295,
-    "pitch": 90,
-    "buttons": 66,
-    "target": 0
+    "yaw": 3496,
+    "pitch": -95,
+    "buttons": 212,
+    "target": 18
    }
   ],
   [
-   34,
+   35,
    {
     "move": [
-     -95,
-     20
+     100,
+     82
     ],
-    "yaw": 3544,
-    "pitch": 82,
-    "buttons": 228,
-    "target": 0
+    "yaw": 1889,
+    "pitch": 61,
+    "buttons": 223,
+    "target": 4
    }
   ],
   [
-   19,
+   21,
    {
     "move": [
-     95,
-     61
+     -115,
+     64
     ],
-    "yaw": 618,
-    "pitch": -115,
-    "buttons": 133,
-    "target": 0
+    "yaw": 930,
+    "pitch": -62,
+    "buttons": 239,
+    "target": 5
    }
   ],
   [
-   31,
+   10,
    {
     "move": [
-     -70,
-     111
+     -37,
+     -97
     ],
-    "yaw": 1047,
-    "pitch": -65,
-    "buttons": 44,
-    "target": 0
-   }
-  ],
-  [
-   15,
-   {
-    "move": [
-     -97,
-     123
-    ],
-    "yaw": 1996,
+    "yaw": 4017,
     "pitch": 30,
-    "buttons": 158,
-    "target": 0
+    "buttons": 124,
+    "target": 19
    }
   ],
   [
@@ -383,81 +331,68 @@
    }
   ],
   [
-   1,
+   9,
    {
     "move": [
-     -71,
-     124
+     124,
+     -67
     ],
-    "yaw": 967,
-    "pitch": 45,
-    "buttons": 166,
-    "target": 0
+    "yaw": 2656,
+    "pitch": -126,
+    "buttons": 172,
+    "target": 5
    }
   ],
   [
-   1,
+   21,
    {
     "move": [
-     -83,
-     2
+     -84,
+     119
     ],
-    "yaw": 692,
-    "pitch": -117,
-    "buttons": 247,
-    "target": 0
+    "yaw": 170,
+    "pitch": -73,
+    "buttons": 24,
+    "target": 19
    }
   ],
   [
-   4,
+   2,
    {
     "move": [
-     -73,
-     27
+     125,
+     -16
     ],
-    "yaw": 165,
-    "pitch": -16,
-    "buttons": 253,
-    "target": 0
+    "yaw": 634,
+    "pitch": 99,
+    "buttons": 164,
+    "target": 12
    }
   ],
   [
-   7,
+   16,
    {
     "move": [
-     36,
-     99
+     10,
+     101
     ],
-    "yaw": 1616,
-    "pitch": 10,
-    "buttons": 99,
-    "target": 0
+    "yaw": 3772,
+    "pitch": 64,
+    "buttons": 22,
+    "target": 28
    }
   ],
   [
-   36,
+   12,
    {
     "move": [
-     107,
-     -105
+     95,
+     -56
     ],
-    "yaw": 3078,
-    "pitch": -55,
-    "buttons": 226,
-    "target": 0
-   }
-  ],
-  [
-   35,
-   {
-    "move": [
-     -56,
-     28
-    ],
-    "yaw": 1251,
-    "pitch": 107,
-    "buttons": 92,
-    "target": 0
+    "yaw": 2493,
+    "pitch": -35,
+    "buttons": 78,
+    "target": 29
    }
   ],
   [
@@ -470,85 +405,72 @@
     "yaw": 582,
     "pitch": 98,
     "buttons": 61,
-    "target": 0
+    "target": 11
    }
   ],
   [
-   15,
+   31,
    {
     "move": [
-     64,
-     42
+     42,
+     -114
     ],
-    "yaw": 221,
-    "pitch": 1,
-    "buttons": 117,
-    "target": 0
+    "yaw": 1880,
+    "pitch": 83,
+    "buttons": 129,
+    "target": 18
    }
   ],
   [
-   34,
-   {
-    "move": [
-     18,
-     82
-    ],
-    "yaw": 3165,
-    "pitch": 105,
-    "buttons": 11,
-    "target": 0
-   }
-  ],
-  [
-   5,
+   33,
    {
     "move": [
      70,
-     -18
+     -116
     ],
-    "yaw": 1723,
-    "pitch": -94,
-    "buttons": 91,
-    "target": 0
+    "yaw": 3730,
+    "pitch": 70,
+    "buttons": 29,
+    "target": 13
    }
   ],
   [
-   32,
+   17,
    {
     "move": [
-     52,
-     -1
+     -36,
+     -94
     ],
-    "yaw": 1057,
-    "pitch": 110,
-    "buttons": 173,
-    "target": 0
-   }
-  ],
-  [
-   27,
-   {
-    "move": [
-     43,
-     117
-    ],
-    "yaw": 1502,
-    "pitch": 21,
+    "yaw": 3242,
+    "pitch": -1,
     "buttons": 179,
-    "target": 0
+    "target": 8
    }
   ],
   [
-   1,
+   28,
    {
     "move": [
-     -6,
-     -52
+     110,
+     42
     ],
-    "yaw": 2615,
-    "pitch": 63,
-    "buttons": 12,
-    "target": 0
+    "yaw": 2745,
+    "pitch": -34,
+    "buttons": 245,
+    "target": 22
+   }
+  ],
+  [
+   24,
+   {
+    "move": [
+     -123,
+     -6
+    ],
+    "yaw": 1213,
+    "pitch": -115,
+    "buttons": 163,
+    "target": 23
    }
   ],
   [
@@ -561,85 +483,72 @@
     "yaw": 3639,
     "pitch": -57,
     "buttons": 186,
-    "target": 0
+    "target": 17
    }
   ],
   [
-   23,
+   22,
    {
     "move": [
-     8,
-     -5
+     -5,
+     50
     ],
-    "yaw": 2852,
-    "pitch": -93,
-    "buttons": 29,
-    "target": 0
+    "yaw": 471,
+    "pitch": -63,
+    "buttons": 34,
+    "target": 20
    }
   ],
   [
-   11,
+   29,
    {
     "move": [
-     39,
-     54
+     49,
+     -9
     ],
-    "yaw": 2831,
-    "pitch": -32,
+    "yaw": 1526,
+    "pitch": -79,
+    "buttons": 111,
+    "target": 10
+   }
+  ],
+  [
+   7,
+   {
+    "move": [
+     -86,
+     -77
+    ],
+    "yaw": 3331,
+    "pitch": -24,
+    "buttons": 171,
+    "target": 2
+   }
+  ],
+  [
+   38,
+   {
+    "move": [
+     -48,
+     -51
+    ],
+    "yaw": 2701,
+    "pitch": 54,
+    "buttons": 198,
+    "target": 18
+   }
+  ],
+  [
+   36,
+   {
+    "move": [
+     -63,
+     112
+    ],
+    "yaw": 2683,
+    "pitch": -28,
     "buttons": 119,
-    "target": 0
-   }
-  ],
-  [
-   18,
-   {
-    "move": [
-     -79,
-     -47
-    ],
-    "yaw": 672,
-    "pitch": -77,
-    "buttons": 42,
-    "target": 0
-   }
-  ],
-  [
-   33,
-   {
-    "move": [
-     43,
-     -24
-    ],
-    "yaw": 279,
-    "pitch": -48,
-    "buttons": 236,
-    "target": 0
-   }
-  ],
-  [
-   13,
-   {
-    "move": [
-     41,
-     70
-    ],
-    "yaw": 2908,
-    "pitch": 101,
-    "buttons": 150,
-    "target": 0
-   }
-  ],
-  [
-   11,
-   {
-    "move": [
-     112,
-     40
-    ],
-    "yaw": 1909,
-    "pitch": -27,
-    "buttons": 99,
-    "target": 0
+    "target": 12
    }
   ],
   [
@@ -652,85 +561,72 @@
     "yaw": 51,
     "pitch": -120,
     "buttons": 191,
-    "target": 0
+    "target": 16
    }
   ],
   [
-   22,
+   21,
    {
     "move": [
-     1,
-     -104
+     -104,
+     62
     ],
-    "yaw": 3050,
-    "pitch": 103,
-    "buttons": 101,
-    "target": 0
+    "yaw": 1618,
+    "pitch": 88,
+    "buttons": 231,
+    "target": 20
    }
   ],
   [
-   34,
+   24,
    {
     "move": [
-     38,
-     23
+     -66,
+     81
     ],
-    "yaw": 990,
-    "pitch": -102,
-    "buttons": 209,
-    "target": 0
+    "yaw": 404,
+    "pitch": 56,
+    "buttons": 214,
+    "target": 28
    }
   ],
   [
-   34,
+   31,
    {
     "move": [
-     56,
-     101
+     -20,
+     -65
     ],
-    "yaw": 3075,
-    "pitch": -65,
-    "buttons": 107,
-    "target": 0
+    "yaw": 2335,
+    "pitch": -58,
+    "buttons": 127,
+    "target": 9
    }
   ],
   [
-   23,
+   6,
    {
     "move": [
-     0,
-     -58
+     37,
+     84
     ],
-    "yaw": 1153,
-    "pitch": 37,
-    "buttons": 33,
-    "target": 0
+    "yaw": 1963,
+    "pitch": 104,
+    "buttons": 122,
+    "target": 6
    }
   ],
   [
-   34,
+   29,
    {
     "move": [
-     -5,
-     -5
+     -117,
+     116
     ],
-    "yaw": 3723,
-    "pitch": 52,
-    "buttons": 55,
-    "target": 0
-   }
-  ],
-  [
-   2,
-   {
-    "move": [
-     116,
-     -98
-    ],
-    "yaw": 367,
-    "pitch": 124,
-    "buttons": 118,
-    "target": 0
+    "yaw": 478,
+    "pitch": -9,
+    "buttons": 22,
+    "target": 31
    }
   ],
   [
@@ -743,85 +639,72 @@
     "yaw": 1179,
     "pitch": -125,
     "buttons": 71,
-    "target": 0
+    "target": 16
    }
   ],
   [
-   21,
+   8,
    {
     "move": [
-     -82,
-     -7
+     -7,
+     108
     ],
-    "yaw": 3776,
-    "pitch": -43,
-    "buttons": 191,
-    "target": 0
+    "yaw": 3060,
+    "pitch": 75,
+    "buttons": 85,
+    "target": 12
    }
   ],
   [
-   32,
+   10,
    {
     "move": [
-     -29,
-     -66
+     -7,
+     19
     ],
-    "yaw": 1933,
-    "pitch": 34,
-    "buttons": 146,
-    "target": 0
+    "yaw": 2591,
+    "pitch": 2,
+    "buttons": 140,
+    "target": 16
    }
   ],
   [
-   22,
+   40,
    {
     "move": [
-     2,
-     3
+     -13,
+     -125
     ],
-    "yaw": 4054,
-    "pitch": -125,
-    "buttons": 114,
-    "target": 0
+    "yaw": 1251,
+    "pitch": 112,
+    "buttons": 87,
+    "target": 10
    }
   ],
   [
    13,
    {
     "move": [
-     -40,
-     112
+     -5,
+     -70
     ],
-    "yaw": 1373,
-    "pitch": -5,
-    "buttons": 82,
-    "target": 0
+    "yaw": 410,
+    "pitch": -29,
+    "buttons": 225,
+    "target": 8
    }
   ],
   [
-   9,
+   31,
    {
     "move": [
-     -102,
-     97
+     -43,
+     -124
     ],
-    "yaw": 1580,
-    "pitch": 70,
-    "buttons": 66,
-    "target": 0
-   }
-  ],
-  [
-   14,
-   {
-    "move": [
-     -124,
-     10
-    ],
-    "yaw": 799,
-    "pitch": 75,
-    "buttons": 42,
-    "target": 0
+    "yaw": 2206,
+    "pitch": -85,
+    "buttons": 49,
+    "target": 25
    }
   ],
   [
@@ -834,85 +717,72 @@
     "yaw": 2516,
     "pitch": -39,
     "buttons": 205,
-    "target": 0
+    "target": 21
    }
   ],
   [
-   27,
+   33,
    {
     "move": [
-     78,
-     6
+     6,
+     97
     ],
-    "yaw": 3598,
-    "pitch": -123,
-    "buttons": 84,
-    "target": 0
+    "yaw": 1356,
+    "pitch": 109,
+    "buttons": 4,
+    "target": 10
    }
   ],
   [
-   38,
+   32,
    {
     "move": [
-     -42,
-     74
+     -84,
+     -42
     ],
-    "yaw": 693,
-    "pitch": -10,
-    "buttons": 85,
-    "target": 0
+    "yaw": 1890,
+    "pitch": 53,
+    "buttons": 50,
+    "target": 20
    }
   ],
   [
-   8,
+   30,
    {
     "move": [
-     53,
-     34
+     22,
+     -81
     ],
-    "yaw": 3030,
-    "pitch": -81,
-    "buttons": 150,
-    "target": 0
+    "yaw": 721,
+    "pitch": -56,
+    "buttons": 3,
+    "target": 19
    }
   ],
   [
-   8,
+   6,
    {
     "move": [
-     -124,
-     -56
+     -41,
+     32
     ],
-    "yaw": 2509,
-    "pitch": -41,
-    "buttons": 36,
-    "target": 0
+    "yaw": 3263,
+    "pitch": -96,
+    "buttons": 210,
+    "target": 23
    }
   ],
   [
-   26,
+   21,
    {
     "move": [
-     76,
-     82
+     -122,
+     -111
     ],
-    "yaw": 499,
-    "pitch": 1,
-    "buttons": 191,
-    "target": 0
-   }
-  ],
-  [
-   1,
-   {
-    "move": [
-     -111,
-     82
-    ],
-    "yaw": 3488,
-    "pitch": 20,
-    "buttons": 207,
-    "target": 0
+    "yaw": 3361,
+    "pitch": 79,
+    "buttons": 218,
+    "target": 18
    }
   ],
   [
@@ -925,85 +795,72 @@
     "yaw": 2857,
     "pitch": -30,
     "buttons": 17,
-    "target": 0
+    "target": 24
    }
   ],
   [
-   31,
+   35,
    {
     "move": [
-     95,
-     -94
+     -94,
+     116
     ],
-    "yaw": 3916,
-    "pitch": -105,
-    "buttons": 59,
-    "target": 0
+    "yaw": 946,
+    "pitch": -25,
+    "buttons": 22,
+    "target": 16
    }
   ],
   [
-   17,
+   10,
    {
     "move": [
-     4,
-     -69
+     69,
+     25
     ],
-    "yaw": 3155,
-    "pitch": 104,
-    "buttons": 153,
-    "target": 0
-   }
-  ],
-  [
-   36,
-   {
-    "move": [
-     -37,
-     -53
-    ],
-    "yaw": 1716,
-    "pitch": 86,
-    "buttons": 161,
-    "target": 0
+    "yaw": 3714,
+    "pitch": -37,
+    "buttons": 224,
+    "target": 9
    }
   ],
   [
    17,
    {
     "move": [
-     71,
-     82
+     34,
+     86
     ],
-    "yaw": 1447,
-    "pitch": -56,
-    "buttons": 65,
-    "target": 0
+    "yaw": 1652,
+    "pitch": 82,
+    "buttons": 198,
+    "target": 11
    }
   ],
   [
-   29,
+   11,
    {
     "move": [
-     -20,
-     18
+     -56,
+     55
     ],
-    "yaw": 1468,
-    "pitch": -13,
-    "buttons": 190,
-    "target": 0
+    "yaw": 1734,
+    "pitch": -36,
+    "buttons": 146,
+    "target": 23
    }
   ],
   [
-   29,
+   19,
    {
     "move": [
-     102,
-     13
+     52,
+     102
     ],
-    "yaw": 3720,
-    "pitch": -78,
-    "buttons": 1,
-    "target": 0
+    "yaw": 2255,
+    "pitch": -126,
+    "buttons": 232,
+    "target": 6
    }
   ],
   [
@@ -1016,85 +873,72 @@
     "yaw": 1669,
     "pitch": -20,
     "buttons": 6,
-    "target": 0
+    "target": 28
    }
   ],
   [
-   36,
+   19,
    {
     "move": [
-     -8,
-     -49
+     -49,
+     83
     ],
-    "yaw": 3389,
-    "pitch": -94,
-    "buttons": 133,
-    "target": 0
+    "yaw": 2137,
+    "pitch": 68,
+    "buttons": 34,
+    "target": 21
    }
   ],
   [
-   31,
+   23,
    {
     "move": [
-     46,
-     15
+     80,
+     7
     ],
-    "yaw": 3327,
-    "pitch": -40,
-    "buttons": 135,
-    "target": 0
-   }
-  ],
-  [
-   20,
-   {
-    "move": [
-     6,
-     52
-    ],
-    "yaw": 1640,
-    "pitch": -42,
-    "buttons": 251,
-    "target": 0
-   }
-  ],
-  [
-   36,
-   {
-    "move": [
-     101,
-     32
-    ],
-    "yaw": 2586,
-    "pitch": -96,
-    "buttons": 90,
-    "target": 0
-   }
-  ],
-  [
-   31,
-   {
-    "move": [
-     -47,
-     -92
-    ],
-    "yaw": 2868,
-    "pitch": 25,
-    "buttons": 93,
-    "target": 0
+    "yaw": 1397,
+    "pitch": 6,
+    "buttons": 127,
+    "target": 22
    }
   ],
   [
    17,
    {
     "move": [
-     -76,
-     -115
+     123,
+     -42
     ],
-    "yaw": 3170,
-    "pitch": -109,
-    "buttons": 169,
-    "target": 0
+    "yaw": 3632,
+    "pitch": 32,
+    "buttons": 229,
+    "target": 20
+   }
+  ],
+  [
+   15,
+   {
+    "move": [
+     -96,
+     64
+    ],
+    "yaw": 1288,
+    "pitch": 51,
+    "buttons": 36,
+    "target": 11
+   }
+  ],
+  [
+   24,
+   {
+    "move": [
+     -23,
+     -76
+    ],
+    "yaw": 193,
+    "pitch": 41,
+    "buttons": 198,
+    "target": 2
    }
   ],
   [
@@ -1107,85 +951,72 @@
     "yaw": 2213,
     "pitch": 17,
     "buttons": 9,
-    "target": 0
+    "target": 26
    }
   ],
   [
-   34,
+   7,
    {
     "move": [
-     -87,
-     127
+     127,
+     5
     ],
-    "yaw": 2135,
-    "pitch": 93,
-    "buttons": 30,
-    "target": 0
+    "yaw": 487,
+    "pitch": -48,
+    "buttons": 221,
+    "target": 18
+   }
+  ],
+  [
+   22,
+   {
+    "move": [
+     -12,
+     78
+    ],
+    "yaw": 543,
+    "pitch": 42,
+    "buttons": 112,
+    "target": 9
    }
   ],
   [
    13,
    {
     "move": [
-     20,
-     12
+     26,
+     -10
     ],
-    "yaw": 1860,
-    "pitch": -94,
-    "buttons": 205,
-    "target": 0
+    "yaw": 3411,
+    "pitch": -60,
+    "buttons": 160,
+    "target": 21
    }
   ],
   [
-   18,
+   2,
    {
     "move": [
-     42,
-     -49
+     100,
+     -90
     ],
-    "yaw": 1301,
-    "pitch": -10,
-    "buttons": 153,
-    "target": 0
-   }
-  ],
-  [
-   34,
-   {
-    "move": [
-     32,
-     -60
-    ],
-    "yaw": 2758,
-    "pitch": 100,
+    "yaw": 2190,
+    "pitch": 105,
     "buttons": 6,
-    "target": 0
+    "target": 9
    }
   ],
   [
-   6,
+   20,
    {
     "move": [
-     9,
-     -121
+     93,
+     62
     ],
-    "yaw": 3729,
-    "pitch": -4,
-    "buttons": 76,
-    "target": 0
-   }
-  ],
-  [
-   35,
-   {
-    "move": [
-     62,
-     -85
-    ],
-    "yaw": 3684,
-    "pitch": -6,
-    "buttons": 61,
-    "target": 0
+    "yaw": 689,
+    "pitch": -67,
+    "buttons": 230,
+    "target": 15
    }
   ],
   [
@@ -1198,85 +1029,72 @@
     "yaw": 2954,
     "pitch": 9,
     "buttons": 160,
-    "target": 0
+    "target": 2
    }
   ],
   [
-   3,
+   40,
    {
     "move": [
-     127,
-     11
+     11,
+     -69
     ],
-    "yaw": 933,
-    "pitch": -127,
-    "buttons": 155,
-    "target": 0
+    "yaw": 2493,
+    "pitch": -78,
+    "buttons": 0,
+    "target": 13
    }
   ],
   [
-   8,
+   14,
    {
     "move": [
-     -20,
-     -39
+     41,
+     -16
     ],
-    "yaw": 2701,
-    "pitch": 58,
-    "buttons": 111,
-    "target": 0
+    "yaw": 2972,
+    "pitch": 79,
+    "buttons": 129,
+    "target": 30
    }
   ],
   [
-   21,
+   10,
    {
     "move": [
-     79,
-     115
+     -69,
+     85
     ],
-    "yaw": 968,
-    "pitch": 85,
-    "buttons": 58,
-    "target": 0
+    "yaw": 1039,
+    "pitch": 94,
+    "buttons": 16,
+    "target": 13
    }
   ],
   [
-   11,
+   28,
    {
     "move": [
-     -111,
-     94
+     -65,
+     103
     ],
-    "yaw": 1682,
-    "pitch": -65,
-    "buttons": 178,
-    "target": 0
+    "yaw": 167,
+    "pitch": 117,
+    "buttons": 221,
+    "target": 18
    }
   ],
   [
-   37,
+   10,
    {
     "move": [
-     -117,
-     93
+     -7,
+     -87
     ],
-    "yaw": 3931,
-    "pitch": -66,
-    "buttons": 149,
-    "target": 0
-   }
-  ],
-  [
-   19,
-   {
-    "move": [
-     -87,
-     -28
-    ],
-    "yaw": 765,
-    "pitch": 45,
-    "buttons": 161,
-    "target": 0
+    "yaw": 1601,
+    "pitch": 33,
+    "buttons": 47,
+    "target": 21
    }
   ],
   [
@@ -1289,85 +1107,72 @@
     "yaw": 1857,
     "pitch": 55,
     "buttons": 227,
-    "target": 0
+    "target": 23
    }
   ],
   [
-   30,
+   20,
    {
     "move": [
-     -2,
-     -111
+     -111,
+     98
     ],
-    "yaw": 3618,
-    "pitch": -8,
-    "buttons": 67,
-    "target": 0
+    "yaw": 1075,
+    "pitch": -57,
+    "buttons": 120,
+    "target": 10
    }
   ],
   [
-   12,
+   39,
    {
     "move": [
-     -41,
-     117
+     12,
+     -14
     ],
-    "yaw": 2242,
-    "pitch": 114,
+    "yaw": 3882,
+    "pitch": -47,
+    "buttons": 42,
+    "target": 12
+   }
+  ],
+  [
+   38,
+   {
+    "move": [
+     -122,
+     93
+    ],
+    "yaw": 2706,
+    "pitch": 102,
+    "buttons": 169,
+    "target": 24
+   }
+  ],
+  [
+   13,
+   {
+    "move": [
+     93,
+     -11
+    ],
+    "yaw": 1369,
+    "pitch": 53,
     "buttons": 114,
     "target": 0
    }
   ],
   [
-   7,
+   9,
    {
     "move": [
-     -47,
-     -29
+     -69,
+     -89
     ],
-    "yaw": 3857,
-    "pitch": 93,
-    "buttons": 5,
-    "target": 0
-   }
-  ],
-  [
-   27,
-   {
-    "move": [
-     41,
-     102
-    ],
-    "yaw": 3072,
-    "pitch": 93,
-    "buttons": 83,
-    "target": 0
-   }
-  ],
-  [
-   19,
-   {
-    "move": [
-     -42,
-     -14
-    ],
-    "yaw": 2899,
-    "pitch": -73,
-    "buttons": 1,
-    "target": 0
-   }
-  ],
-  [
-   10,
-   {
-    "move": [
-     -89,
-     81
-    ],
-    "yaw": 1201,
-    "pitch": -84,
-    "buttons": 168,
-    "target": 0
+    "yaw": 3347,
+    "pitch": 41,
+    "buttons": 75,
+    "target": 5
    }
   ],
   [
@@ -1380,85 +1185,72 @@
     "yaw": 3892,
     "pitch": 101,
     "buttons": 4,
-    "target": 0
+    "target": 2
    }
   ],
   [
-   4,
+   1,
    {
     "move": [
-     -125,
-     -119
+     -119,
+     99
     ],
-    "yaw": 3637,
-    "pitch": -53,
-    "buttons": 0,
-    "target": 0
-   }
-  ],
-  [
-   36,
-   {
-    "move": [
-     100,
-     100
-    ],
-    "yaw": 3831,
-    "pitch": 6,
-    "buttons": 205,
-    "target": 0
-   }
-  ],
-  [
-   28,
-   {
-    "move": [
-     83,
-     -72
-    ],
-    "yaw": 3855,
-    "pitch": -56,
-    "buttons": 114,
-    "target": 0
-   }
-  ],
-  [
-   30,
-   {
-    "move": [
-     94,
-     -28
-    ],
-    "yaw": 2971,
-    "pitch": 57,
-    "buttons": 234,
-    "target": 0
+    "yaw": 4,
+    "pitch": 101,
+    "buttons": 75,
+    "target": 28
    }
   ],
   [
    36,
    {
     "move": [
-     -25,
-     -92
+     111,
+     77
     ],
-    "yaw": 1324,
-    "pitch": -59,
-    "buttons": 136,
-    "target": 0
+    "yaw": 2151,
+    "pitch": 83,
+    "buttons": 176,
+    "target": 6
    }
   ],
   [
-   5,
+   38,
    {
     "move": [
-     -67,
-     -84
+     -13,
+     -56
     ],
-    "yaw": 3539,
-    "pitch": -89,
-    "buttons": 45,
-    "target": 0
+    "yaw": 3046,
+    "pitch": -28,
+    "buttons": 222,
+    "target": 23
+   }
+  ],
+  [
+   37,
+   {
+    "move": [
+     57,
+     99
+    ],
+    "yaw": 1644,
+    "pitch": -45,
+    "buttons": 35,
+    "target": 17
+   }
+  ],
+  [
+   11,
+   {
+    "move": [
+     -96,
+     -67
+    ],
+    "yaw": 698,
+    "pitch": -82,
+    "buttons": 221,
+    "target": 4
    }
   ],
   [
@@ -1471,85 +1263,72 @@
     "yaw": 977,
     "pitch": -125,
     "buttons": 84,
-    "target": 0
+    "target": 10
    }
   ],
   [
-   14,
+   39,
    {
     "move": [
-     116,
-     -23
+     -23,
+     62
     ],
-    "yaw": 3050,
-    "pitch": -111,
-    "buttons": 147,
-    "target": 0
+    "yaw": 2355,
+    "pitch": 35,
+    "buttons": 16,
+    "target": 10
    }
   ],
   [
-   26,
+   35,
    {
     "move": [
-     -47,
-     89
+     76,
+     107
     ],
-    "yaw": 3261,
-    "pitch": 48,
-    "buttons": 235,
-    "target": 0
+    "yaw": 2812,
+    "pitch": 29,
+    "buttons": 59,
+    "target": 5
    }
   ],
   [
-   10,
+   23,
    {
     "move": [
-     29,
-     -83
+     -70,
+     23
     ],
-    "yaw": 2342,
-    "pitch": 23,
-    "buttons": 57,
-    "target": 0
+    "yaw": 3698,
+    "pitch": 55,
+    "buttons": 190,
+    "target": 1
    }
   ],
   [
-   37,
+   27,
    {
     "move": [
-     63,
-     55
+     -69,
+     66
     ],
-    "yaw": 254,
-    "pitch": -69,
-    "buttons": 171,
-    "target": 0
+    "yaw": 2662,
+    "pitch": -22,
+    "buttons": 157,
+    "target": 28
    }
   ],
   [
-   31,
+   21,
    {
     "move": [
-     38,
-     29
+     106,
+     20
     ],
-    "yaw": 1687,
-    "pitch": 1,
-    "buttons": 225,
-    "target": 0
-   }
-  ],
-  [
-   37,
-   {
-    "move": [
-     20,
-     71
-    ],
-    "yaw": 3582,
-    "pitch": -32,
-    "buttons": 22,
-    "target": 0
+    "yaw": 3188,
+    "pitch": -106,
+    "buttons": 223,
+    "target": 12
    }
   ],
   [
@@ -1562,85 +1341,72 @@
     "yaw": 502,
     "pitch": 36,
     "buttons": 66,
-    "target": 0
+    "target": 20
    }
   ],
   [
-   27,
+   14,
    {
     "move": [
-     -39,
-     -9
+     -9,
+     17
     ],
-    "yaw": 2317,
-    "pitch": 114,
-    "buttons": 110,
-    "target": 0
+    "yaw": 1770,
+    "pitch": -60,
+    "buttons": 242,
+    "target": 29
    }
   ],
   [
-   11,
+   2,
    {
     "move": [
-     106,
-     -121
+     -95,
+     -115
     ],
-    "yaw": 517,
-    "pitch": -92,
-    "buttons": 12,
-    "target": 0
+    "yaw": 574,
+    "pitch": 38,
+    "buttons": 201,
+    "target": 23
    }
   ],
   [
-   32,
+   33,
    {
     "move": [
-     38,
-     56
+     83,
+     30
     ],
-    "yaw": 3321,
-    "pitch": 30,
-    "buttons": 211,
-    "target": 0
+    "yaw": 1536,
+    "pitch": 120,
+    "buttons": 204,
+    "target": 26
    }
   ],
   [
-   16,
+   21,
    {
     "move": [
-     76,
-     120
+     -103,
+     -69
     ],
-    "yaw": 3395,
-    "pitch": -103,
-    "buttons": 132,
-    "target": 0
+    "yaw": 1110,
+    "pitch": 0,
+    "buttons": 200,
+    "target": 13
    }
   ],
   [
-   10,
+   24,
    {
     "move": [
-     -58,
-     72
+     96,
+     -20
     ],
-    "yaw": 2044,
-    "pitch": 24,
-    "buttons": 106,
-    "target": 0
-   }
-  ],
-  [
-   35,
-   {
-    "move": [
-     -20,
-     -12
-    ],
-    "yaw": 2034,
-    "pitch": 16,
-    "buttons": 48,
-    "target": 0
+    "yaw": 1852,
+    "pitch": -79,
+    "buttons": 127,
+    "target": 17
    }
   ],
   [
@@ -1653,85 +1419,72 @@
     "yaw": 100,
     "pitch": 17,
     "buttons": 238,
-    "target": 0
+    "target": 8
    }
   ],
   [
-   11,
+   22,
    {
     "move": [
-     10,
-     107
+     107,
+     -3
     ],
-    "yaw": 2002,
-    "pitch": 113,
-    "buttons": 165,
-    "target": 0
+    "yaw": 2652,
+    "pitch": 55,
+    "buttons": 241,
+    "target": 17
+   }
+  ],
+  [
+   22,
+   {
+    "move": [
+     -99,
+     -125
+    ],
+    "yaw": 1069,
+    "pitch": 6,
+    "buttons": 188,
+    "target": 5
+   }
+  ],
+  [
+   25,
+   {
+    "move": [
+     -51,
+     -89
+    ],
+    "yaw": 949,
+    "pitch": -87,
+    "buttons": 197,
+    "target": 18
    }
   ],
   [
    29,
    {
     "move": [
-     9,
-     8
+     79,
+     -79
     ],
-    "yaw": 451,
-    "pitch": -61,
-    "buttons": 2,
-    "target": 0
+    "yaw": 891,
+    "pitch": 107,
+    "buttons": 127,
+    "target": 3
    }
   ],
   [
-   30,
+   26,
    {
     "move": [
-     6,
-     -84
+     -75,
+     -126
     ],
-    "yaw": 2479,
-    "pitch": -89,
-    "buttons": 76,
-    "target": 0
-   }
-  ],
-  [
-   10,
-   {
-    "move": [
-     69,
-     -87
-    ],
-    "yaw": 2332,
-    "pitch": 79,
-    "buttons": 181,
-    "target": 0
-   }
-  ],
-  [
-   8,
-   {
-    "move": [
-     -72,
-     0
-    ],
-    "yaw": 3772,
-    "pitch": 38,
-    "buttons": 24,
-    "target": 0
-   }
-  ],
-  [
-   9,
-   {
-    "move": [
-     -126,
-     -27
-    ],
-    "yaw": 4075,
-    "pitch": -88,
-    "buttons": 46,
-    "target": 0
+    "yaw": 1610,
+    "pitch": -81,
+    "buttons": 254,
+    "target": 5
    }
   ],
   [
@@ -1744,85 +1497,72 @@
     "yaw": 1375,
     "pitch": 0,
     "buttons": 207,
-    "target": 0
+    "target": 28
    }
   ],
   [
-   36,
+   13,
    {
     "move": [
-     -46,
-     -104
+     -104,
+     -45
     ],
-    "yaw": 1325,
-    "pitch": 123,
-    "buttons": 235,
-    "target": 0
+    "yaw": 3763,
+    "pitch": -102,
+    "buttons": 251,
+    "target": 30
+   }
+  ],
+  [
+   16,
+   {
+    "move": [
+     54,
+     -111
+    ],
+    "yaw": 819,
+    "pitch": -54,
+    "buttons": 137,
+    "target": 25
+   }
+  ],
+  [
+   5,
+   {
+    "move": [
+     27,
+     31
+    ],
+    "yaw": 1793,
+    "pitch": 30,
+    "buttons": 230,
+    "target": 15
    }
   ],
   [
    4,
    {
     "move": [
-     116,
-     -29
-    ],
-    "yaw": 2914,
-    "pitch": -77,
-    "buttons": 16,
-    "target": 0
-   }
-  ],
-  [
-   22,
-   {
-    "move": [
-     -54,
-     79
-    ],
-    "yaw": 476,
-    "pitch": 31,
-    "buttons": 154,
-    "target": 0
-   }
-  ],
-  [
-   18,
-   {
-    "move": [
-     102,
-     30
-    ],
-    "yaw": 1952,
-    "pitch": -70,
-    "buttons": 25,
-    "target": 0
-   }
-  ],
-  [
-   17,
-   {
-    "move": [
      -70,
-     -105
+     -22
     ],
-    "yaw": 2783,
-    "pitch": -76,
-    "buttons": 241,
-    "target": 0
+    "yaw": 929,
+    "pitch": 46,
+    "buttons": 22,
+    "target": 30
    }
   ],
   [
-   2,
+   9,
    {
     "move": [
-     -108,
-     -25
+     -115,
+     -108
     ],
-    "yaw": 2294,
-    "pitch": -9,
-    "buttons": 0,
-    "target": 0
+    "yaw": 1645,
+    "pitch": -127,
+    "buttons": 143,
+    "target": 14
    }
   ],
   [
@@ -1835,85 +1575,72 @@
     "yaw": 1057,
     "pitch": 89,
     "buttons": 14,
-    "target": 0
+    "target": 17
    }
   ],
   [
-   22,
+   36,
    {
     "move": [
-     100,
-     -123
+     -123,
+     -96
     ],
-    "yaw": 511,
-    "pitch": -58,
-    "buttons": 107,
-    "target": 0
+    "yaw": 1725,
+    "pitch": -36,
+    "buttons": 69,
+    "target": 9
    }
   ],
   [
-   15,
+   13,
    {
     "move": [
-     -49,
-     -46
+     -30,
+     123
     ],
-    "yaw": 1567,
-    "pitch": -4,
-    "buttons": 251,
-    "target": 0
+    "yaw": 1990,
+    "pitch": -69,
+    "buttons": 239,
+    "target": 29
    }
   ],
   [
-   38,
+   16,
    {
     "move": [
-     -69,
-     104
+     60,
+     83
     ],
-    "yaw": 1610,
-    "pitch": 83,
-    "buttons": 188,
-    "target": 0
-   }
-  ],
-  [
-   25,
-   {
-    "move": [
-     -126,
-     -111
-    ],
-    "yaw": 3731,
-    "pitch": -118,
-    "buttons": 60,
-    "target": 0
-   }
-  ],
-  [
-   34,
-   {
-    "move": [
-     92,
-     -48
-    ],
-    "yaw": 896,
-    "pitch": 108,
-    "buttons": 121,
-    "target": 0
+    "yaw": 2521,
+    "pitch": -111,
+    "buttons": 1,
+    "target": 29
    }
   ],
   [
    10,
    {
     "move": [
-     74,
-     -104
+     -118,
+     85
     ],
-    "yaw": 2762,
-    "pitch": -86,
-    "buttons": 24,
-    "target": 0
+    "yaw": 3521,
+    "pitch": -72,
+    "buttons": 79,
+    "target": 15
+   }
+  ],
+  [
+   38,
+   {
+    "move": [
+     -68,
+     74
+    ],
+    "yaw": 378,
+    "pitch": -103,
+    "buttons": 172,
+    "target": 5
    }
   ],
   [
@@ -1926,32 +1653,253 @@
     "yaw": 3905,
     "pitch": -36,
     "buttons": 235,
+    "target": 2
+   }
+  ],
+  [
+   12,
+   {
+    "move": [
+     -80,
+     124
+    ],
+    "yaw": 2985,
+    "pitch": -7,
+    "buttons": 217,
+    "target": 4
+   }
+  ],
+  [
+   8,
+   {
+    "move": [
+     -63,
+     -122
+    ],
+    "yaw": 638,
+    "pitch": 65,
+    "buttons": 175,
+    "target": 26
+   }
+  ],
+  [
+   7,
+   {
+    "move": [
+     -103,
+     -40
+    ],
+    "yaw": 219,
+    "pitch": 122,
+    "buttons": 136,
+    "target": 27
+   }
+  ],
+  [
+   40,
+   {
+    "move": [
+     -59,
+     -107
+    ],
+    "yaw": 503,
+    "pitch": -42,
+    "buttons": 90,
+    "target": 1
+   }
+  ],
+  [
+   6,
+   {
+    "move": [
+     98,
+     53
+    ],
+    "yaw": 2028,
+    "pitch": 111,
+    "buttons": 148,
+    "target": 6
+   }
+  ],
+  [
+   13,
+   {
+    "move": [
+     99,
+     -13
+    ],
+    "yaw": 3016,
+    "pitch": 125,
+    "buttons": 24,
+    "target": 18
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     -118,
+     29
+    ],
+    "yaw": 1140,
+    "pitch": -40,
+    "buttons": 187,
+    "target": 30
+   }
+  ],
+  [
+   37,
+   {
+    "move": [
+     80,
+     -19
+    ],
+    "yaw": 4029,
+    "pitch": -121,
+    "buttons": 115,
+    "target": 22
+   }
+  ],
+  [
+   4,
+   {
+    "move": [
+     40,
+     -78
+    ],
+    "yaw": 3746,
+    "pitch": -99,
+    "buttons": 7,
     "target": 0
+   }
+  ],
+  [
+   30,
+   {
+    "move": [
+     -84,
+     27
+    ],
+    "yaw": 2057,
+    "pitch": 94,
+    "buttons": 53,
+    "target": 20
+   }
+  ],
+  [
+   33,
+   {
+    "move": [
+     12,
+     -5
+    ],
+    "yaw": 412,
+    "pitch": -1,
+    "buttons": 162,
+    "target": 22
+   }
+  ],
+  [
+   2,
+   {
+    "move": [
+     -57,
+     -26
+    ],
+    "yaw": 2936,
+    "pitch": 108,
+    "buttons": 185,
+    "target": 18
+   }
+  ],
+  [
+   29,
+   {
+    "move": [
+     -75,
+     -114
+    ],
+    "yaw": 1582,
+    "pitch": 38,
+    "buttons": 253,
+    "target": 0
+   }
+  ],
+  [
+   23,
+   {
+    "move": [
+     40,
+     93
+    ],
+    "yaw": 637,
+    "pitch": -102,
+    "buttons": 219,
+    "target": 22
+   }
+  ],
+  [
+   5,
+   {
+    "move": [
+     -92,
+     18
+    ],
+    "yaw": 3778,
+    "pitch": -32,
+    "buttons": 194,
+    "target": 11
+   }
+  ],
+  [
+   34,
+   {
+    "move": [
+     -36,
+     -59
+    ],
+    "yaw": 2004,
+    "pitch": 38,
+    "buttons": 179,
+    "target": 22
+   }
+  ],
+  [
+   27,
+   {
+    "move": [
+     22,
+     -34
+    ],
+    "yaw": 636,
+    "pitch": 101,
+    "buttons": 152,
+    "target": 15
    }
   ]
  ],
- "ticks": 3011,
+ "ticks": 3016,
  "hashEvery": 300,
  "hashes": {
-  "0": "3805d826e89f3535235ff1f63d264dc8",
-  "300": "8cfc91cf508cadd2253954c2b4471a46",
-  "600": "98df8f308cb843d4990c10b8a89ffa7e",
-  "900": "6168c540d2e071f73f6909f40480c77a",
-  "1200": "d1eb0bfc3e08fa02ab8dfe3a6b0899e4",
-  "1500": "07de383755874f43bc073c2480293bcc",
-  "1800": "263c9c4e0496bcabd69a75bc12fea34d",
-  "2100": "4f45ab013dd699aededaebea48257536",
-  "2400": "89c0dbfe533a183fb41e527207a5b6f1",
-  "2700": "3233dbb3eb4498ced98fba90f5faf2e9",
-  "3000": "b9fe0583ac9dd642ba2879fd483378f1"
+  "0": "08fe744958b469b3405caac81a84f5f2",
+  "300": "210b48befd9a97a1b9525e0b3f94bd40",
+  "600": "455447629d5b0c707740c90fcb7744d5",
+  "900": "46addb8c8b750c6fb5b21ef9426deae1",
+  "1200": "37d4db957bd8a711618bbc769373ca3d",
+  "1500": "b207f8ca748b67e5e954fde4e5546b93",
+  "1800": "34d6b6eff0b0bef23edcec451960ede4",
+  "2100": "e19528d4c66cf678cc6c1d9161165966",
+  "2400": "7b56467a06144942f52182b1b3bbe438",
+  "2700": "c3c58d96bb4a8628f0538e5d8a2fdcd4",
+  "3000": "625d46df4dae31f142324e2013dc72cc"
  },
- "final": "1a95692eda07465ba1b8c268aa2d248d",
+ "final": "e2a414468a4fc5a3dc1a374353b2043e",
  "finalState": {
   "v": 1,
-  "core": "m0.2",
-  "world": "6f6e6da0d3cc62503ac6b7000716e596",
+  "core": "m0.3",
+  "world": "b813305a974230bde515e75a8e225195",
   "mode": "ironman",
-  "tick": 3011,
+  "tick": 3016,
   "rng": [
    3027271600,
    768661525,
@@ -1959,18 +1907,48 @@
    3498263955
   ],
   "player": {
-   "x": 76988,
-   "z": 140310,
-   "vx": -3214,
-   "vz": 2269,
-   "rx": -20,
-   "rz": 22,
-   "yaw": 3905,
-   "pitch": -36,
+   "x": 90103,
+   "z": 139076,
+   "vx": -937,
+   "vz": 396,
+   "rx": -13,
+   "rz": 29,
+   "yaw": 636,
+   "pitch": 101,
    "hp": 100,
-   "oil": 2847890,
-   "hooded": false
+   "oil": 2841000,
+   "hooded": true
   },
-  "prevButtons": 235
+  "doors": [
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   }
+  ],
+  "prevButtons": 152
  }
 }

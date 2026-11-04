@@ -23,9 +23,34 @@ final class World
     public const MAX_GRID = 64;
     public const MAX_GDF_BYTES = 262144;
     public const MAX_GDF_DEPTH = 12;
+    public const MAX_ENTITIES = 400;
+    /** R-DOOR-2..4: door travel in [0, DOOR_FULL], +DOOR_STEP per tick while opening; solid while 20*t < 17*DOOR_FULL. */
+    public const DOOR_FULL = 693;
+    public const DOOR_STEP = 21;
+    private const CELL_MM = 2400;
     private const KEY_RE = '/^[A-Za-z_][A-Za-z0-9_]*$/D';
+    private const ID_RE = '/^[A-Za-z_][A-Za-z0-9_]{0,31}$/D';
+    /** R-PROP-1: footprints per kind, mm. Circles: r. Boxes: half-extents at yaw 0 (swap at 1024/3072). */
+    private const PROP_KINDS = [
+        'statue' => ['r' => 500], 'stele' => ['r' => 550], 'tree' => ['r' => 450], 'post' => ['r' => 160],
+        'plinth' => ['r' => 500], 'lectern' => ['r' => 500], 'sarcophagus' => ['hx' => 750, 'hz' => 1150],
+    ];
+    private const KEYS_DOOR = ['id', 'type', 'cell', 'style', 'opens'];
+    private const KEYS_DOOR_MASK = ['id', 'type', 'cell', 'style', 'opens', 'face'];
+    private const KEYS_SLAB = ['id', 'type', 'cell'];
+    private const KEYS_PROP = ['id', 'type', 'kind', 'pos', 'yaw'];
+    private const DOOR_STYLES = ['stone', 'grate', 'mask'];
+    private const DOOR_OPENS = ['interact', 'trigger'];
+    private const MASK_FACES = ['weep', 'laugh', 'sleep', 'blank'];
 
-    /** @param string $grid one byte per cell, row-major */
+    /**
+     * @param string $grid one byte per cell, row-major
+     * @param array<int,int> $doorAt cell index -> door index
+     * @param array<int,true> $slab cell indices holding a slab
+     * @param list<array{id:string,k:int,cx:int,cz:int,interact:bool}> $doors in entity order
+     * @param list<array{circle:bool,x:int,z:int,r:int,x0:int,x1:int,z0:int,z1:int}> $props in entity order
+     * @param list<array{type:string,door?:int}> $refs one per entity (R-ENT-3)
+     */
     private function __construct(
         public readonly string $id,
         public readonly int $w,
@@ -33,6 +58,11 @@ final class World
         private readonly string $grid,
         public readonly int $startI,
         public readonly int $startJ,
+        private readonly array $doorAt,
+        private readonly array $slab,
+        public readonly array $doors,
+        public readonly array $props,
+        private readonly array $refs,
     ) {
     }
 
@@ -210,17 +240,191 @@ final class World
         if ($sk !== self::ROOM && $sk !== self::CORR) {
             throw new \RangeException('start.cell is not floor');
         }
+        $ents = self::loadEntities($gdf, $grid, $w, $h, $sj * $w + $si);
         // R-WORLD-3: world id = first 16 bytes of SHA-256 over the canonical GDF, as hex.
         $id = substr(hash('sha256', Canonical::encode($gdf)), 0, 32);
-        return new self($id, $w, $h, $grid, $si, $sj);
+        return new self($id, $w, $h, $grid, $si, $sj, $ents['doorAt'], $ents['slab'], $ents['doors'], $ents['props'], $ents['refs']);
     }
 
-    /** R-MOVE-4: solid for collision. Outside the grid counts as solid. */
-    public function solidCell(int $i, int $j): bool
+    /** @param array<mixed> $e @param list<string> $keys */
+    private static function hasExactKeys(array $e, array $keys): bool
+    {
+        if (count($e) !== count($keys)) {
+            return false;
+        }
+        foreach ($keys as $k) {
+            if (!array_key_exists($k, $e)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** R-ENT-2: [i, j] inside the grid -> cell index. */
+    private static function cellIndex(mixed $v, int $w, int $h): int
+    {
+        if (!is_array($v) || !array_is_list($v) || count($v) !== 2 || !is_int($v[0]) || !is_int($v[1])) {
+            throw new \RangeException('entity cell');
+        }
+        [$i, $j] = $v;
+        if ($i < 0 || $j < 0 || $i >= $w || $j >= $h) {
+            throw new \RangeException('entity cell outside grid');
+        }
+        return $j * $w + $i;
+    }
+
+    /**
+     * R-ENT-*, R-DOOR-1, R-SLAB-1, R-PROP-*: validate the entity list and build the collision tables
+     * (mirrors loadEntities in world.js, check for check).
+     *
+     * @param array<string,mixed> $gdf
+     * @return array{doorAt:array<int,int>,slab:array<int,true>,doors:list<array{id:string,k:int,cx:int,cz:int,interact:bool}>,props:list<array{circle:bool,x:int,z:int,r:int,x0:int,x1:int,z0:int,z1:int}>,refs:list<array{type:string,door?:int}>}
+     */
+    private static function loadEntities(array $gdf, string $grid, int $w, int $h, int $startK): array
+    {
+        $list = array_key_exists('entities', $gdf) ? $gdf['entities'] : [];
+        if (!is_array($list) || !array_is_list($list) || count($list) > self::MAX_ENTITIES) {
+            throw new \RangeException('entities');
+        }
+        $ids = [];
+        $doorAt = [];
+        $slab = [];
+        $doors = [];
+        $props = [];
+        $refs = [];
+        foreach ($list as $e) {
+            if (!is_array($e) || array_is_list($e) || !is_string($e['id'] ?? null) || preg_match(self::ID_RE, $e['id']) !== 1) {
+                throw new \RangeException('entity id');
+            }
+            if (isset($ids[$e['id']])) {
+                throw new \RangeException('duplicate entity id');
+            }
+            $ids[$e['id']] = true;
+            $type = $e['type'] ?? null;
+            if ($type === 'door') {
+                $style = $e['style'] ?? null;
+                if (!self::hasExactKeys($e, $style === 'mask' ? self::KEYS_DOOR_MASK : self::KEYS_DOOR)) {
+                    throw new \RangeException('door keys');
+                }
+                if (!in_array($style, self::DOOR_STYLES, true) || !in_array($e['opens'], self::DOOR_OPENS, true)) {
+                    throw new \RangeException('door style/opens');
+                }
+                if ($style === 'mask' && !in_array($e['face'], self::MASK_FACES, true)) {
+                    throw new \RangeException('door face');
+                }
+                $k = self::cellIndex($e['cell'], $w, $h);
+                $code = ord($grid[$k]);
+                if (($code !== self::ROOM && $code !== self::CORR) || $k === $startK) {
+                    throw new \RangeException('door cell');
+                }
+                if (isset($doorAt[$k]) || isset($slab[$k])) {
+                    throw new \RangeException('cell already taken');
+                }
+                $doorAt[$k] = count($doors);
+                $refs[] = ['type' => 'door', 'door' => count($doors)];
+                [$ci, $cj] = $e['cell'];
+                $doors[] = [
+                    'id' => $e['id'], 'k' => $k,
+                    'cx' => $ci * self::CELL_MM + intdiv(self::CELL_MM, 2), 'cz' => $cj * self::CELL_MM + intdiv(self::CELL_MM, 2),
+                    'interact' => $e['opens'] === 'interact',
+                ];
+            } elseif ($type === 'slab') {
+                if (!self::hasExactKeys($e, self::KEYS_SLAB)) {
+                    throw new \RangeException('slab keys');
+                }
+                $k = self::cellIndex($e['cell'], $w, $h);
+                if (ord($grid[$k]) !== self::PLATE) {
+                    throw new \RangeException('slab not on a plate');
+                }
+                if (isset($doorAt[$k]) || isset($slab[$k])) {
+                    throw new \RangeException('cell already taken');
+                }
+                $slab[$k] = true;
+                $refs[] = ['type' => 'slab'];
+            } elseif ($type === 'prop') {
+                if (!self::hasExactKeys($e, self::KEYS_PROP)) {
+                    throw new \RangeException('prop keys');
+                }
+                $kind = $e['kind'];
+                $fp = is_string($kind) ? (self::PROP_KINDS[$kind] ?? null) : null;
+                if ($fp === null) {
+                    throw new \RangeException('prop kind');
+                }
+                $pos = $e['pos'];
+                if (!is_array($pos) || !array_is_list($pos) || count($pos) !== 2 || !is_int($pos[0]) || !is_int($pos[1])) {
+                    throw new \RangeException('prop pos');
+                }
+                $yaw = $e['yaw'];
+                if (!is_int($yaw) || $yaw < 0 || $yaw > 4095) {
+                    throw new \RangeException('prop yaw');
+                }
+                [$x, $z] = $pos;
+                if ($x < 0 || $z < 0 || $x > $w * self::CELL_MM || $z > $h * self::CELL_MM) {
+                    throw new \RangeException('prop pos outside grid');
+                }
+                if (isset($fp['r'])) {
+                    $r = $fp['r'];
+                    $props[] = ['circle' => true, 'x' => $x, 'z' => $z, 'r' => $r, 'x0' => $x - $r, 'x1' => $x + $r, 'z0' => $z - $r, 'z1' => $z + $r];
+                } else {
+                    if ($yaw % 1024 !== 0) {
+                        throw new \RangeException('box prop yaw');
+                    }
+                    $turned = $yaw === 1024 || $yaw === 3072;
+                    $hx = $turned ? $fp['hz'] : $fp['hx'];
+                    $hz = $turned ? $fp['hx'] : $fp['hz'];
+                    $props[] = ['circle' => false, 'x' => $x, 'z' => $z, 'r' => 0, 'x0' => $x - $hx, 'x1' => $x + $hx, 'z0' => $z - $hz, 'z1' => $z + $hz];
+                }
+                $refs[] = ['type' => 'prop'];
+            } else {
+                throw new \RangeException('unknown entity type');
+            }
+        }
+        // R-PROP-2: every cell under the footprint's bounds is inside the grid and free floor.
+        foreach ($props as $p) {
+            $i0 = IntMath::fdiv($p['x0'], self::CELL_MM);
+            $i1 = IntMath::fdiv($p['x1'] - 1, self::CELL_MM);
+            $j0 = IntMath::fdiv($p['z0'], self::CELL_MM);
+            $j1 = IntMath::fdiv($p['z1'] - 1, self::CELL_MM);
+            for ($j = $j0; $j <= $j1; $j++) {
+                for ($i = $i0; $i <= $i1; $i++) {
+                    if ($i < 0 || $j < 0 || $i >= $w || $j >= $h) {
+                        throw new \RangeException('prop outside grid');
+                    }
+                    $k = $j * $w + $i;
+                    if (ord($grid[$k]) === self::WALL || isset($doorAt[$k]) || isset($slab[$k]) || $k === $startK) {
+                        throw new \RangeException('prop footprint blocked');
+                    }
+                }
+            }
+        }
+        return ['doorAt' => $doorAt, 'slab' => $slab, 'doors' => $doors, 'props' => $props, 'refs' => $refs];
+    }
+
+    /**
+     * R-MOVE-4: solid for collision. Outside the grid, wall, a door cell while R-DOOR-4 holds, a slab.
+     *
+     * @param list<array{open:bool,t:int}> $doors state.doors
+     */
+    public function solidCell(array $doors, int $i, int $j): bool
     {
         if ($i < 0 || $j < 0 || $i >= $this->w || $j >= $this->h) {
             return true;
         }
-        return ord($this->grid[$j * $this->w + $i]) === self::WALL;
+        $k = $j * $this->w + $i;
+        if (ord($this->grid[$k]) === self::WALL || isset($this->slab[$k])) {
+            return true;
+        }
+        $d = $this->doorAt[$k] ?? -1;
+        return $d >= 0 && 20 * $doors[$d]['t'] < 17 * self::DOOR_FULL;
+    }
+
+    /**
+     * R-ENT-3: the entity with number n (1-based), or null.
+     *
+     * @return array{type:string,door?:int}|null
+     */
+    public function entityRef(int $n): ?array
+    {
+        return $n >= 1 ? ($this->refs[$n - 1] ?? null) : null;
     }
 }

@@ -258,6 +258,276 @@
   ],
   "requires": "bossDefeated"
  },
- "entities": [],
+ "entities": [
+  {
+   "id": "vest",
+   "type": "door",
+   "cell": [
+    34,
+    55
+   ],
+   "style": "stone",
+   "opens": "interact"
+  },
+  {
+   "id": "bell",
+   "type": "door",
+   "cell": [
+    23,
+    25
+   ],
+   "style": "grate",
+   "opens": "trigger"
+  },
+  {
+   "id": "vault",
+   "type": "door",
+   "cell": [
+    36,
+    11
+   ],
+   "style": "stone",
+   "opens": "trigger"
+  },
+  {
+   "id": "script",
+   "type": "door",
+   "cell": [
+    31,
+    4
+   ],
+   "style": "stone",
+   "opens": "interact"
+  },
+  {
+   "id": "mSleep",
+   "type": "door",
+   "cell": [
+    7,
+    18
+   ],
+   "style": "mask",
+   "opens": "trigger",
+   "face": "sleep"
+  },
+  {
+   "id": "mWeep",
+   "type": "door",
+   "cell": [
+    9,
+    18
+   ],
+   "style": "mask",
+   "opens": "trigger",
+   "face": "weep"
+  },
+  {
+   "id": "mLaugh",
+   "type": "door",
+   "cell": [
+    11,
+    18
+   ],
+   "style": "mask",
+   "opens": "trigger",
+   "face": "laugh"
+  },
+  {
+   "id": "slab1",
+   "type": "slab",
+   "cell": [
+    32,
+    51
+   ]
+  },
+  {
+   "id": "slab2",
+   "type": "slab",
+   "cell": [
+    35,
+    47
+   ]
+  },
+  {
+   "id": "statue1",
+   "type": "prop",
+   "kind": "statue",
+   "pos": [
+    77520,
+    118800
+   ],
+   "yaw": 3072
+  },
+  {
+   "id": "statue2",
+   "type": "prop",
+   "kind": "statue",
+   "pos": [
+    77520,
+    106800
+   ],
+   "yaw": 3072
+  },
+  {
+   "id": "statue3",
+   "type": "prop",
+   "kind": "statue",
+   "pos": [
+    77520,
+    99600
+   ],
+   "yaw": 3072
+  },
+  {
+   "id": "statue4",
+   "type": "prop",
+   "kind": "statue",
+   "pos": [
+    77520,
+    94800
+   ],
+   "yaw": 3072
+  },
+  {
+   "id": "statue5",
+   "type": "prop",
+   "kind": "statue",
+   "pos": [
+    88080,
+    123600
+   ],
+   "yaw": 1024
+  },
+  {
+   "id": "statue6",
+   "type": "prop",
+   "kind": "statue",
+   "pos": [
+    88080,
+    116400
+   ],
+   "yaw": 1024
+  },
+  {
+   "id": "statue7",
+   "type": "prop",
+   "kind": "statue",
+   "pos": [
+    88080,
+    109200
+   ],
+   "yaw": 1024
+  },
+  {
+   "id": "statue8",
+   "type": "prop",
+   "kind": "statue",
+   "pos": [
+    88080,
+    104400
+   ],
+   "yaw": 1024
+  },
+  {
+   "id": "stele1",
+   "type": "prop",
+   "kind": "stele",
+   "pos": [
+    87900,
+    126200
+   ],
+   "yaw": 3770
+  },
+  {
+   "id": "tree1",
+   "type": "prop",
+   "kind": "tree",
+   "pos": [
+    37200,
+    54000
+   ],
+   "yaw": 0
+  },
+  {
+   "id": "tree2",
+   "type": "prop",
+   "kind": "tree",
+   "pos": [
+    51600,
+    54000
+   ],
+   "yaw": 0
+  },
+  {
+   "id": "tree3",
+   "type": "prop",
+   "kind": "tree",
+   "pos": [
+    37200,
+    68400
+   ],
+   "yaw": 0
+  },
+  {
+   "id": "tree4",
+   "type": "prop",
+   "kind": "tree",
+   "pos": [
+    51600,
+    68400
+   ],
+   "yaw": 0
+  },
+  {
+   "id": "post1",
+   "type": "prop",
+   "kind": "post",
+   "pos": [
+    40512,
+    61200
+   ],
+   "yaw": 0
+  },
+  {
+   "id": "post2",
+   "type": "prop",
+   "kind": "post",
+   "pos": [
+    48288,
+    61200
+   ],
+   "yaw": 0
+  },
+  {
+   "id": "plinth1",
+   "type": "prop",
+   "kind": "plinth",
+   "pos": [
+    39600,
+    68400
+   ],
+   "yaw": 0
+  },
+  {
+   "id": "lectern1",
+   "type": "prop",
+   "kind": "lectern",
+   "pos": [
+    85200,
+    10800
+   ],
+   "yaw": 0
+  },
+  {
+   "id": "sarcophagus1",
+   "type": "prop",
+   "kind": "sarcophagus",
+   "pos": [
+    18000,
+    75600
+   ],
+   "yaw": 0
+  }
+ ],
  "links": []
 }

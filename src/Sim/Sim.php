@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.2';
+    public const CORE_VERSION = 'm0.3';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -19,6 +19,8 @@ final class Sim
     public const OIL_BURN_OPEN = 80;
     public const OIL_BURN_HOODED = 25;
     public const PLAYER_R_MM = 360;
+    /** R-ACT-1: interact reach, mm (Gloamhollow ia r 2.6 m). */
+    public const REACH_MM = 2600;
 
     public const BTN_STRIKE = 1 << 0;
     public const BTN_HOOD = 1 << 1;
@@ -87,6 +89,7 @@ final class Sim
                 'yaw' => 0, 'pitch' => 0,
                 'hp' => 100, 'oil' => 100 * self::OIL_UNIT, 'hooded' => false,
             ],
+            'doors' => array_map(static fn (): array => ['open' => false, 't' => 0], $world->doors), // R-DOOR-2
             'prevButtons' => 0,
         ];
     }
@@ -108,6 +111,13 @@ final class Sim
 
         $p['yaw'] = $input['yaw'];
         $p['pitch'] = $input['pitch'];
+        unset($p);
+
+        // R-ACT-1: interact with the target entity, from where the player stood before moving.
+        if (($pressed & self::BTN_INTERACT) && $input['target'] !== 0) {
+            self::interact($world, $state, $input['target'], $events);
+        }
+        $p = &$state['player'];
 
         [$fw, $st] = $input['move'];
         $m2 = $fw * $fw + $st * $st;
@@ -134,7 +144,15 @@ final class Sim
         $oz = $p['z'];
         $p['x'] += $dx;
         $p['z'] += $dz;
-        self::pushOut($world, $p, self::PLAYER_R_MM, $ox, $oz);
+        self::pushOut($world, $state['doors'], $p, self::PLAYER_R_MM, $ox, $oz);
+
+        // R-DOOR-3: opening doors move on.
+        foreach ($state['doors'] as &$d) {
+            if ($d['open'] && $d['t'] < World::DOOR_FULL) {
+                $d['t'] = min(World::DOOR_FULL, $d['t'] + World::DOOR_STEP);
+            }
+        }
+        unset($d);
 
         if ($pressed & self::BTN_HOOD) {
             if ($p['oil'] > 0) {
@@ -159,12 +177,41 @@ final class Sim
     }
 
     /**
-     * R-MOVE-4: push a circle out of solid cells (mirrors pushOut in sim.js).
-     * Bounds (R-INT-2): |dx|, |dz| <= 2400 + r, so dx*r and d2 stay below 2^23.
+     * R-ACT-1: open an interact door within reach. Anything else does nothing.
      *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function interact(World $world, array &$state, int $n, array &$events): void
+    {
+        $ref = $world->entityRef($n);
+        if ($ref === null || $ref['type'] !== 'door') {
+            return;
+        }
+        $def = $world->doors[$ref['door']];
+        $d = &$state['doors'][$ref['door']];
+        if (!$def['interact'] || $d['open']) {
+            return;
+        }
+        // |dx|, |dz| <= 64*2400, so the squares stay below 2^36.
+        $dx = $state['player']['x'] - $def['cx'];
+        $dz = $state['player']['z'] - $def['cz'];
+        if ($dx * $dx + $dz * $dz > self::REACH_MM * self::REACH_MM) {
+            return;
+        }
+        $d['open'] = true;
+        $events[] = ['e' => 'door', 'id' => $def['id'], 'open' => true];
+    }
+
+    /**
+     * R-MOVE-4: push a circle out of solid cells, then out of props (mirrors pushOut in sim.js).
+     * Bounds (R-INT-2): cells: |dx|, |dz| <= 2400 + r, so dx*r and d2 stay below 2^23. Props: |dx|, |dz|
+     * <= 64*2400, so d2 < 2^36; a push needs d2 < R^2 <= 910^2, so dx*R < 2^20.
+     *
+     * @param list<array{open:bool,t:int}> $doors
      * @param array<string,mixed> $e
      */
-    private static function pushOut(World $world, array &$e, int $r, int $ox, int $oz): void
+    private static function pushOut(World $world, array $doors, array &$e, int $r, int $ox, int $oz): void
     {
         for ($pass = 0; $pass < 3; $pass++) {
             $ci = IntMath::fdiv($e['x'], self::CELL_MM);
@@ -173,7 +220,7 @@ final class Sim
                 for ($di = -1; $di <= 1; $di++) {
                     $gi = $ci + $di;
                     $gj = $cj + $dj;
-                    if (!$world->solidCell($gi, $gj)) {
+                    if (!$world->solidCell($doors, $gi, $gj)) {
                         continue;
                     }
                     $minx = $gi * self::CELL_MM;
@@ -187,6 +234,30 @@ final class Sim
                         $e['x'] = $ox;
                         $e['z'] = $oz;
                     } elseif ($d2 < $r * $r) {
+                        $d = IntMath::isqrt($d2);
+                        $e['x'] = $qx + IntMath::idiv($dx * $r, $d);
+                        $e['z'] = $qz + IntMath::idiv($dz * $r, $d);
+                    }
+                }
+            }
+            foreach ($world->props as $o) {
+                if ($o['circle']) {
+                    $dx = $e['x'] - $o['x'];
+                    $dz = $e['z'] - $o['z'];
+                    $d2 = $dx * $dx + $dz * $dz;
+                    $rr = $r + $o['r'];
+                    if ($d2 > 0 && $d2 < $rr * $rr) {
+                        $d = IntMath::isqrt($d2);
+                        $e['x'] = $o['x'] + IntMath::idiv($dx * $rr, $d);
+                        $e['z'] = $o['z'] + IntMath::idiv($dz * $rr, $d);
+                    }
+                } else {
+                    $qx = IntMath::clamp($e['x'], $o['x0'], $o['x1']);
+                    $qz = IntMath::clamp($e['z'], $o['z0'], $o['z1']);
+                    $dx = $e['x'] - $qx;
+                    $dz = $e['z'] - $qz;
+                    $d2 = $dx * $dx + $dz * $dz;
+                    if ($d2 > 0 && $d2 < $r * $r) {
                         $d = IntMath::isqrt($d2);
                         $e['x'] = $qx + IntMath::idiv($dx * $r, $d);
                         $e['z'] = $qz + IntMath::idiv($dz * $r, $d);

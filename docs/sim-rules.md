@@ -41,6 +41,32 @@ The contract is `world = Sim.load(gdf)`, `state = Sim.init(world, seed, mode)`, 
 - **R-WORLD-3** World id = the first 16 bytes of SHA-256 over the canonical GDF (R-CANON-*), as 32 lower-case hex characters. `init` stores it as `state.world`; `step` refuses a state whose `world` differs.
 - **R-WORLD-4** The world can't be changed after load (the JS core keeps the grid out of reach; `init` and `step` refuse anything `load` didn't build). Anything that changes during play (doors, sprung slabs) lives in state.
 
+## Entities (the placed things)
+
+- **R-ENT-1** `entities` is optional; when present it is a list of at most 400 objects. Each has `id` (a string matching `^[A-Za-z_][A-Za-z0-9_]{0,31}$`, unique in the file) and `type`. The core knows the types `door`, `slab` and `prop`; any other type is rejected (types are added as the core learns them). Each type allows exactly the keys listed below: a missing key or any other key is rejected.
+- **R-ENT-2** `cell` is `[i, j]`, two integers inside the grid. At most one door or slab per cell.
+- **R-ENT-3** An entity's *number* is 1 + its index in `entities`. The input's `target` names an entity by number; 0 names none (decision #15).
+- **R-DOOR-1** Door keys: `id`, `type`, `cell`, `style` (`stone`, `grate` or `mask`), `opens` (`interact` or `trigger`) and, only when the style is `mask`, `face` (`weep`, `laugh`, `sleep` or `blank`). The cell must be room or corridor and must not be `start.cell`. *(Opening by key id comes with keys.)*
+- **R-DOOR-2** `state.doors` holds one `{ open, t }` per door, in entity order; `init` sets `open: false, t: 0`. `t` ∈ [0, 693] is how far the door has moved (693 = 33 · 21).
+- **R-DOOR-3** At the end of each tick's movement, every door with `open` and t < 693 moves on: t = min(693, t + 21). From the press it takes 33 ticks to open fully (Gloamhollow: 1.1 s). *(Closing (0.7 s, 21 ticks) comes with the effects that close or seal doors.)*
+- **R-DOOR-4** A door's cell is solid while 20·t < 17·693 (Gloamhollow: solid while `anim` < 0.85). A door opened on tick n stops blocking on tick n + 29.
+- **R-ACT-1** Interact (button 5) on its rising edge, before movement, with `target` = N ≠ 0: if entity N exists, is a door with `opens: "interact"` that isn't open, and (x − cx)² + (z − cz)² ≤ 2600² for the door cell's centre (cx, cz) and the player's position before this tick's move, the door's `open` becomes true and the step emits `{ e: "door", id, open: true }`. Anything else does nothing: no error, no event. Facing isn't checked; choosing what to highlight is the client's job (Gloamhollow `nearestInteract`: reach 2.6 m, no line of sight).
+- **R-SLAB-1** Slab keys: `id`, `type`, `cell`. A slab lies on a plate cell (code 3) that was sprung before the run began (Gloamhollow `PRE_SLABS`). Its cell is solid. *(Plates sprung during play join them via `state.sprung`, later in M0.)*
+- **R-PROP-1** Prop keys: `id`, `type`, `kind`, `pos` (`[x, z]` in mm, integers with 0 ≤ x ≤ 2400·w and 0 ≤ z ≤ 2400·h) and `yaw` (0–4095). A prop is decor that blocks walking. Its footprint is fixed by its kind (Gloamhollow `addCircle` / `addBox`):
+
+  | kind | footprint |
+  |---|---|
+  | `statue` | circle r 500 |
+  | `stele` | circle r 550 |
+  | `tree` | circle r 450 |
+  | `post` | circle r 160 |
+  | `plinth` | circle r 500 |
+  | `lectern` | circle r 500 |
+  | `sarcophagus` | box, half-extents 750 (x) × 1150 (z); at yaw 1024 or 3072 the half-extents swap |
+
+  A box prop's yaw must be a multiple of 1024. A circle's yaw is only for the renderer.
+- **R-PROP-2** The footprint's bounding square or box [x0, x1] × [z0, z1] (x0 = x − r, x1 = x + r, or x ∓ the half-extent) covers the cells fdiv(x0, 2400) … fdiv(x1 − 1, 2400), and the same for z. Every one of those cells must be inside the grid, must not be wall, a door cell, a slab cell or `start.cell`.
+
 ## State, hash, input
 
 - **R-CANON-1** Canonical form: JSON with keys sorted by byte order, no whitespace, integers in plain decimal (−0 → 0), `true`/`false`/`null`.
@@ -58,8 +84,14 @@ The contract is `world = Sim.load(gdf)`, `state = Sim.init(world, seed, mode)`, 
 - **R-MOVE-3** Target velocity: tx = speed·(−sin·fw + cos·strafe) / (127·2¹⁴), tz = speed·(−cos·fw − sin·strafe) / (127·2¹⁴). Velocity eases by `v += (t − v)·2/5` per tick (Gloamhollow's `min(1, dt·12)` at 30 Hz). Position moves by `(v + r) / 30` and keeps the exact remainder r, so no distance is lost.
 - **R-MOVE-4** Collision (Gloamhollow `pushCircle`). The player is a circle of radius r = 360 mm. After the move of R-MOVE-3, run 3 passes. Each pass computes (ci, cj) = (fdiv(x, 2400), fdiv(z, 2400)) once, then visits dj = −1, 0, 1 and, inside that, di = −1, 0, 1. For each solid cell (gi, gj) = (ci+di, cj+dj): qx = clamp(x, 2400·gi, 2400·gi+2400), qz = clamp(z, 2400·gj, 2400·gj+2400), dx = x − qx, dz = z − qz, d2 = dx² + dz².
   If d2 = 0 (the centre is in or on the cell), x, z go back to the position before this tick's move. Else if d2 < r²: d = isqrt(d2), x = qx + idiv(dx·r, d), z = qz + idiv(dz·r, d). Later cells in the same pass see the updated x, z. Velocity and remainders are not changed. Bounds: |dx|, |dz| ≤ 2,760, so every product stays below 2²³.
-  Solid cells: outside the grid, and wall cells. *(Later in M0: shut doors, sprung slabs, props and foes.)*
-- **Open question:** Gloamhollow's touch stick moves at 4.8 m/s × deflection, which is neither walk nor run speed. Decide whether the client maps the stick onto walk/run, or the input gains a speed field.
+  Solid cells: outside the grid, wall cells, door cells while R-DOOR-4 holds, and slab cells.
+  After the nine cells, the same pass visits every prop in entity order (Gloamhollow's `obstacles`):
+  - Circle of radius ρ at (px, pz): dx = x − px, dz = z − pz, d2 = dx² + dz², R = r + ρ. If 0 < d2 < R²: d = isqrt(d2), x = px + idiv(dx·R, d), z = pz + idiv(dz·R, d).
+  - Box [x0, x1] × [z0, z1]: qx = clamp(x, x0, x1), qz = clamp(z, z0, z1), dx = x − qx, dz = z − qz, d2 = dx² + dz². If 0 < d2 < r²: d = isqrt(d2), x = qx + idiv(dx·r, d), z = qz + idiv(dz·r, d).
+  - d2 = 0 does nothing for props (Gloamhollow only resets for cells).
+  Bounds: |dx|, |dz| ≤ 64 · 2400, so d2 < 2³⁶; a push needs d2 < R² ≤ 910², so dx·R < 2²⁰.
+  *(Later in M0: plates sprung during play, and foes.)*
+- **R-MOVE-5** The sim has no touch-stick speed. The client maps a touch stick onto `move` with run held: move = deflection · 127 · 8/9 (5.4 m/s · 8/9 = Gloamhollow's 4.8 m/s), after a 12 % dead zone (decision #16).
 
 ## Lantern *(provisional)*
 

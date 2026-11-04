@@ -9,7 +9,7 @@ the rules themselves go in `docs/sim-rules.md`.
 | Gloamhollow | Values | Sim-core note |
 |---|---|---|
 | `updatePlayer` | walk 3.2, run 5.4, stick 4.8·m m/s; velocity lerp `min(1, dt·12)`; arrows turn 2.1 rad/s | Done provisionally (R-MOVE-*). Arrow turning becomes client-side yaw input |
-| `pushCircle` | player radius 0.36 m, 3 iterations, cells + circle/box obstacles + foes | Next: integer circle-vs-AABB with `isqrt` |
+| `pushCircle` | player radius 0.36 m, 3 iterations, cells + circle/box obstacles + foes | Done for cells, doors, old slabs and decor props (R-MOVE-4, R-PROP-*). Bells, mirrors, chests and braziers bring their footprints with them; foes later |
 | `checkTraps` | the "inner" test: 0.12–0.88 of the cell | Plates, pits, void, vents, weep/laugh alcoves |
 | `ventState` | period 3.6 s, warn 0.9 s, fire 1.1 s, phases 0 / 1.2 / 2.4 s | 108 / 27 / 33 ticks; phases 0 / 36 / 72 |
 | Waking eyes | wake when the lantern is lit in the gallery; die at 1.0 s; decay ×1.4 | 30 ticks; spec floor is ≥ 0.6 s |
@@ -20,8 +20,8 @@ the rules themselves go in `docs/sim-rules.md`.
 | Foes | warden 3 hp/14 dmg/2.2 m/s; crawler 2/9/2.9; wind-up and cooldowns | `ph: Math.random()` is visual only; leave it out of state |
 | Boss | 6 hp, solid within 3.6 m of a lit brazier, phase 2 at ≤ 3 hp, oil drain | |
 | `later()` / `setTimeout` in rules (`strike` 110 ms, bell 0.65 s / 0.9 s, mask doors 1.5–2.6 s) | | Tick-scheduled events in state (spec §6.2) |
-| Door animation `anim < 0.85` gates collision | | Door open/close needs a tick-based state machine |
-| Interactions `nearestInteract` | dot ≥ 0.45, score `dot·2 − d·0.6 + pri·0.4` | Client sends `target`; the server re-checks reach |
+| Door animation `anim < 0.85` gates collision | open 1.1 s, close 0.7 s | Opening done (R-DOOR-*: 33 ticks, passable from tick 29). Closing comes with seal/close effects |
+| Interactions `nearestInteract` | dot ≥ 0.45, score `dot·2 − d·0.6 + pri·0.4` | Client picks and sends `target` (entity number); the sim re-checks reach only (R-ACT-1). Done for interact doors |
 
 ## CSP blockers in the current file (spec §11.4)
 

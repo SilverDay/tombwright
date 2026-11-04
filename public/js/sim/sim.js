@@ -6,9 +6,9 @@ import { isin, icos, TRIG_ONE } from './sine.js';
 import { rngSeed } from './rng.js';
 import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
-import { loadWorld, solidCell, assertWorld } from './world.js';
+import { loadWorld, solidCell, assertWorld, worldProps, worldDoors, entityRef, DOOR_FULL, DOOR_STEP } from './world.js';
 
-export const CORE_VERSION = 'm0.2';
+export const CORE_VERSION = 'm0.3';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -21,6 +21,8 @@ export const OIL_BURN_OPEN = 80;   // 0.08 points/s
 export const OIL_BURN_HOODED = 25; // 0.025 points/s
 // R-MOVE-4: the player is a circle of radius 360 mm (Gloamhollow RAD 0.36 m).
 export const PLAYER_R_MM = 360;
+// R-ACT-1: interact reach, mm (Gloamhollow ia r 2.6 m).
+export const REACH_MM = 2600;
 
 export const BTN = Object.freeze({
   strike: 1 << 0, hood: 1 << 1, probe: 1 << 2, pebble: 1 << 3,
@@ -62,6 +64,7 @@ export function init(world, seed, mode) {
       yaw: 0, pitch: 0,
       hp: 100, oil: 100 * OIL_UNIT, hooded: false,
     },
+    doors: worldDoors(world).map(() => ({ open: false, t: 0 })), // R-DOOR-2
     prevButtons: 0,
   };
 }
@@ -77,6 +80,9 @@ export function step(world, state, input) {
 
   p.yaw = input.yaw;
   p.pitch = input.pitch;
+
+  // R-ACT-1: interact with the target entity, from where the player stood before moving.
+  if ((pressed & BTN.interact) && input.target !== 0) interact(world, state, input.target, events);
 
   // R-MOVE-2: normalise the move vector to length <= 127.
   let [fw, st] = input.move;
@@ -97,7 +103,10 @@ export function step(world, state, input) {
   p.rx = ax - dx * TICK_HZ; p.rz = az - dz * TICK_HZ;
   const ox = p.x, oz = p.z;
   p.x += dx; p.z += dz;
-  pushOut(world, p, PLAYER_R_MM, ox, oz);
+  pushOut(world, state.doors, p, PLAYER_R_MM, ox, oz);
+
+  // R-DOOR-3: opening doors move on.
+  for (const d of state.doors) if (d.open && d.t < DOOR_FULL) d.t = Math.min(DOOR_FULL, d.t + DOOR_STEP);
 
   // R-OIL-2: hood toggles on the press; refused with no oil.
   if (pressed & BTN.hood) {
@@ -114,23 +123,48 @@ export function step(world, state, input) {
   return events;
 }
 
+/** R-ACT-1: open an interact door within reach. Anything else does nothing. */
+function interact(world, state, n, events) {
+  const ref = entityRef(world, n);
+  if (!ref || ref.type !== 'door') return;
+  const def = worldDoors(world)[ref.door], d = state.doors[ref.door], p = state.player;
+  if (!def.interact || d.open) return;
+  const dx = p.x - def.cx, dz = p.z - def.cz; // |dx|, |dz| <= 64*2400, so the squares stay below 2^36
+  if (dx * dx + dz * dz > REACH_MM * REACH_MM) return;
+  d.open = true;
+  events.push({ e: 'door', id: def.id, open: true });
+}
+
 /**
- * R-MOVE-4: push a circle out of solid cells. Three passes; each looks at the 3x3 cells around the
- * centre (rows outer, columns inner) and moves the centre to exactly r from the nearest point of
- * each solid cell it overlaps. A centre inside a solid cell goes back to where it was before the move.
- * Bounds (R-INT-2): |dx|, |dz| <= 2400 + r, so dx*r and d2 stay below 2^23.
+ * R-MOVE-4: push a circle out of solid cells, then out of props. Three passes; each looks at the
+ * 3x3 cells around the centre (rows outer, columns inner) and moves the centre to exactly r from the
+ * nearest point of each solid cell it overlaps. A centre inside a solid cell goes back to where it
+ * was before the move. Then every prop, in entity order.
+ * Bounds (R-INT-2): cells: |dx|, |dz| <= 2400 + r, so dx*r and d2 stay below 2^23. Props: |dx|, |dz|
+ * <= 64*2400, so d2 < 2^36; a push needs d2 < R^2 <= 910^2, so dx*R < 2^20.
  */
-function pushOut(world, e, r, ox, oz) {
+function pushOut(world, doors, e, r, ox, oz) {
+  const props = worldProps(world);
   for (let pass = 0; pass < 3; pass++) {
     const ci = fdiv(e.x, CELL_MM), cj = fdiv(e.z, CELL_MM);
     for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
       const gi = ci + di, gj = cj + dj;
-      if (!solidCell(world, gi, gj)) continue;
+      if (!solidCell(world, doors, gi, gj)) continue;
       const minx = gi * CELL_MM, minz = gj * CELL_MM;
       const qx = clamp(e.x, minx, minx + CELL_MM), qz = clamp(e.z, minz, minz + CELL_MM);
       const dx = e.x - qx, dz = e.z - qz, d2 = dx * dx + dz * dz;
       if (d2 === 0) { e.x = ox; e.z = oz; }
       else if (d2 < r * r) { const d = isqrt(d2); e.x = qx + idiv(dx * r, d); e.z = qz + idiv(dz * r, d); }
+    }
+    for (const o of props) {
+      if (o.circle) {
+        const dx = e.x - o.x, dz = e.z - o.z, d2 = dx * dx + dz * dz, rr = r + o.r;
+        if (d2 > 0 && d2 < rr * rr) { const d = isqrt(d2); e.x = o.x + idiv(dx * rr, d); e.z = o.z + idiv(dz * rr, d); }
+      } else {
+        const qx = clamp(e.x, o.x0, o.x1), qz = clamp(e.z, o.z0, o.z1);
+        const dx = e.x - qx, dz = e.z - qz, d2 = dx * dx + dz * dz;
+        if (d2 > 0 && d2 < r * r) { const d = isqrt(d2); e.x = qx + idiv(dx * r, d); e.z = qz + idiv(dz * r, d); }
+      }
     }
   }
 }
