@@ -1,0 +1,48 @@
+name: Differential fuzz
+
+# Spec §6.4 (point 2) and §15: random tombs and inputs through both sim cores, nightly and on every
+# change to either core. The M1 exit criterion is 0 mismatches over 10,000 cases.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  push:
+    branches: [main]
+    paths: ["public/js/sim/**", "src/Sim/**", "tests/fuzz/**", "tests/golden/generate.mjs"]
+  workflow_dispatch:
+    inputs:
+      cases:
+        description: "Number of cases"
+        default: "10000"
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, zlib
+          coverage: none
+      - run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      - run: composer install --no-interaction --no-progress
+      # Nightly: 10,000 cases from a different start each day; on a push: 2,000 from 0.
+      - name: Fuzz
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            node tests/fuzz/run.mjs --cases 10000 --start $(( $(date +%j) * 10000 ))
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            node tests/fuzz/run.mjs --cases ${{ inputs.cases }}
+          else
+            node tests/fuzz/run.mjs --cases 2000
+          fi

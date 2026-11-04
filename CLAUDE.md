@@ -30,6 +30,7 @@ node bin/build-gloamhollow-gdf.mjs       # rebuild dungeons/gloamhollow.gdf.json
 php bin/migrate.php status|up [--test]   # migrations (migrate user, not the app user)
 composer lint                            # php -l over the tree
 npm run e2e                              # Playwright: both walkthroughs (reference game and the Tombwright port)
+npm run fuzz -- --cases 10000            # differential fuzzer: random tombs + inputs, JS vs PHP (--case N reproduces one)
 ```
 
 Two walkthroughs play Gloamhollow from the stair to daylight in fixed 1/30 s ticks with rendering off:

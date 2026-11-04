@@ -66,7 +66,7 @@ const doors = [
 
 // A small closed room full of entities for the props fuzz: every prop kind (the sarcophagus turned),
 // an interact door and a trigger door on the north row, and an old slab on a plate.
-function propRoom() {
+export function propRoom() {
   const w = 12, h = 10, cells = new Uint8Array(w * h);
   for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) cells[j * w + i] = 1;
   cells[1 * w + 3] = 2; cells[1 * w + 8] = 2;   // door cells (corridor)
@@ -491,7 +491,7 @@ export function foeRoom(start = [2, 4]) {
 
 // The awake cap, the wake queue and a mixed group (R-FOE-4, R-FOE-8): the foe room with ten dormant crawlers in group
 // all, spawned on tick 0 (two must wait), and group mix (an asleep warden and a dormant crawler, never spawned).
-function crowdRoom() {
+export function crowdRoom() {
   const g = JSON.parse(foeRoom());
   g.entities = [
     ...Array.from({ length: 10 }, (_, k) => ({ id: 'q' + k, type: 'foe', kind: 'crawler', cell: [9 + (k % 5), 1 + ((k / 5) | 0)], start: 'dormant', group: 'all' })),

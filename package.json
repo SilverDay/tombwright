@@ -12,7 +12,8 @@
     "golden:regen": "node tests/golden/generate.mjs",
     "gen:sine": "node bin/gen-sine-table.mjs",
     "check:sim-purity": "node scripts/check-sim-purity.mjs",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "fuzz": "node tests/fuzz/run.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
