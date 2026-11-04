@@ -18,10 +18,10 @@ final class Links
     private const MAX_TRIGGERS = 16;
     private const MAX_MESSAGE_BYTES = 1000;
     private const EVENTS = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired'];
-    private const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'bellsSolved', 'linkActive'];
+    private const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'bellsSolved', 'beamHits', 'linkActive'];
     private const GATES = ['all', 'any', 'atLeast', 'sequence', 'not'];
     private const GATE_OPTS = ['all' => ['within'], 'any' => ['within'], 'atLeast' => ['k', 'within'], 'sequence' => ['within', 'strict', 'onWrong'], 'not' => []];
-    private const EFFECTS = ['openDoor', 'closeDoor', 'sealDoor', 'damage', 'message'];
+    private const EFFECTS = ['openDoor', 'closeDoor', 'sealDoor', 'reveal', 'hide', 'damage', 'message'];
     private const LINK_KEYS = ['id', 'when', 'do', 'undo', 'repeat', 'delay'];
 
     private static function bad(string $what): never
@@ -121,6 +121,8 @@ final class Links
                     self::bad('message');
                 }
                 $out[] = ['kind' => $kind, 'text' => $v];
+            } elseif ($kind === 'reveal' || $kind === 'hide') {
+                $out[] = ['kind' => $kind, 'item' => self::entity($v, $ctx, static fn (array $r): bool => $r['type'] === 'item' && $r['hidden'])['n']];
             } else {
                 $out[] = ['kind' => $kind, 'door' => self::entity($v, $ctx, static fn (array $r): bool => $r['type'] === 'door')['door']];
             }
@@ -167,7 +169,7 @@ final class Links
         $takeable = static fn (array $r): bool => $r['type'] === 'item' && $r['kind'] !== 'rubble';
         switch ($kind) {
             case 'interact':
-                return self::entity($v, $c['ctx'], static fn (array $r): bool => in_array($r['type'], ['door', 'item', 'bell'], true))['n'];
+                return self::entity($v, $c['ctx'], static fn (array $r): bool => in_array($r['type'], ['door', 'item', 'bell', 'lampHook', 'mirror'], true))['n'];
             case 'itemTaken':
             case 'hasItem':
                 return self::entity($v, $c['ctx'], $takeable)['n'];
@@ -183,6 +185,8 @@ final class Links
                 return self::linkRef($v, $c);
             case 'doorOpen':
                 return self::entity($v, $c['ctx'], static fn (array $r): bool => $r['type'] === 'door')['door'];
+            case 'beamHits':
+                return self::entity($v, $c['ctx'], static fn (array $r): bool => $r['type'] === 'crystal')['crystal'];
             case 'lanternHooded':
                 if (!is_bool($v)) {
                     self::bad('lanternHooded');

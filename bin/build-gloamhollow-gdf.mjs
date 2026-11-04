@@ -57,7 +57,7 @@ const VENT_PHASES = [0, 36, 72];
 // comes with the mirror puzzle; names stay client text for now (decision #23).
 const ITEMS = [
   ['chain', 'treasure', 35, 33, 60], ['coins', 'treasure', 14, 21, 40], ['censer', 'treasure', 33, 24, 150],
-  ['ring', 'treasure', 22, 8, 250],
+  ['ring', 'treasure', 22, 8, 250], ['opal', 'treasure', 41, 14, 300, true],
   ['f1', 'flask', 32, 57], ['f2', 'flask', 38, 26], ['f3', 'flask', 40, 20], ['f4', 'flask', 3, 23], ['f5', 'flask', 11, 23],
   ['rub1', 'rubble', 33, 35], ['rub2', 'rubble', 27, 1],
 ];
@@ -69,6 +69,11 @@ const BELLS = [
   { id: 'brown', cell: [19, 25], size: 2, patina: 1, note: 196 },
 ];
 const BELL_ORDER = ['green', 'brown', 'great'];
+// The Mirror Vault (Gloamhollow HOOK, MIRRORS, CRYSTAL; R-HOOK-*, R-MIRROR-*, R-BEAM-*). The beam leaves the hook
+// going east. Solution: A \, B \, C /, D \, E \.
+const HOOK = { id: 'hook', cell: [33, 14], dir: 'e' };
+const MIRRORS = [['A', 36, 14, '/'], ['B', 36, 18, '/'], ['C', 40, 18, '\\'], ['D', 40, 12, '/'], ['E', 38, 12, '/']];
+const CRYSTAL = { id: 'crystal', cell: [38, 12], wall: 'n' };
 // Links (R-LINK-*), with Gloamhollow's texts. Delays: 0.65 s and 0.9 s in ticks. The second failure's
 // wardens come with foes (link 3, step 5d).
 const LINKS = [
@@ -80,6 +85,8 @@ const LINKS = [
   { id: 5, when: { interact: 'script' }, do: [{ message: 'The door sinks into the floor. Cold air rises from somewhere far below.' }] },
   { id: 6, when: { interact: 'bell' }, repeat: true, do: [{ message: 'The bronze grate will not move. Something in this garden must raise it.' }] },
   { id: 7, when: { interact: 'vault' }, repeat: true, do: [{ message: 'The door has no handle and no keyhole. It does not move.' }] },
+  { id: 8, when: { beamHits: 'crystal' },
+    do: [{ openDoor: 'vault' }, { reveal: 'opal' }, { message: 'The beam strikes the crystal, which blazes like a small sun. With a deep grinding, the north door sinks into the floor, and in the glare something glints in a crack of the east wall.' }] },
 ];
 
 // Props (Gloamhollow buildProps addCircle/addBox), positions in mm. cx/cz = cell centre.
@@ -120,14 +127,18 @@ const gdf = {
   entities: [
     ...DOORS.map((d) => ({ id: d.id, type: 'door', cell: d.cell, style: d.style, opens: d.opens, ...(d.face ? { face: d.face } : {}) })),
     ...PRE_SLABS.map(([i, j], n) => ({ id: `slab${n + 1}`, type: 'slab', cell: [i, j] })),
-    ...ITEMS.map(([id, kind, i, j, value]) => ({ id, type: 'item', kind, cell: [i, j], ...(kind === 'treasure' ? { value } : {}) })),
+    ...ITEMS.map(([id, kind, i, j, value, hidden]) => ({ id, type: 'item', kind, cell: [i, j], ...(kind === 'treasure' ? { value } : {}), ...(hidden ? { hidden } : {}) })),
     { id: 'eyes', type: 'eyes', zone: 'gallery', wake: 30 },  // the Waking Eyes: 1.0 s (R-EYES-*)
     ...VENTS.map((i, n) => ({ id: `vent${n + 1}`, type: 'vent', cells: VENT_ROWS.map((j) => [i, j]), period: 108, phase: VENT_PHASES[n], warn: 27, fire: 33 })),
     ...PROPS.flatMap(([kind, x, z, yaw], n) => {
       const prop = { id: kind + PROPS.slice(0, n + 1).filter((p) => p[0] === kind).length, type: 'prop', kind, pos: [x, z], yaw };
       // The bells hang between the frame's posts and the plinth, as in Gloamhollow's obstacle list (push order).
-      return kind === 'plinth' ? [...BELLS.map((b) => ({ type: 'bell', ...b })), prop] : [prop];
+      if (kind === 'plinth') return [...BELLS.map((b) => ({ type: 'bell', ...b })), prop];
+      // The mirrors stand between the plinth and the lectern in Gloamhollow's obstacle list.
+      if (kind === 'lectern') return [...MIRRORS.map(([id, i, j, start]) => ({ id, type: 'mirror', cell: [i, j], start })), prop];
+      return [prop];
     }),
+    { type: 'lampHook', ...HOOK }, { type: 'crystal', ...CRYSTAL },
     { id: 'bells', type: 'bellSet', bells: BELLS.map((b) => b.id), order: BELL_ORDER.map((id) => BELLS.findIndex((b) => b.id === id)) },
   ],
   links: LINKS,

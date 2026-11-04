@@ -46,6 +46,11 @@ final class World
     private const KEYS_TREASURE = ['id', 'type', 'kind', 'cell', 'value'];
     private const KEYS_EYES = ['id', 'type', 'zone', 'wake'];
     private const KEYS_BELL = ['id', 'type', 'cell', 'size', 'patina', 'note'];
+    private const KEYS_HOOK = ['id', 'type', 'cell', 'dir'];
+    private const KEYS_MIRROR = ['id', 'type', 'cell', 'start'];
+    private const KEYS_CRYSTAL = ['id', 'type', 'cell', 'wall'];
+    /** R-BEAM-1: directions as [di, dj]. */
+    public const DIRS = ['n' => [0, -1], 'e' => [1, 0], 's' => [0, 1], 'w' => [-1, 0]];
     private const KEYS_BELL_SET = ['id', 'type', 'bells', 'order'];
     /** R-BELL-1, R-BELL-3: footprint radius and reach by size 1..3. */
     private const BELL_R = [470, 650, 830];
@@ -76,6 +81,9 @@ final class World
      * @param list<array{id:string,k:int,x:int,z:int,reach:int,set:int,index:int}> $bells
      * @param list<array{id:string,bells:list<int>,order:list<int>}> $bellSets
      * @param list<array<string,mixed>> $links compiled, ascending id
+     * @param list<array<string,mixed>> $hooks
+     * @param list<array<string,mixed>> $mirrors
+     * @param list<array<string,mixed>> $crystals
      */
     private function __construct(
         public readonly string $id,
@@ -99,6 +107,9 @@ final class World
         public readonly array $bells,
         public readonly array $bellSets,
         public readonly array $links,
+        public readonly array $hooks,
+        public readonly array $mirrors,
+        public readonly array $crystals,
     ) {
     }
 
@@ -295,6 +306,7 @@ final class World
             $id, $w, $h, $grid, $si, $sj, $ents['doorAt'], $ents['slab'], $ents['doors'], $ents['props'], $ents['refs'],
             $ents['ventAt'], $ents['vents'], $zs['zoneOf'], $zs['zones'], $zs['zoneOf'][$startK] ?? -1,
             $ents['items'], $ents['eyes'], $ents['bells'], $ents['bellSets'], $links,
+            $ents['hooks'], $ents['mirrors'], $ents['crystals'],
         );
     }
 
@@ -437,6 +449,9 @@ final class World
         $bells = [];
         $bellSets = [];
         $byId = [];
+        $hooks = [];
+        $mirrors = [];
+        $crystals = [];
         foreach ($list as $e) {
             if (!is_array($e) || array_is_list($e) || !is_string($e['id'] ?? null) || preg_match(self::ID_RE, $e['id']) !== 1) {
                 throw new \RangeException('entity id');
@@ -550,11 +565,16 @@ final class World
                 $refs[] = ['type' => 'vent'];
             } elseif ($type === 'item') {
                 $kind = $e['kind'] ?? null;
-                if (!self::hasExactKeys($e, $kind === 'treasure' ? self::KEYS_TREASURE : self::KEYS_ITEM)) {
+                $hidden = array_key_exists('hidden', $e);
+                $keys = array_merge($kind === 'treasure' ? self::KEYS_TREASURE : self::KEYS_ITEM, $hidden ? ['hidden'] : []);
+                if (!self::hasExactKeys($e, $keys)) {
                     throw new \RangeException('item keys');
                 }
                 if (!in_array($kind, self::ITEM_KINDS, true)) {
                     throw new \RangeException('item kind');
+                }
+                if ($hidden && ($e['hidden'] !== true || $kind === 'rubble')) {
+                    throw new \RangeException('item hidden');
                 }
                 if ($kind === 'treasure' && (!is_int($e['value']) || $e['value'] < 1 || $e['value'] > 100000)) {
                     throw new \RangeException('item value');
@@ -568,7 +588,7 @@ final class World
                 $off = $kind === 'rubble' ? 300 : 0;
                 $refs[] = ['type' => 'item', 'item' => count($items)];
                 $items[] = [
-                    'id' => $e['id'], 'kind' => $kind, 'k' => $k,
+                    'id' => $e['id'], 'kind' => $kind, 'hidden' => $hidden, 'k' => $k,
                     'x' => $ci * self::CELL_MM + intdiv(self::CELL_MM, 2) - $off, 'z' => $cj * self::CELL_MM + intdiv(self::CELL_MM, 2) - $off,
                     'reach' => $kind === 'rubble' ? 1600 : 1700,
                 ];
@@ -610,6 +630,48 @@ final class World
                 $props[] = ['circle' => true, 'x' => $x, 'z' => $z, 'r' => $r, 'x0' => $x - $r, 'x1' => $x + $r, 'z0' => $z - $r, 'z1' => $z + $r];
                 $refs[] = ['type' => 'bell', 'bell' => count($bells)];
                 $bells[] = ['id' => $e['id'], 'k' => $k, 'x' => $x, 'z' => $z, 'reach' => self::BELL_REACH[$e['size'] - 1], 'set' => -1, 'index' => -1];
+            } elseif ($type === 'lampHook' || $type === 'mirror' || $type === 'crystal') {
+                if (!self::hasExactKeys($e, $type === 'lampHook' ? self::KEYS_HOOK : ($type === 'mirror' ? self::KEYS_MIRROR : self::KEYS_CRYSTAL))) {
+                    throw new \RangeException($type . ' keys');
+                }
+                $k = self::cellIndex($e['cell'], $w, $h);
+                $code = ord($grid[$k]);
+                if ($code !== self::ROOM && $code !== self::CORR) {
+                    throw new \RangeException($type . ' cell');
+                }
+                [$ci, $cj] = $e['cell'];
+                $x = $ci * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                $z = $cj * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                if ($type === 'lampHook') {
+                    $d = is_string($e['dir']) ? (self::DIRS[$e['dir']] ?? null) : null;
+                    if ($d === null) {
+                        throw new \RangeException('lampHook dir');
+                    }
+                    $refs[] = ['type' => 'lampHook', 'hook' => count($hooks)];
+                    $hooks[] = ['id' => $e['id'], 'k' => $k, 'i' => $ci, 'j' => $cj, 'di' => $d[0], 'dj' => $d[1], 'x' => $x - 900 * $d[0], 'z' => $z - 900 * $d[1], 'reach' => 2200];
+                } elseif ($type === 'mirror') {
+                    if ($e['start'] !== '/' && $e['start'] !== '\\') {
+                        throw new \RangeException('mirror start');
+                    }
+                    foreach ($mirrors as $m) {
+                        if ($m['k'] === $k) {
+                            throw new \RangeException('two mirrors on one cell');
+                        }
+                    }
+                    $props[] = ['circle' => true, 'x' => $x, 'z' => $z, 'r' => 420, 'x0' => $x - 420, 'x1' => $x + 420, 'z0' => $z - 420, 'z1' => $z + 420];
+                    $refs[] = ['type' => 'mirror', 'mirror' => count($mirrors)];
+                    $mirrors[] = ['id' => $e['id'], 'k' => $k, 'x' => $x, 'z' => $z, 'reach' => 2150, 'start' => $e['start'] === '/' ? 0 : 1];
+                } else {
+                    $d = is_string($e['wall']) ? (self::DIRS[$e['wall']] ?? null) : null;
+                    if ($d === null) {
+                        throw new \RangeException('crystal wall');
+                    }
+                    if (ord($grid[($cj + $d[1]) * $w + $ci + $d[0]]) !== self::WALL) {
+                        throw new \RangeException('crystal not on a wall');
+                    }
+                    $refs[] = ['type' => 'crystal', 'crystal' => count($crystals)];
+                    $crystals[] = ['id' => $e['id'], 'k' => $k, 'di' => $d[0], 'dj' => $d[1]];
+                }
             } elseif ($type === 'bellSet') {
                 if (!self::hasExactKeys($e, self::KEYS_BELL_SET)) {
                     throw new \RangeException('bellSet keys');
@@ -632,7 +694,13 @@ final class World
             } else {
                 throw new \RangeException('unknown entity type');
             }
-            $byId[$e['id']] = $refs[count($refs) - 1] + ['n' => count($refs), 'kind' => $type === 'item' ? $e['kind'] : null];
+            $byId[$e['id']] = $refs[count($refs) - 1] + ['n' => count($refs), 'kind' => $type === 'item' ? $e['kind'] : null, 'hidden' => $type === 'item' && array_key_exists('hidden', $e)];
+        }
+        // R-HOOK-1, R-MIRROR-1: hooks and mirrors on free cells.
+        foreach (array_merge($hooks, $mirrors) as $x) {
+            if (isset($doorAt[$x['k']]) || isset($slab[$x['k']])) {
+                throw new \RangeException('hook or mirror cell taken');
+            }
         }
         // R-BELL-1, R-BELL-2: bells on free cells; every bell in exactly one set, named by bell id.
         foreach ($bells as $b) {
@@ -690,7 +758,8 @@ final class World
             }
         }
         return ['doorAt' => $doorAt, 'slab' => $slab, 'doors' => $doors, 'props' => $props, 'refs' => $refs, 'ventAt' => $ventAt, 'vents' => $vents, 'items' => $items, 'eyes' => $eyes,
-            'bells' => $bells, 'bellSets' => $bellSets, 'byId' => $byId];
+            'bells' => $bells, 'bellSets' => $bellSets, 'byId' => $byId,
+            'hooks' => $hooks, 'mirrors' => $mirrors, 'crystals' => $crystals];
     }
 
     /**

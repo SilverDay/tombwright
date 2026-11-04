@@ -42,3 +42,5 @@ Two real-time timers still sit in game logic and the walkthrough has to wait for
 Checkpoints, death and rising are done (R-CP-*, R-DEATH-*, R-RISE-1): Gloamhollow's `G` becomes the checkpoint's `life`, `L` becomes the lesson lists `sprung` and `pits`. The Sanctum checkpoint waits for the `setCheckpoint` effect (decision #20).
 
 Bells and wiring (step 5a): `ringBell` becomes `bell` / `bellSet` entities (R-BELL-*) and links (R-LINK-*): solved → grate after 27 ticks; wrong → 28 damage after 20 ticks (repeat). The second failure's wardens (`sequence` of two `bellsWrong`) come with foes in 5d. The locked-door and door-opening texts are `message` links on `interact`.
+
+Mirror Vault (step 5b): `HOOK`, `MIRRORS`, `CRYSTAL` become `lampHook`, `mirror` and `crystal` entities (R-HOOK-*, R-MIRROR-*, R-CRYSTAL-1); `buildBeam` becomes R-BEAM-1, traced from the state whenever `beamHits` is read; `solveMirrors` is link 8 (open the vault, reveal the hidden sun-opal, Gloamhollow's text). `G.hung` is `player.hung`; leaving the vault while it hangs is undone (R-HOOK-3). The crawlers that wake on the first hanging come with foes in 5d.

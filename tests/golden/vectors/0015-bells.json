@@ -1,6 +1,6 @@
 {
  "name": "0015-bells",
- "core": "m0.6",
+ "core": "m0.7",
  "seed": 15,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":12,\"h\":8,\"cells\":\"DQAHAQEAAgECAAcBAQACAQIABwEBAAIBAgAHAQECAgECAAcBAQACAQIABwEBAAIBDQA=\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"w\",\"name\":\"W\",\"rects\":[[1,1,7,6]],\"ceil\":5400},{\"id\":\"e\",\"name\":\"E\",\"rects\":[[9,1,2,6]],\"ceil\":4200,\"checkpoint\":{\"cell\":[9,4],\"yaw\":3072}}],\"entities\":[{\"id\":\"grate\",\"type\":\"door\",\"cell\":[8,4],\"style\":\"grate\",\"opens\":\"trigger\"},{\"id\":\"b1\",\"type\":\"bell\",\"cell\":[3,2],\"size\":1,\"patina\":2,\"note\":330},{\"id\":\"b2\",\"type\":\"bell\",\"cell\":[5,2],\"size\":2,\"patina\":1,\"note\":196},{\"id\":\"b3\",\"type\":\"bell\",\"cell\":[7,2],\"size\":3,\"patina\":0,\"note\":98},{\"id\":\"set\",\"type\":\"bellSet\",\"bells\":[\"b1\",\"b2\",\"b3\"],\"order\":[2,0,1]}],\"links\":[{\"id\":1,\"when\":{\"bellsSolved\":\"set\"},\"delay\":27,\"do\":[{\"openDoor\":\"grate\"},{\"message\":\"The grate rises.\"}]},{\"id\":2,\"when\":{\"bellsWrong\":\"set\"},\"repeat\":true,\"delay\":20,\"do\":[{\"damage\":28}]},{\"id\":3,\"when\":{\"sequence\":[{\"bellsWrong\":\"set\"},{\"bellsWrong\":\"set\"}]},\"do\":[{\"message\":\"Two wrongs.\"}]},{\"id\":4,\"when\":{\"enterZone\":\"e\"},\"delay\":30,\"do\":[{\"sealDoor\":\"grate\"}]},{\"id\":5,\"when\":{\"interact\":\"grate\"},\"repeat\":true,\"do\":[{\"message\":\"It will not move.\"}]}]}",
@@ -308,14 +308,14 @@
  "ticks": 600,
  "hashEvery": 300,
  "hashes": {
-  "0": "0a02a7651d12ee13f2c82f5b6ad4c1d2",
-  "300": "a86b934e01e10443ce081afb5debad12",
-  "600": "fbcdecb35247d09965e75b62179030da"
+  "0": "d7931abd0201923e4297c4f79d996bce",
+  "300": "8adc34951f8675b08763879014f44e0b",
+  "600": "fe88a86fd24c56984430b5389c3605d7"
  },
- "final": "fbcdecb35247d09965e75b62179030da",
+ "final": "fe88a86fd24c56984430b5389c3605d7",
  "finalState": {
   "v": 1,
-  "core": "m0.6",
+  "core": "m0.7",
   "world": "9b1ad0a2d813d0de3a03eda4eed8b5d0",
   "mode": "delve",
   "tick": 600,
@@ -338,6 +338,7 @@
    "calm": 151,
    "oil": 2952000,
    "hooded": false,
+   "hung": -1,
    "flasks": 1,
    "pebbles": 10,
    "probeCd": 0,
@@ -363,6 +364,8 @@
   "sealed": [
    0
   ],
+  "revealed": [],
+  "mirrors": [],
   "bellSets": [
    {
     "seq": [
@@ -430,8 +433,11 @@
      "hp": 3000,
      "oil": 3000000,
      "hooded": false,
+     "hung": -1,
      "flasks": 1,
      "pebbles": 10,
+     "revealed": [],
+     "mirrors": [],
      "doors": [
       false
      ],
@@ -501,8 +507,11 @@
      "hp": 2248,
      "oil": 2963680,
      "hooded": false,
+     "hung": -1,
      "flasks": 1,
      "pebbles": 10,
+     "revealed": [],
+     "mirrors": [],
      "doors": [
       true
      ],

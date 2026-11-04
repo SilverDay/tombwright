@@ -8,12 +8,12 @@ import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
 import {
   loadWorld, solidCell, assertWorld, worldProps, worldDoors, entityRef, cellCode, slabAt, ventAt, zoneAt, worldZones, startZone,
-  worldItems, worldEyes, sightBlocked, worldBells, worldBellSets, worldLinks,
+  worldItems, worldEyes, sightBlocked, worldBells, worldBellSets, worldLinks, worldHooks, worldMirrors, worldCrystals,
   CELL, DOOR_FULL, DOOR_STEP, DOOR_CLOSE_STEP,
 } from './world.js';
 import { runLinks, initLinkState, copyLinkState } from './links.js';
 
-export const CORE_VERSION = 'm0.6';
+export const CORE_VERSION = 'm0.7';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -77,7 +77,7 @@ export function init(world, seed, mode) {
       x: cellCentre(ci), z: cellCentre(cj),
       vx: 0, vz: 0, rx: 0, rz: 0,   // velocity mm/s; sub-mm remainders in 1/30 mm (R-MOVE-3)
       yaw: 0, pitch: 0,
-      hp: HP_FULL, calm: CALM_MAX, oil: 100 * OIL_UNIT, hooded: false, // R-HP-1
+      hp: HP_FULL, calm: CALM_MAX, oil: 100 * OIL_UNIT, hooded: false, hung: -1, // R-HP-1, R-HOOK-1
       flasks: 1, pebbles: 10, probeCd: 0, pebbleCd: 0, // R-OIL-3, R-PEB-1, R-TOOL-2
     },
     doors: worldDoors(world).map(() => ({ open: false, t: 0 })), // R-DOOR-2
@@ -93,6 +93,8 @@ export function init(world, seed, mode) {
     eyes: worldEyes(world).map(() => 0), // R-EYES-1
     zone: startZone(world),  // R-ZONE-3
     sealed: [],              // R-DOOR-5 (a lesson)
+    revealed: [],            // R-LINK-8: hidden items revealed, by entity number
+    mirrors: worldMirrors(world).map((m) => m.start), // R-MIRROR-1
     bellSets: worldBellSets(world).map(() => ({ seq: [], solved: false })), // R-BELL-2
     links: initLinkState(worldLinks(world)),                               // R-LINK-4
     checkpoints: [],        // R-CP-1
@@ -107,7 +109,8 @@ export function init(world, seed, mode) {
 function lifeOf(state) {
   const p = state.player;
   return {
-    hp: p.hp, oil: p.oil, hooded: p.hooded, flasks: p.flasks, pebbles: p.pebbles,
+    hp: p.hp, oil: p.oil, hooded: p.hooded, hung: p.hung, flasks: p.flasks, pebbles: p.pebbles,
+    revealed: state.revealed.slice(), mirrors: state.mirrors.slice(),
     doors: state.doors.map((d) => d.open), floor: state.floor.map((f) => ({ x: f.x, z: f.z })), taken: state.taken.slice(),
     bellSets: copyBellSets(state.bellSets), links: copyLinkState(state.links),
   };
@@ -166,6 +169,7 @@ function links(world, state, batch, events) {
         case 'hasItem': return state.taken.includes(arg);
         case 'lanternHooded': return p.hooded === arg;
         case 'bellsSolved': return state.bellSets[arg].solved;
+        case 'beamHits': return beamHits(world, state, arg);
         case 'linkActive': return state.links[worldLinks(world).findIndex((l) => l.id === arg)].active;
       }
       throw new Error('cond');
@@ -175,6 +179,8 @@ function links(world, state, batch, events) {
       for (const fx of list) {
         if (fx.kind === 'message') { events.push({ e: 'message', text: fx.text }); continue; }
         if (fx.kind === 'damage') { hurt(state, fx.n, events); changed = true; if (state.dead !== null) return true; continue; }
+        if (fx.kind === 'reveal') { if (!state.revealed.includes(fx.item)) { state.revealed.push(fx.item); changed = true; } continue; }
+        if (fx.kind === 'hide') { const at = state.revealed.indexOf(fx.item); if (at >= 0) { state.revealed.splice(at, 1); changed = true; } continue; }
         const d = state.doors[fx.door], id = doors[fx.door].id, sealed = state.sealed.includes(fx.door);
         if (fx.kind === 'openDoor') {
           if (!sealed && !d.open) { d.open = true; changed = true; events.push({ e: 'door', id, open: true }); }
@@ -213,7 +219,8 @@ function live(world, state, input, pressed, events, batch) {
 
   // R-TOOL-1: tool presses, in button order, from where the player stood before moving.
   if (pressed & BTN.hood) {
-    if (p.oil > 0) { p.hooded = !p.hooded; events.push({ e: 'hood', on: p.hooded }); } // R-OIL-2
+    if (p.hung >= 0) events.push({ e: 'msg', k: 'lanternHung' });                     // R-HOOK-2
+    else if (p.oil > 0) { p.hooded = !p.hooded; events.push({ e: 'hood', on: p.hooded }); } // R-OIL-2
     else events.push({ e: 'msg', k: 'lanternOut' });
   }
   if (pressed & BTN.probe) probe(world, state, events);
@@ -241,6 +248,13 @@ function live(world, state, input, pressed, events, batch) {
   const ox = p.x, oz = p.z;
   p.x += dx; p.z += dz;
   pushOut(world, state, p, PLAYER_R_MM, ox, oz);
+  if (p.hung >= 0) {                                    // R-HOOK-3: the lantern holds you to its zone
+    const hz = zoneAt(world, worldHooks(world)[p.hung].k);
+    if (zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM)) !== hz) {
+      p.x = ox; p.z = oz; p.vx = 0; p.vz = 0; p.rx = 0; p.rz = 0;
+      events.push({ e: 'msg', k: 'lanternHung' });
+    }
+  }
   moveDoors(state);
   checkpoint(world, state, events);
   const zNow = zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM)); // R-ZONE-3
@@ -370,7 +384,7 @@ function wakeEyes(world, state, events) {
   const eyes = worldEyes(world);
   if (eyes.length === 0) return false;
   const p = state.player, z = zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM));
-  const lit = p.oil > 0 && !p.hooded;
+  const lit = p.oil > 0 && !p.hooded && p.hung < 0;
   let woke = false;
   eyes.forEach((ey, n) => {
     if (z === ey.zone && lit) {
@@ -398,6 +412,7 @@ function lineOfSight(world, state, ix, iz) {
 function takeItem(world, state, n, it, events, batch) {
   const p = state.player;
   if (it.kind === 'rubble' ? p.pebbles >= PEBBLE_MAX : state.taken.includes(n)) return;
+  if (it.hidden && !state.revealed.includes(n)) return; // R-ITEM-1
   const dx = p.x - it.x, dz = p.z - it.z; // squares < 2^36
   if (dx * dx + dz * dz > it.reach * it.reach || !lineOfSight(world, state, it.x, it.z)) return;
   batch.push(['interact', n]);
@@ -468,6 +483,9 @@ function rise(world, state, target, events) {
   state.links = copyLinkState(life.links);
   p.oil = Math.max(life.oil, RISE_OIL);
   p.hooded = life.hooded;
+  p.hung = life.hung;
+  state.revealed = life.revealed.slice();
+  state.mirrors = life.mirrors.slice();
   p.flasks = life.flasks;
   p.pebbles = life.pebbles;
   state.floor = life.floor.map((f) => ({ x: f.x, z: f.z }));
@@ -486,6 +504,8 @@ function interact(world, state, n, events, batch) {
   const ref = entityRef(world, n);
   if (ref && ref.type === 'item') { takeItem(world, state, n, worldItems(world)[ref.item], events, batch); return; }
   if (ref && ref.type === 'bell') { ringBell(world, state, n, worldBells(world)[ref.bell], events, batch); return; }
+  if (ref && ref.type === 'lampHook') { useHook(world, state, n, ref.hook, events, batch); return; }
+  if (ref && ref.type === 'mirror') { turnMirror(world, state, n, ref.mirror, events, batch); return; }
   if (!ref || ref.type !== 'door') return;
   const def = worldDoors(world)[ref.door], d = state.doors[ref.door], p = state.player;
   if (d.open) return;
@@ -495,6 +515,42 @@ function interact(world, state, n, events, batch) {
   if (!def.interact || state.sealed.includes(ref.door)) return;
   d.open = true;
   events.push({ e: 'door', id: def.id, open: true });
+}
+
+/** R-HOOK-2 */
+function useHook(world, state, n, h, events, batch) {
+  const p = state.player, hook = worldHooks(world)[h], dx = p.x - hook.x, dz = p.z - hook.z; // squares < 2^36
+  if (dx * dx + dz * dz > hook.reach * hook.reach || !lineOfSight(world, state, hook.x, hook.z)) return;
+  batch.push(['interact', n]);
+  if (p.hung === h) p.hung = -1;
+  else if (p.hung >= 0) return;
+  else if (p.oil > 0) { p.hung = h; p.hooded = false; }
+  else { events.push({ e: 'msg', k: 'lanternOut' }); return; }
+  events.push({ e: 'hook', id: hook.id, hung: p.hung === h });
+}
+
+/** R-MIRROR-2 */
+function turnMirror(world, state, n, mi, events, batch) {
+  const p = state.player, m = worldMirrors(world)[mi], dx = p.x - m.x, dz = p.z - m.z; // squares < 2^36
+  if (dx * dx + dz * dz > m.reach * m.reach || !lineOfSight(world, state, m.x, m.z)) return;
+  batch.push(['interact', n]);
+  state.mirrors[mi] = 1 - state.mirrors[mi];
+  events.push({ e: 'mirror', id: m.id, turn: state.mirrors[mi] });
+}
+
+/** R-BEAM-1, R-BEAM-2: does the hung lantern's beam end on crystal c? */
+function beamHits(world, state, c) {
+  const h = state.player.hung;
+  if (h < 0) return false;
+  const hook = worldHooks(world)[h], mirrors = worldMirrors(world), cr = worldCrystals(world)[c];
+  let i = hook.i, j = hook.j, di = hook.di, dj = hook.dj;
+  for (let n = 0; n < 80; n++) {
+    if (solidCell(world, state, i + di, j + dj)) return j * world.w + i === cr.k && di === cr.di && dj === cr.dj;
+    i += di; j += dj;
+    const k = j * world.w + i, m = mirrors.findIndex((x) => x.k === k);
+    if (m >= 0) [di, dj] = state.mirrors[m] === 0 ? [-dj, -di] : [dj, di];
+  }
+  return false;
 }
 
 /** R-BELL-3 */

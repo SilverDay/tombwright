@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { ROOT, loadCore } from './lib/load.mjs';
-import { replay, GLOAMHOLLOW, expand, trapRoom, toolRoom } from '../golden/generate.mjs';
+import { replay, GLOAMHOLLOW, expand, trapRoom, toolRoom, mirrorRoom } from '../golden/generate.mjs';
 import { solidCell, b64decode, worldProps, DOOR_FULL } from '../../public/js/sim/world.js';
 const utf8 = (t) => new TextEncoder().encode(t);
 import { fdiv } from '../../public/js/sim/int.js';
@@ -261,4 +261,27 @@ test('eyes: an open flame wakes them in 18 ticks; hooding cools them by 7 a tick
   run([[1, {}], [1, { buttons: BT.hood }], [17, {}]]);
   assert.equal(log.filter((e) => e.e === 'death').map((e) => e.cause).join(), 'eyes');
   assert.equal(st.eyes[0], 90);
+});
+
+test('a hidden item can only be taken once revealed (R-ITEM-1, decision #33)', () => {
+  const world = Sim.load(utf8(mirrorRoom())), st = Sim.init(world, 1, 'delve');
+  const take = () => Sim.step(world, st, { move: [0, 0], yaw: 0, pitch: 0, buttons: Sim.BTN.interact, target: 5 });
+  const rest = () => Sim.step(world, st, { move: [0, 0], yaw: 0, pitch: 0, buttons: 0, target: 0 });
+  st.player.x = 14000; st.player.z = 3600; st.zone = 0;   // 1.6 m from the gem at (6, 1)
+  assert.deepEqual(take(), []);
+  rest();
+  st.revealed = [5];
+  assert.deepEqual(take(), [{ e: 'item', id: 'gem', kind: 'treasure' }]);
+  assert.deepEqual(st.taken, [5]);
+});
+
+test('the Mirror Vault: Gloamhollow\'s solution opens the vault and reveals the sun-opal', () => {
+  const world = Sim.load(utf8(GLOAMHOLLOW)), st = Sim.init(world, 1, 'delve'), g = JSON.parse(GLOAMHOLLOW);
+  const num = (id) => g.entities.findIndex((e) => e.id === id) + 1;
+  st.player.x = 33 * 2400 + 1200; st.player.z = 14 * 2400 + 1200; st.zone = g.zones.findIndex((z) => z.id === 'vault');
+  st.mirrors = [1, 1, 0, 1, 1];                           // A \\, B \\, C /, D \\, E \\
+  const ev = Sim.step(world, st, { move: [0, 0], yaw: 0, pitch: 0, buttons: Sim.BTN.interact, target: num('hook') });
+  assert.ok(ev.some((e) => e.e === 'link' && e.id === 8));
+  assert.equal(st.doors[g.entities.filter((e) => e.type === 'door').findIndex((e) => e.id === 'vault')].open, true);
+  assert.deepEqual(st.revealed, [num('opal')]);
 });

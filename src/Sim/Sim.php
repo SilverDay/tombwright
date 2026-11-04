@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.6';
+    public const CORE_VERSION = 'm0.7';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -103,7 +103,7 @@ final class Sim
                 'x' => self::cellCentre($ci), 'z' => self::cellCentre($cj),
                 'vx' => 0, 'vz' => 0, 'rx' => 0, 'rz' => 0,
                 'yaw' => 0, 'pitch' => 0,
-                'hp' => self::HP_FULL, 'calm' => self::CALM_MAX, 'oil' => 100 * self::OIL_UNIT, 'hooded' => false, // R-HP-1
+                'hp' => self::HP_FULL, 'calm' => self::CALM_MAX, 'oil' => 100 * self::OIL_UNIT, 'hooded' => false, 'hung' => -1, // R-HP-1, R-HOOK-1
                 'flasks' => 1, 'pebbles' => 10, 'probeCd' => 0, 'pebbleCd' => 0, // R-OIL-3, R-PEB-1, R-TOOL-2
             ],
             'doors' => array_map(static fn (): array => ['open' => false, 't' => 0], $world->doors), // R-DOOR-2
@@ -119,6 +119,8 @@ final class Sim
             'eyes' => array_map(static fn (): int => 0, $world->eyes), // R-EYES-1
             'zone' => $world->startZone, // R-ZONE-3
             'sealed' => [],       // R-DOOR-5 (a lesson)
+            'revealed' => [],     // R-LINK-8
+            'mirrors' => array_map(static fn (array $m): int => $m['start'], $world->mirrors), // R-MIRROR-1
             'bellSets' => array_map(static fn (): array => ['seq' => [], 'solved' => false], $world->bellSets), // R-BELL-2
             'links' => Links::initState($world->links), // R-LINK-4
             'checkpoints' => [],  // R-CP-1
@@ -141,7 +143,8 @@ final class Sim
     {
         $p = $state['player'];
         return [
-            'hp' => $p['hp'], 'oil' => $p['oil'], 'hooded' => $p['hooded'], 'flasks' => $p['flasks'], 'pebbles' => $p['pebbles'],
+            'hp' => $p['hp'], 'oil' => $p['oil'], 'hooded' => $p['hooded'], 'hung' => $p['hung'], 'flasks' => $p['flasks'], 'pebbles' => $p['pebbles'],
+            'revealed' => $state['revealed'], 'mirrors' => $state['mirrors'],
             'doors' => array_map(static fn (array $d): bool => $d['open'], $state['doors']),
             'floor' => $state['floor'], 'taken' => $state['taken'],
             'bellSets' => $state['bellSets'], 'links' => $state['links'],
@@ -260,6 +263,21 @@ final class Sim
                 $events[] = ['e' => 'message', 'text' => $fx['text']];
                 continue;
             }
+            if ($fx['kind'] === 'reveal') {
+                if (!in_array($fx['item'], $state['revealed'], true)) {
+                    $state['revealed'][] = $fx['item'];
+                    $changed = true;
+                }
+                continue;
+            }
+            if ($fx['kind'] === 'hide') {
+                $at = array_search($fx['item'], $state['revealed'], true);
+                if ($at !== false) {
+                    array_splice($state['revealed'], $at, 1);
+                    $changed = true;
+                }
+                continue;
+            }
             if ($fx['kind'] === 'damage') {
                 self::hurt($state, $fx['n'], $events);
                 $changed = true;
@@ -312,6 +330,8 @@ final class Sim
                 return $p['hooded'] === $arg;
             case 'bellsSolved':
                 return $state['bellSets'][$arg]['solved'];
+            case 'beamHits':
+                return self::beamHits($world, $state, $arg);
             case 'linkActive':
                 foreach ($world->links as $n => $l) {
                     if ($l['id'] === $arg) {
@@ -336,7 +356,9 @@ final class Sim
         $p['pitch'] = $input['pitch'];
         // R-TOOL-1: tool presses, in button order, from where the player stood before moving.
         if ($pressed & self::BTN_HOOD) {
-            if ($p['oil'] > 0) { // R-OIL-2
+            if ($p['hung'] >= 0) { // R-HOOK-2
+                $events[] = ['e' => 'msg', 'k' => 'lanternHung'];
+            } elseif ($p['oil'] > 0) { // R-OIL-2
                 $p['hooded'] = !$p['hooded'];
                 $events[] = ['e' => 'hood', 'on' => $p['hooded']];
             } else {
@@ -384,6 +406,18 @@ final class Sim
         $p['x'] += $dx;
         $p['z'] += $dz;
         self::pushOut($world, $state, $p, self::PLAYER_R_MM, $ox, $oz);
+        if ($p['hung'] >= 0) { // R-HOOK-3: the lantern holds you to its zone
+            $hz = $world->zoneAt($world->hooks[$p['hung']]['k']);
+            if ($world->zoneAt(IntMath::fdiv($p['z'], self::CELL_MM) * $world->w + IntMath::fdiv($p['x'], self::CELL_MM)) !== $hz) {
+                $p['x'] = $ox;
+                $p['z'] = $oz;
+                $p['vx'] = 0;
+                $p['vz'] = 0;
+                $p['rx'] = 0;
+                $p['rz'] = 0;
+                $events[] = ['e' => 'msg', 'k' => 'lanternHung'];
+            }
+        }
         unset($p);
         self::moveDoors($state);
         self::checkpoint($world, $state, $events);
@@ -671,7 +705,7 @@ final class Sim
         }
         $p = $state['player'];
         $z = $world->zoneAt(IntMath::fdiv($p['z'], self::CELL_MM) * $world->w + IntMath::fdiv($p['x'], self::CELL_MM));
-        $lit = $p['oil'] > 0 && !$p['hooded'];
+        $lit = $p['oil'] > 0 && !$p['hooded'] && $p['hung'] < 0;
         foreach ($world->eyes as $n => $ey) {
             if ($z === $ey['zone'] && $lit) {
                 if ($state['eyes'][$n] === 0) {
@@ -729,6 +763,9 @@ final class Sim
     {
         $p = $state['player'];
         if ($it['kind'] === 'rubble' ? $p['pebbles'] >= self::PEBBLE_MAX : in_array($n, $state['taken'], true)) {
+            return;
+        }
+        if ($it['hidden'] && !in_array($n, $state['revealed'], true)) { // R-ITEM-1
             return;
         }
         $dx = $p['x'] - $it['x'];
@@ -881,12 +918,15 @@ final class Sim
         }
         unset($d);
         $state['bellSets'] = $life['bellSets'];
+        $state['revealed'] = $life['revealed'];
+        $state['mirrors'] = $life['mirrors'];
         $state['links'] = $life['links'];
         $p = &$state['player'];
         $p['hp'] = self::HP_FULL;
         $p['calm'] = self::CALM_MAX;
         $p['oil'] = max($life['oil'], self::RISE_OIL);
         $p['hooded'] = $life['hooded'];
+        $p['hung'] = $life['hung'];
         $p['flasks'] = $life['flasks'];
         $p['pebbles'] = $life['pebbles'];
         $p['x'] = $c['x'];
@@ -924,6 +964,14 @@ final class Sim
             self::ringBell($world, $state, $n, $world->bells[$ref['bell']], $events, $batch);
             return;
         }
+        if ($ref !== null && $ref['type'] === 'lampHook') {
+            self::useHook($world, $state, $n, $ref['hook'], $events, $batch);
+            return;
+        }
+        if ($ref !== null && $ref['type'] === 'mirror') {
+            self::turnMirror($world, $state, $n, $ref['mirror'], $events, $batch);
+            return;
+        }
         if ($ref === null || $ref['type'] !== 'door') {
             return;
         }
@@ -943,6 +991,94 @@ final class Sim
         }
         $state['doors'][$ref['door']]['open'] = true;
         $events[] = ['e' => 'door', 'id' => $def['id'], 'open' => true];
+    }
+
+    /**
+     * R-HOOK-2
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     * @param list<array{string,int}> $batch
+     */
+    private static function useHook(World $world, array &$state, int $n, int $h, array &$events, array &$batch): void
+    {
+        $hook = $world->hooks[$h];
+        $dx = $state['player']['x'] - $hook['x'];
+        $dz = $state['player']['z'] - $hook['z'];
+        if ($dx * $dx + $dz * $dz > $hook['reach'] * $hook['reach'] || !self::lineOfSight($world, $state, $hook['x'], $hook['z'])) {
+            return;
+        }
+        $batch[] = ['interact', $n];
+        $p = &$state['player'];
+        if ($p['hung'] === $h) {
+            $p['hung'] = -1;
+        } elseif ($p['hung'] >= 0) {
+            unset($p);
+            return;
+        } elseif ($p['oil'] > 0) {
+            $p['hung'] = $h;
+            $p['hooded'] = false;
+        } else {
+            unset($p);
+            $events[] = ['e' => 'msg', 'k' => 'lanternOut'];
+            return;
+        }
+        $events[] = ['e' => 'hook', 'id' => $hook['id'], 'hung' => $p['hung'] === $h];
+        unset($p);
+    }
+
+    /**
+     * R-MIRROR-2
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     * @param list<array{string,int}> $batch
+     */
+    private static function turnMirror(World $world, array &$state, int $n, int $mi, array &$events, array &$batch): void
+    {
+        $m = $world->mirrors[$mi];
+        $dx = $state['player']['x'] - $m['x'];
+        $dz = $state['player']['z'] - $m['z'];
+        if ($dx * $dx + $dz * $dz > $m['reach'] * $m['reach'] || !self::lineOfSight($world, $state, $m['x'], $m['z'])) {
+            return;
+        }
+        $batch[] = ['interact', $n];
+        $state['mirrors'][$mi] = 1 - $state['mirrors'][$mi];
+        $events[] = ['e' => 'mirror', 'id' => $m['id'], 'turn' => $state['mirrors'][$mi]];
+    }
+
+    /**
+     * R-BEAM-1, R-BEAM-2: does the hung lantern's beam end on crystal c?
+     *
+     * @param array<string,mixed> $state
+     */
+    private static function beamHits(World $world, array $state, int $c): bool
+    {
+        $h = $state['player']['hung'];
+        if ($h < 0) {
+            return false;
+        }
+        $hook = $world->hooks[$h];
+        $cr = $world->crystals[$c];
+        $i = $hook['i'];
+        $j = $hook['j'];
+        $di = $hook['di'];
+        $dj = $hook['dj'];
+        for ($n = 0; $n < 80; $n++) {
+            if ($world->solidCell($state, $i + $di, $j + $dj)) {
+                return $j * $world->w + $i === $cr['k'] && $di === $cr['di'] && $dj === $cr['dj'];
+            }
+            $i += $di;
+            $j += $dj;
+            $k = $j * $world->w + $i;
+            foreach ($world->mirrors as $m => $mir) {
+                if ($mir['k'] === $k) {
+                    [$di, $dj] = $state['mirrors'][$m] === 0 ? [-$dj, -$di] : [$dj, $di];
+                    break;
+                }
+            }
+        }
+        return false;
     }
 
     /**

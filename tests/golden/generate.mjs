@@ -34,11 +34,11 @@ const walk = [
 
 // Fuzz: random inputs from the sim's own RNG (seeded), so the vector itself is reproducible.
 // Targets run past the end of the entity list on purpose (R-ENT-3: unknown numbers do nothing).
-function fuzz(seed, ticks, targets = 32) {
+function fuzz(seed, ticks, targets = 32, speed = 127) {
   const r = rngSeed(seed), rle = [];
   while (rle.reduce((a, [n]) => a + n, 0) < ticks) {
     const n = 1 + rngBelow(r, 40);
-    const inp = I([rngBelow(r, 255) - 127, rngBelow(r, 255) - 127], rngBelow(r, 4096), rngBelow(r, 256), rngBelow(r, 255) - 127, rngBelow(r, targets));
+    const inp = I([rngBelow(r, 2 * speed + 1) - speed, rngBelow(r, 2 * speed + 1) - speed], rngBelow(r, 4096), rngBelow(r, 256), rngBelow(r, 255) - 127, rngBelow(r, targets));
     rle.push([n, inp]);
   }
   return rle;
@@ -324,6 +324,54 @@ const bells = [
   [20, I([0,0], 0, 0, 0, 0)],
 ];
 
+// The lamp hook and mirrors (R-HOOK-*, R-MIRROR-*, R-BEAM-*, R-ITEM-1 hidden). A 12x8 room in two zones: v (cols
+// 1-6, start 2, 4) and o (cols 7-10). Hook (1, 3) shining east; mirror m1 (4, 3) starts \\ (beam south onto m2
+// (4, 5) /, then west into the wall); turned to /, the beam goes north and ends on the crystal (4, 1, north wall).
+// Links: the beam reveals the gem (6, 1) once; another link says on/off while it hits (undo).
+export function mirrorRoom(start = [2, 4]) {
+  const w = 12, h = 8, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  return JSON.stringify({
+    gdf: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: start },
+    zones: [{ id: 'v', name: 'V', rects: [[1, 1, 6, 6]], ceil: 4600 }, { id: 'o', name: 'O', rects: [[7, 1, 4, 6]], ceil: 4200 }],
+    entities: [
+      { id: 'hook', type: 'lampHook', cell: [1, 3], dir: 'e' },
+      { id: 'm1', type: 'mirror', cell: [4, 3], start: '\\' },
+      { id: 'm2', type: 'mirror', cell: [4, 5], start: '/' },
+      { id: 'cr', type: 'crystal', cell: [4, 1], wall: 'n' },
+      { id: 'gem', type: 'item', kind: 'treasure', cell: [6, 1], value: 50, hidden: true },
+    ],
+    links: [
+      { id: 1, when: { beamHits: 'cr' }, do: [{ reveal: 'gem' }, { message: 'lit' }] },
+      { id: 2, when: { beamHits: 'cr' }, repeat: true, do: [{ message: 'on' }], undo: [{ message: 'off' }] },
+    ],
+  });
+}
+
+// The mirror room by hand: hang the lantern, turn m1 three times (on, off, on), try to walk into o (held back),
+// fetch the lantern (beam off), take the revealed gem, walk into o.
+const mirrors = [
+  [30, I([127,0], 512, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 1)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [55, I([127,0], 3072, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 2)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 2)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 2)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [100, I([127,0], 3072, 0, 0, 0)],
+  [130, I([127,0], 1024, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 1)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [70, I([127,0], 3584, 0, 0, 0)],
+  [60, I([127,0], 3072, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 5)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [40, I([127,0], 3072, 0, 0, 0)],
+];
+
 // Vectors carry the GDF as its exact text: Sim.load takes bytes (R-GDF-0).
 export const GLOAMHOLLOW = readFileSync(ROOT + 'dungeons/gloamhollow.gdf.json', 'utf8');
 const utf8 = (s) => new TextEncoder().encode(s);
@@ -347,6 +395,9 @@ const VECTORS = {
   '0017-links-fuzz-2': { gdf: linkRoom(2), seed: 17, mode: 'practice', inputs: fuzz(0x2222, 8000, 12) },
   '0018-links-fuzz-3': { gdf: linkRoom(3), seed: 18, mode: 'delve', inputs: fuzz(0x3333, 8000, 12) },
   '0019-links-fuzz-4': { gdf: linkRoom(4), seed: 19, mode: 'practice', inputs: fuzz(0x4444, 8000, 12) },
+  '0020-mirrors': { gdf: mirrorRoom(), seed: 20, mode: 'delve', inputs: mirrors },
+  '0021-mirrors-fuzz': { gdf: mirrorRoom(), seed: 21, mode: 'delve', inputs: fuzz(0x3170, 9000, 7) },
+  '0022-mirrors-practice-fuzz': { gdf: mirrorRoom([1, 3]), seed: 22, mode: 'practice', inputs: fuzz(0x3171, 9000, 4, 30) }, // slow, near the hook
 };
 
 export function replay(gdf, seed, mode, rle, each) {
@@ -398,7 +449,7 @@ function gdfCases() {
     raw('not an object', utf8('[1,2]')), raw('null', utf8('null')), raw('trailing garbage', utf8(text(r) + 'x')),
     raw('too large', utf8(text(r).replace('"gdf":1', '"gdf":1,"pad":"' + 'a'.repeat(262144) + '"'))),
   ];
-  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw));
+  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw), ...mirrorCases(raw));
   return cases.map((c) => { try { return { ...c, ok: true, id: Sim.load(b64decodeBytes(c.bytes)).id }; } catch { return { ...c, ok: false }; } });
 }
 
@@ -590,6 +641,31 @@ function linkCases(raw) {
     one('bells: same bell twice', set('set', { bells: ['b1', 'b1', 'b2'] })), one('bells: order not permutation', set('set', { order: [0, 0, 1] })),
     one('bells: order short', set('set', { order: [0, 1] })), one('bells: order 3', set('set', { order: [0, 1, 3] })), one('bells: one bell', set('set', { bells: ['b1'], order: [0] })),
     one('bells: bell id number', set('set', { bells: ['b1', 'b2', 3] })), one('bells: set before bells ok', (g) => { g.entities.unshift(g.entities.pop()); }),
+  ];
+}
+
+// Hooks, mirrors, crystals, hidden items (R-HOOK-1, R-MIRROR-1, R-CRYSTAL-1, R-ITEM-1, R-LINK-2/3): edits of the mirror room.
+function mirrorCases(raw) {
+  const base = JSON.parse(mirrorRoom());
+  const one = (name, f) => { const g = structuredClone(base); f(g); return raw(name, utf8(JSON.stringify(g))); };
+  const ent = (id) => (g) => g.entities.find((e) => e.id === id);
+  const set = (id, o) => (g) => Object.assign(ent(id)(g), o);
+  const W = (when, o = {}) => (g) => { g.links = [{ id: 9, do: [{ message: 'x' }], ...o, when }]; };
+  return [
+    one('mirrors: room', () => {}),
+    one('mirrors: hook dir x', set('hook', { dir: 'x' })), one('mirrors: hook dir number', set('hook', { dir: 1 })), one('mirrors: hook dir __proto__', set('hook', { dir: '__proto__' })),
+    one('mirrors: hook no dir', (g) => { delete ent('hook')(g).dir; }), one('mirrors: hook extra key', set('hook', { r: 1 })), one('mirrors: hook on wall', set('hook', { cell: [0, 3] })),
+    one('mirrors: hook on start', set('hook', { cell: [2, 4] })),
+    one('mirrors: start x', set('m1', { start: 'x' })), one('mirrors: start backslash ok', set('m1', { start: '\\' })), one('mirrors: start number', set('m1', { start: 0 })),
+    one('mirrors: two on one cell', set('m2', { cell: [4, 3] })), one('mirrors: on start', set('m1', { cell: [2, 4] })), one('mirrors: on wall', set('m1', { cell: [11, 3] })),
+    one('mirrors: crystal wall e', set('cr', { wall: 'e' })), one('mirrors: crystal wall bad', set('cr', { wall: 'up' })),
+    one('mirrors: crystal at the border ok', set('cr', { cell: [1, 1], wall: 'w' })), one('mirrors: crystal facing floor', set('cr', { cell: [4, 3], wall: 'n' })), one('mirrors: mirror on the crystal cell ok', set('m2', { cell: [4, 1] })),
+    one('mirrors: hidden false', set('gem', { hidden: false })), one('mirrors: hidden rubble', (g) => { g.entities.push({ id: 'r1', type: 'item', kind: 'rubble', cell: [8, 4], hidden: true }); g.links = []; }),
+    one('mirrors: hidden flask ok', (g) => { g.entities.push({ id: 'f1', type: 'item', kind: 'flask', cell: [8, 4], hidden: true }); }),
+    one('mirrors: reveal unhidden item', (g) => { g.entities.push({ id: 'f1', type: 'item', kind: 'flask', cell: [8, 4] }); g.links[0].do = [{ reveal: 'f1' }]; }),
+    one('mirrors: hide ok', W({ beamHits: 'cr' }, { do: [{ hide: 'gem' }] })), one('mirrors: reveal door', W({ beamHits: 'cr' }, { do: [{ reveal: 'hook' }] })),
+    one('mirrors: beamHits mirror', W({ beamHits: 'm1' })), one('mirrors: beamHits number', W({ beamHits: 1 })),
+    one('mirrors: interact hook ok', W({ interact: 'hook' })), one('mirrors: interact mirror ok', W({ interact: 'm1' })), one('mirrors: interact crystal', W({ interact: 'cr' })),
   ];
 }
 

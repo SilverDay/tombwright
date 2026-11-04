@@ -32,6 +32,7 @@ const KEYS = {
   slab: ['id', 'type', 'cell'], prop: ['id', 'type', 'kind', 'pos', 'yaw'],
   vent: ['id', 'type', 'cells', 'period', 'phase', 'warn', 'fire'],
   item: ['id', 'type', 'kind', 'cell'], treasure: ['id', 'type', 'kind', 'cell', 'value'],
+  lampHook: ['id', 'type', 'cell', 'dir'], mirror: ['id', 'type', 'cell', 'start'], crystal: ['id', 'type', 'cell', 'wall'],
   eyes: ['id', 'type', 'zone', 'wake'],
   bell: ['id', 'type', 'cell', 'size', 'patina', 'note'], bellSet: ['id', 'type', 'bells', 'order'],
   zone: ['id', 'name', 'rects', 'ceil'], zoneCp: ['id', 'name', 'rects', 'ceil', 'checkpoint'],
@@ -40,6 +41,9 @@ const KEYS = {
 const ITEM_KINDS = ['flask', 'rubble', 'treasure'];
 // R-BELL-1, R-BELL-3: by size 1..3, the footprint radius and the extra reach (Gloamhollow r + 0.05 m and 2 m + r).
 const BELL_R = [470, 650, 830], BELL_REACH = [2420, 2600, 2780];
+// R-BEAM-1: directions n, e, s, w as (di, dj).
+export const DIRS = Object.freeze({ n: Object.freeze([0, -1]), e: Object.freeze([1, 0]), s: Object.freeze([0, 1]), w: Object.freeze([-1, 0]) });
+const dirOf = (v) => (typeof v === 'string' && Object.hasOwn(DIRS, v) ? DIRS[v] : undefined);
 const DOOR_STYLES = ['stone', 'grate', 'mask'], DOOR_OPENS = ['interact', 'trigger'], MASK_FACES = ['weep', 'laugh', 'sleep', 'blank'];
 
 // The decoded grid and entity tables of each genuine world. Kept out of the frozen world object so
@@ -234,7 +238,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
   if (!Array.isArray(list) || list.length > MAX_ENTITIES) throw new RangeError('entities');
   const ids = new Set(), doorAt = new Int16Array(w * h).fill(-1), slab = new Uint8Array(w * h);
   const doors = [], props = [], refs = [], vents = [], ventAt = new Int16Array(w * h).fill(-1), items = [], eyes = [];
-  const bells = [], bellSets = [], byId = new Map();
+  const bells = [], bellSets = [], byId = new Map(), hooks = [], mirrors = [], crystals = [];
   for (const e of list) {
     if (!isObj(e) || typeof e.id !== 'string' || !ID_RE.test(e.id)) throw new RangeError('entity id');
     if (ids.has(e.id)) throw new RangeError('duplicate entity id');
@@ -289,14 +293,17 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       vents.push(Object.freeze({ period, phase, warn, fire }));
       refs.push({ type: 'vent' });
     } else if (e.type === 'item') {
-      if (!hasExactKeys(e, e.kind === 'treasure' ? KEYS.treasure : KEYS.item)) throw new RangeError('item keys');
+      const hidden = Object.hasOwn(e, 'hidden');
+      const keys = (e.kind === 'treasure' ? KEYS.treasure : KEYS.item).concat(hidden ? ['hidden'] : []);
+      if (!hasExactKeys(e, keys)) throw new RangeError('item keys');
       if (!ITEM_KINDS.includes(e.kind)) throw new RangeError('item kind');
+      if (hidden && (e.hidden !== true || e.kind === 'rubble')) throw new RangeError('item hidden');
       if (e.kind === 'treasure' && (!isInt(e.value) || e.value < 1 || e.value > 100000)) throw new RangeError('item value');
       const k = cellIndex(e.cell, w, h);
       if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR && grid[k] !== CELL.BRIDGE) throw new RangeError('item cell');
       const [ci, cj] = e.cell, off = e.kind === 'rubble' ? 300 : 0;
       refs.push({ type: 'item', item: items.length });
-      items.push(Object.freeze({ id: e.id, kind: e.kind, k, x: ci * CELL_MM + CELL_MM / 2 - off, z: cj * CELL_MM + CELL_MM / 2 - off, reach: e.kind === 'rubble' ? 1600 : 1700 }));
+      items.push(Object.freeze({ id: e.id, kind: e.kind, hidden, k, x: ci * CELL_MM + CELL_MM / 2 - off, z: cj * CELL_MM + CELL_MM / 2 - off, reach: e.kind === 'rubble' ? 1600 : 1700 }));
     } else if (e.type === 'eyes') {
       if (!hasExactKeys(e, KEYS.eyes)) throw new RangeError('eyes keys');
       const zi = typeof e.zone === 'string' ? zoneIds.indexOf(e.zone) : -1;
@@ -315,6 +322,29 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       props.push(Object.freeze({ circle: true, x, z, r, x0: x - r, x1: x + r, z0: z - r, z1: z + r }));
       refs.push({ type: 'bell', bell: bells.length });
       bells.push({ id: e.id, k, x, z, reach: BELL_REACH[e.size - 1], set: -1, index: -1 });
+    } else if (e.type === 'lampHook' || e.type === 'mirror' || e.type === 'crystal') {
+      if (!hasExactKeys(e, KEYS[e.type])) throw new RangeError(e.type + ' keys');
+      const k = cellIndex(e.cell, w, h);
+      if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR) throw new RangeError(e.type + ' cell');
+      const [ci, cj] = e.cell, x = ci * CELL_MM + CELL_MM / 2, z = cj * CELL_MM + CELL_MM / 2;
+      if (e.type === 'lampHook') {
+        const d = dirOf(e.dir);
+        if (d === undefined) throw new RangeError('lampHook dir');
+        refs.push({ type: 'lampHook', hook: hooks.length });
+        hooks.push(Object.freeze({ id: e.id, k, i: ci, j: cj, di: d[0], dj: d[1], x: x - 900 * d[0], z: z - 900 * d[1], reach: 2200 }));
+      } else if (e.type === 'mirror') {
+        if (e.start !== '/' && e.start !== '\\') throw new RangeError('mirror start');
+        if (mirrors.some((m) => m.k === k)) throw new RangeError('two mirrors on one cell');
+        props.push(Object.freeze({ circle: true, x, z, r: 420, x0: x - 420, x1: x + 420, z0: z - 420, z1: z + 420 }));
+        refs.push({ type: 'mirror', mirror: mirrors.length });
+        mirrors.push(Object.freeze({ id: e.id, k, x, z, reach: 2150, start: e.start === '/' ? 0 : 1 }));
+      } else {
+        const d = dirOf(e.wall);
+        if (d === undefined) throw new RangeError('crystal wall');
+        if (grid[(cj + d[1]) * w + ci + d[0]] !== CELL.WALL) throw new RangeError('crystal not on a wall');
+        refs.push({ type: 'crystal', crystal: crystals.length });
+        crystals.push(Object.freeze({ id: e.id, k, di: d[0], dj: d[1] }));
+      }
     } else if (e.type === 'bellSet') {
       if (!hasExactKeys(e, KEYS.bellSet)) throw new RangeError('bellSet keys');
       if (!Array.isArray(e.bells) || e.bells.length < 2 || e.bells.length > 5 || !e.bells.every((b) => typeof b === 'string')) throw new RangeError('bellSet bells');
@@ -323,10 +353,12 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       refs.push({ type: 'bellSet', set: bellSets.length });
       bellSets.push({ id: e.id, names: e.bells.slice(), order: Object.freeze(e.order.slice()) });
     } else throw new RangeError('unknown entity type');
-    byId.set(e.id, { ...refs[refs.length - 1], n: refs.length, kind: e.type === 'item' ? e.kind : undefined });
+    byId.set(e.id, { ...refs[refs.length - 1], n: refs.length, kind: e.type === 'item' ? e.kind : undefined, hidden: e.type === 'item' && Object.hasOwn(e, 'hidden') });
   }
   // R-BELL-1, R-BELL-2: bells on free cells; every bell in exactly one set, named by bell id.
   for (const b of bells) if (doorAt[b.k] >= 0 || slab[b.k]) throw new RangeError('bell cell taken');
+  // R-HOOK-1, R-MIRROR-1: hooks and mirrors on free cells.
+  for (const x of [...hooks, ...mirrors]) if (doorAt[x.k] >= 0 || slab[x.k]) throw new RangeError('hook or mirror cell taken');
   bellSets.forEach((set, si) => {
     set.bells = set.names.map((name, i) => {
       const r = byId.get(name);
@@ -352,6 +384,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
   }
   return {
     byId, bells: Object.freeze(bells.map(Object.freeze)),
+    hooks: Object.freeze(hooks), mirrors: Object.freeze(mirrors), crystals: Object.freeze(crystals),
     bellSets: Object.freeze(bellSets.map((b) => Object.freeze({ id: b.id, bells: Object.freeze(b.bells), order: b.order }))),
     doorAt, slab, ventAt, vents: Object.freeze(vents), items: Object.freeze(items), eyes: Object.freeze(eyes), doors: Object.freeze(doors), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
 }
@@ -393,6 +426,11 @@ export function ventAt(world, k) { const W = GRIDS.get(world), v = W.ventAt[k]; 
 export function zoneAt(world, k) { return GRIDS.get(world).zoneOf[k]; }
 export function worldZones(world) { return GRIDS.get(world).zones; }
 export function startZone(world) { return GRIDS.get(world).startZone; }
+
+/** R-HOOK-*, R-MIRROR-*, R-CRYSTAL-1: lamp hooks, mirrors and crystals, in entity order (frozen). */
+export function worldHooks(world) { return GRIDS.get(world).hooks; }
+export function worldMirrors(world) { return GRIDS.get(world).mirrors; }
+export function worldCrystals(world) { return GRIDS.get(world).crystals; }
 
 /** R-BELL-*, R-LINK-*: bells, bell sets and the compiled links (frozen). */
 export function worldBells(world) { return GRIDS.get(world).bells; }

@@ -390,6 +390,17 @@
    "value": 250
   },
   {
+   "id": "opal",
+   "type": "item",
+   "kind": "treasure",
+   "cell": [
+    41,
+    14
+   ],
+   "value": 300,
+   "hidden": true
+  },
+  {
    "id": "f1",
    "type": "item",
    "kind": "flask",
@@ -718,6 +729,51 @@
    "yaw": 0
   },
   {
+   "id": "A",
+   "type": "mirror",
+   "cell": [
+    36,
+    14
+   ],
+   "start": "/"
+  },
+  {
+   "id": "B",
+   "type": "mirror",
+   "cell": [
+    36,
+    18
+   ],
+   "start": "/"
+  },
+  {
+   "id": "C",
+   "type": "mirror",
+   "cell": [
+    40,
+    18
+   ],
+   "start": "\\"
+  },
+  {
+   "id": "D",
+   "type": "mirror",
+   "cell": [
+    40,
+    12
+   ],
+   "start": "/"
+  },
+  {
+   "id": "E",
+   "type": "mirror",
+   "cell": [
+    38,
+    12
+   ],
+   "start": "/"
+  },
+  {
    "id": "lectern1",
    "type": "prop",
    "kind": "lectern",
@@ -736,6 +792,24 @@
     75600
    ],
    "yaw": 0
+  },
+  {
+   "type": "lampHook",
+   "id": "hook",
+   "cell": [
+    33,
+    14
+   ],
+   "dir": "e"
+  },
+  {
+   "type": "crystal",
+   "id": "crystal",
+   "cell": [
+    38,
+    12
+   ],
+   "wall": "n"
   },
   {
    "id": "bells",
@@ -827,6 +901,23 @@
    "do": [
     {
      "message": "The door has no handle and no keyhole. It does not move."
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "when": {
+    "beamHits": "crystal"
+   },
+   "do": [
+    {
+     "openDoor": "vault"
+    },
+    {
+     "reveal": "opal"
+    },
+    {
+     "message": "The beam strikes the crystal, which blazes like a small sun. With a deep grinding, the north door sinks into the floor, and in the glare something glints in a crack of the east wall."
     }
    ]
   }
