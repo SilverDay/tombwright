@@ -65,6 +65,8 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 58 | 2026-11-04 | **Bestiary tuning (Q12):** `bestiary.v1.json` ships with the §4.9.1 conversion as it stands; any retuning goes into `bestiary.v2` (old dungeons keep the version they were proven with). | Owner |
 | 59 | 2026-11-04 | **Lantern Delve source:** the owner adds Lantern Delve's source under `reference/lantern-delve/`; its foes' sprites, sounds and timings are ported from it, as Gloamhollow's were. | Owner |
 | 60 | 2026-11-04 | **Lantern Delve reference licence:** `reference/lantern-delve/LanternDelve.html` is MIT, © 2026 SilverDay Media. Its foe names and base stats come from Rogue 5.4 (BSD); Rogue's notice ships with the foes that use them (spec §4.9.5). | Owner |
+| 61 | 2026-11-04 | **Step 7 split (M1, Lantern Delve's foes):** 7a all 26 foes in `bestiary.v1` with the plain fighters, fliers, flitting and regeneration; 7b touch powers (aquator, ice monster, flytrap, medusa, rattlesnake, vampire); 7c thieves and tricks (leprechaun, nymph, orc, wraith, phantom, xeroc); 7d projectiles (dragon) and the Warden. Each with the rules, both cores, vectors, parity review and the client's sprites and sounds. One commit and core version each. | Owner |
+| 62 | 2026-11-04 | **Mixed groups** (spec §4.9.5, picked at publish time) come with publishing in M3; M1 has only explicitly placed foes. | Owner |
 
 ## Still open (spec §17)
 

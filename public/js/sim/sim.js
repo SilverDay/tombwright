@@ -13,7 +13,7 @@ import {
 } from './world.js';
 import { runLinks, initLinkState, copyLinkState } from './links.js';
 
-export const CORE_VERSION = 'm0.11';
+export const CORE_VERSION = 'm0.12';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -136,7 +136,7 @@ function freshBoss(def) {
 
 /** R-FOE-3: a foe as it starts (or comes back, R-FOE-8). */
 function freshFoe(def, st) {
-  return { st, x: def.x, z: def.z, hp: def.kind.strikes, t: 0, atk: def.kind.firstAttack, stun: 0, wake: false, gx: -1, gz: -1 };
+  return { st, x: def.x, z: def.z, hp: def.kind.strikes, t: 0, atk: def.kind.firstAttack, stun: 0, wake: false, gx: -1, gz: -1, rg: 0, ft: 0, fa: 0 };
 }
 
 function copyBellSets(b) { return b.map((x) => ({ seq: x.seq.slice(), solved: x.solved })); }
@@ -517,7 +517,8 @@ function noise(world, state, x, z, range, kind, events) {
     if (dx * dx + dz * dz > range * range) return;
     if (f.st === 'asleep') requestWake(world, state, n, events);
     else if (f.st === 'idle') {
-      if (kind === 'pebble') { f.gx = x; f.gz = z; f.t = 300; } else { f.st = 'hunting'; f.t = 0; f.gx = -1; f.gz = -1; foeEvent(world, n, 'hunting', events); }
+      // R-FOE-7: a landing pebble is a goal, except for the flytrap (speed 0), which takes none.
+      if (kind === 'pebble') { if (worldFoes(world)[n].kind.speed > 0) { f.gx = x; f.gz = z; f.t = 300; } } else { f.st = 'hunting'; f.t = 0; f.gx = -1; f.gz = -1; foeEvent(world, n, 'hunting', events); }
     }
   });
 }
@@ -550,9 +551,11 @@ function landBlow(world, state, n, events, batch) {
   if (f.st === 'dead') return;
   f.hp -= 1; f.stun = STUN;
   if (f.st === 'asleep') requestWake(world, state, n, events);
-  const dx = f.x - p.x, dz = f.z - p.z, d = Math.max(1, isqrt(dx * dx + dz * dz)); // squares < 2^36
-  f.x += idiv(dx * KNOCKBACK, d); f.z += idiv(dz * KNOCKBACK, d);
-  pushOut(world, state, f, def.kind.radius, f.x, f.z, false, !def.kind.fly);
+  if (def.kind.speed > 0) {                             // R-STRIKE-2: the flytrap isn't knocked back
+    const dx = f.x - p.x, dz = f.z - p.z, d = Math.max(1, isqrt(dx * dx + dz * dz)); // squares < 2^36
+    f.x += idiv(dx * KNOCKBACK, d); f.z += idiv(dz * KNOCKBACK, d);
+    pushOut(world, state, f, def.kind.radius, f.x, f.z, false, !def.kind.fly);
+  }
   events.push({ e: 'hit', id: def.id, hp: f.hp });
   if (f.hp > 0) return;
   f.st = 'dead'; f.wake = false;
@@ -592,9 +595,15 @@ function field(world, state, fly) {
 }
 
 /** Move foe f towards (gx, gz) at its speed for one tick. */
-function walkTo(f, speed, gx, gz) {
+function walkTo(f, speed, gx, gz, flit) {
   const ex = gx - f.x, ez = gz - f.z, e = Math.max(1, isqrt(ex * ex + ez * ez)); // squares < 2^36; ex·speed < 2^31
-  f.x += idiv(ex * speed, 30 * e); f.z += idiv(ez * speed, 30 * e);
+  if (flit === null) { f.x += idiv(ex * speed, 30 * e); f.z += idiv(ez * speed, 30 * e); return; }
+  drift(f, speed, idiv(ex * TRIG_ONE, e) + flit[0], idiv(ez * TRIG_ONE, e) + flit[1]); // |ex·2^14| < 2^32
+}
+
+/** R-FOE-10: move along v (scaled by 2^14) at the kind's speed; |vx·speed| < 2^15·4500 < 2^28. */
+function drift(f, speed, vx, vz) {
+  f.x += idiv(vx * speed, 30 * TRIG_ONE); f.z += idiv(vz * speed, 30 * TRIG_ONE);
 }
 
 /** R-FOE-6 */
@@ -609,6 +618,11 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
   if (defs.length === 0) return;
   if (!wasBusy && (input.buttons & BTN.run) && (input.move[0] !== 0 || input.move[1] !== 0)) noise(world, state, p.x, p.z, NOISE_RUN, 'run', events);
   state.foes.forEach((f, n) => { if (f.wake && awakeCount(state) < MAX_AWAKE) requestWake(world, state, n, events); }); // R-FOE-4
+  state.foes.forEach((f, n) => {                       // R-FOE-11
+    const kind = defs[n].kind;
+    if (kind.regen === 0 || f.st === 'dormant' || f.st === 'dead') return;
+    if (f.hp < kind.strikes) { f.rg += 1; if (f.rg === kind.regen) { f.hp += 1; f.rg = 0; } } else f.rg = 0;
+  });
   const lit = p.oil > 0 && !p.hooded && p.hung < 0, sight = lit ? SIGHT_LIT : SIGHT_DARK;
   const fields = { walk: null, fly: null };
   const pi = fdiv(p.x, CELL_MM), pj = fdiv(p.z, CELL_MM);
@@ -628,9 +642,16 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
       continue;
     }
     if (f.stun > 0) continue;
+    let flit = null, moved = false, wound = false;
+    if (kind.flit === 1) {                                // R-FOE-10
+      if (f.ft > 0) f.ft -= 1;
+      if (f.ft === 0) { f.ft = 8 + rngBelow(state.rng, 9); f.fa = rngBelow(state.rng, 4096); }
+      flit = [idiv(9 * icos(f.fa), 10), idiv(9 * isin(f.fa), 10)];
+    }
+    const still = kind.speed === 0;                       // R-FOE-6: the flytrap never moves
     if (f.st === 'hunting') {
       const d = Math.max(1, isqrt(dx * dx + dz * dz));
-      if (d < kind.reach && f.atk === 0) { f.t = kind.wind; }
+      if (d < kind.reach && f.atk === 0) { f.t = kind.wind; wound = true; }
       else if (d > idiv(3 * kind.reach, 4)) {
         const fi = fdiv(f.x, CELL_MM), fj = fdiv(f.z, CELL_MM);
         let gx = -1, gz = -1;
@@ -647,12 +668,14 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
             }
           }
         }
-        if (gx >= 0) walkTo(f, kind.speed, gx, gz);
+        if (gx >= 0) { walkTo(f, kind.speed, gx, gz, flit); moved = true; }
       }
     } else {                                              // idle
-      const sx = f.x - p.x, sz = f.z - p.z;
-      if (sx * sx + sz * sz <= sight * sight && losFrom(world, state, f.x, f.z, p.x, p.z)) {
+      const sx = f.x - p.x, sz = f.z - p.z, see = still ? kind.reach : sight; // R-FOE-7
+      if (sx * sx + sz * sz <= see * see && losFrom(world, state, f.x, f.z, p.x, p.z)) {
         f.st = 'hunting'; f.t = 0; f.gx = -1; f.gz = -1; foeEvent(world, n, 'hunting', events);
+      } else if (still) {
+        // no goal: it never moves
       } else if (f.gx < 0) {
         if (f.t > 0) f.t -= 1;
         if (f.t === 0) {
@@ -662,11 +685,13 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
           else { const k = cells[rngBelow(state.rng, cells.length)]; f.gx = (k % world.w) * CELL_MM + CELL_MM / 2; f.gz = ((k - (k % world.w)) / world.w) * CELL_MM + CELL_MM / 2; f.t = 300; }
         }
       } else {
-        walkTo(f, kind.speed, f.gx, f.gz);
+        walkTo(f, kind.speed, f.gx, f.gz, flit); moved = true;
         f.t -= 1;
         if ((fdiv(f.x, CELL_MM) === fdiv(f.gx, CELL_MM) && fdiv(f.z, CELL_MM) === fdiv(f.gz, CELL_MM)) || f.t <= 0) { f.gx = -1; f.gz = -1; f.t = 30 + rngBelow(state.rng, 61); }
       }
     }
+    if (flit !== null && !moved && !wound) drift(f, kind.speed, flit[0], flit[1]); // R-FOE-10
+    if (still) continue;
     // Separation from the other foes, then the walls and props.
     for (let m = 0; m < defs.length; m++) {
       const o = state.foes[m];

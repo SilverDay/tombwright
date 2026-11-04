@@ -108,7 +108,10 @@ export const TOMB_TEXT = {
   },
 };
 
-export const FOE_NAMES = { warden: 'a bone gardener', crawler: 'a gloam crawler' };
+import { DELVE_NAMES } from './delve-art.js';
+const article = (n) => (/^[aeiou]/.test(n) ? 'an ' : 'a ') + n;
+// Gloamhollow's two, then Lantern Delve's names (its `warden` is the Warden of the Deep, a boss, not a foe kind here).
+export const FOE_NAMES = { ...Object.fromEntries(Object.entries(DELVE_NAMES).filter(([k]) => k !== 'warden').map(([k, n]) => [k, article(n)])), warden: 'a bone gardener', crawler: 'a gloam crawler' };
 export const FLASK_NAME = 'a flask of lamp oil';
 export const READ_LABEL = { plaque: 'Read the plaque', carving: 'Read the carving', scrawl: 'Read the scratches on the wall', stele: 'Read the stele', book: 'Read the book', look: 'Look closer' };
 export const FACE_NAME = { weep: 'weeping', laugh: 'laughing', sleep: 'sleeping', blank: 'blank' };

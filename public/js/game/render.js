@@ -6,6 +6,7 @@
 // "legacy" falloff and π scale, so the tomb looks as it did.
 import * as THREE from '../vendor/three/three.module.js';
 import * as TX from './textures.js';
+import { DELVE_ART, DELVE_H } from './delve-art.js';
 
 const S = 2.4, EYE = 1.62, MM = 1 / 1000;
 const TAU = Math.PI * 2;
@@ -420,11 +421,17 @@ export class TombView {
     });
     // foes and the boss
     this.T.foeKinds = this.byType('foe').map((f) => f.kind);
+    // Gloamhollow's bone gardener (`warden`) and gloam crawler keep their sprites; Lantern Delve's 26 use its pixel art.
+    this.delveTex = {};
     for (const f of this.byType('foe')) {
-      const crawler = f.kind === 'crawler', hgt = crawler ? 0.62 : 1.75, s = this.makeSprite(this.TEXS[crawler ? 'crawler' : 'warden'] ?? this.TEXS.warden, hgt);
+      const crawler = f.kind === 'crawler', gloam = crawler || f.kind === 'warden';
+      const hgt = gloam ? (crawler ? 0.62 : 1.75) : DELVE_H[f.kind] ?? 1.5;
+      const tx = gloam ? this.TEXS[f.kind] : (this.delveTex[f.kind] ??= this.tex(DELVE_ART[f.kind], true, true));
+      const s = this.makeSprite(tx, hgt);
       s.material.transparent = true; s.material.alphaTest = 0.05; s.visible = false;
       let glow = null; if (crawler) { glow = new THREE.Sprite(M.eyeGlow.clone()); glow.material.opacity = 0.55; glow.scale.set(0.22, 0.22, 1); this.ents.add(glow); }
-      E.foes.push({ def: f, s, glow, h: hgt, min: crawler ? 0.22 : 0.3, crawler, ph: f.cell[0] * 1.3 + f.cell[1], flash: 0, hp: -1, deadT: -1 });
+      const fly = this.T.bestiary(f.kind)?.mover === 'fly';
+      E.foes.push({ def: f, s, glow, h: hgt, min: crawler ? 0.22 : 0.3, crawler, fly, ph: f.cell[0] * 1.3 + f.cell[1], flash: 0, hp: -1, deadT: -1 });
     }
     const bd = this.byType('boss')[0];
     if (bd) {
@@ -664,7 +671,9 @@ export class TombView {
       const dx = px - x, dz = pz - z, d = Math.hypot(dx, dz) || 1;
       const wind = f.t > 0 && f.st === 'hunting' && kind ? f.t : 0;
       const lunge = wind ? (1 - wind / Math.max(1, kind.wind)) * 0.25 : 0;
-      s.position.set(x + dx / d * lunge, F.crawler ? Math.abs(Math.sin(t * 9 + F.ph)) * 0.04 : 0, z + dz / d * lunge);
+      // Lantern Delve's fliers hover 0.7 m up and bob.
+      const y = F.fly ? 0.7 + (this.reduced ? 0 : Math.sin(t * 3 + F.ph) * 0.12) : F.crawler ? Math.abs(Math.sin(t * 9 + F.ph)) * 0.04 : 0;
+      s.position.set(x + dx / d * lunge, y, z + dz / d * lunge);
       const b = Math.max(F.min, this.lightAt(x, 0.9, z));
       if (F.flash > 0) s.material.color.setRGB(2.2, 0.8, 0.7); else if (wind) s.material.color.setRGB(b * 1.35, b * 1.1, b); else s.material.color.setScalar(b);
       if (f.st === 'asleep') s.material.color.setScalar(b * 0.8);

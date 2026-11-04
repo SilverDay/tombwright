@@ -3,8 +3,8 @@
 import { sha256Hex } from './sha256.js';
 
 export const BESTIARY_VERSION = 1;
-export const BESTIARY_SHA256 = 'be0276708112bbe96049a97638a6182d66d11699d497a304a1ac65bfcb301b25';
-const FIELDS = ['tier', 'strikes', 'damage', 'speed', 'radius', 'reach', 'wind', 'cooldown', 'rise', 'firstAttack'];
+export const BESTIARY_SHA256 = '4ec12a4f269299c5af032dce0196373f8dd729bd372bb692a1ffcb8ed439b04e';
+const FIELDS = ['tier', 'strikes', 'damage', 'speed', 'radius', 'reach', 'wind', 'cooldown', 'rise', 'firstAttack', 'regen', 'flit'];
 
 const BOSS_FIELDS = ['strikes', 'damage', 'oilHit', 'radius', 'speed', 'speed2', 'wakeAtk', 'wind', 'hitRange', 'windRange', 'seekWindRange',
   'stop', 'reel', 'feed', 'feed2', 'feedReach', 'feedCd', 'phase2Atk', 'phase2FeedCd', 'atk', 'atk2', 'tearWind', 'solidRange', 'drainRange', 'drain', 'drain2'];

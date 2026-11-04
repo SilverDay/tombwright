@@ -489,6 +489,30 @@ export function foeRoom(start = [2, 4]) {
   });
 }
 
+// Lantern Delve's plain fighters (R-FOE-1, R-FOE-10, R-FOE-11, decision #61): a flitting bat and a kestrel over a pit row,
+// a regenerating troll and griffin, a still flytrap by the start, a snake, a zombie and an emu; budget 1+1+16+25+16+1+4+1 = 65.
+export function delveRoom(start = [3, 4]) {
+  const w = 16, h = 10, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  for (let i = 6; i <= 9; i++) set(i, 5, 5);
+  set(11, 2, 3); set(12, 7, 4);
+  return JSON.stringify({
+    gdf: 1, bestiary: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: start },
+    zones: [{ id: 'd', name: 'D', rects: [[1, 1, 14, 8]], ceil: 5000 }],
+    entities: [
+      { id: 'bat', type: 'foe', kind: 'bat', cell: [8, 2], start: 'hunting' },
+      { id: 'kes', type: 'foe', kind: 'kestrel', cell: [12, 4], start: 'idle' },
+      { id: 'tro', type: 'foe', kind: 'troll', cell: [13, 2], start: 'asleep' },
+      { id: 'gri', type: 'foe', kind: 'griffin', cell: [13, 7], start: 'idle' },
+      { id: 'fly', type: 'foe', kind: 'flytrap', cell: [4, 4], start: 'idle' },
+      { id: 'sna', type: 'foe', kind: 'snake', cell: [2, 7], start: 'asleep' },
+      { id: 'zom', type: 'foe', kind: 'zombie', cell: [10, 8], start: 'dormant', group: 'dead' },
+      { id: 'emu', type: 'foe', kind: 'emu', cell: [2, 2], start: 'idle' },
+    ],
+    links: [{ id: 1, when: { foesDefeated: 'fly' }, do: [{ spawnFoes: 'dead' }, { message: 'the flytrap falls' }] }],
+  });
+}
+
 // The awake cap, the wake queue and a mixed group (R-FOE-4, R-FOE-8): the foe room with ten dormant crawlers in group
 // all, spawned on tick 0 (two must wait), and group mix (an asleep warden and a dormant crawler, never spawned).
 export function crowdRoom() {
@@ -607,6 +631,10 @@ const VECTORS = {
     return [[40, I([127, 0], 0)], ...['verseText', 'torch1', 'masons', 'decor1', 'stairText'].flatMap((id) => [[1, I([0, 0], 0, B.interact, 0, n(id))], [2, I()]]),
       [30, I([127, 0], 1024)], [1, I([0, 0], 0, B.interact, 0, n('verseText'))], [60, I([127, 0], 0, B.run)]];
   })() },
+  // Strike the flytrap from beside it (it never moves or flinches), then fight what comes, then run.
+  '0036-delve-fight': { gdf: delveRoom(), seed: 36, mode: 'practice', inputs: [[400, I([0, 0], 3072, B.strike)], [200, I([0, 0], 1024, B.strike)], [300, I([127, 0], 0, B.strike)], [300, I([127, 30], 2048, B.run)], [1, I([0, 0], 0, B.rise)], [400, I([0, 0], 3072, B.strike)]] },
+  '0037-delve-fuzz': { gdf: delveRoom(), seed: 37, mode: 'delve', inputs: fuzz(0xDE17E, 9000, 11) },
+  '0038-delve-practice-fuzz': { gdf: delveRoom([12, 4]), seed: 38, mode: 'practice', inputs: fuzz(0xDE17F, 9000, 11, 60) },
   '0022-mirrors-practice-fuzz': { gdf: mirrorRoom([1, 3]), seed: 22, mode: 'practice', inputs: fuzz(0x3171, 9000, 4, 30) }, // slow, near the hook
 };
 
@@ -917,7 +945,10 @@ function foeCases(raw) {
   const set = (id, o) => (g) => Object.assign(ent(id)(g), o);
   const many = (n, start) => (g) => { g.entities = Array.from({ length: n }, (_, k) => ({ id: 'q' + k, type: 'foe', kind: 'crawler', cell: [1 + (k % 6), 1 + ((k / 6) | 0)], start })); g.links = []; };
   return [
-    one('foes: room', () => {}), one('foes: kind unknown', set('f1', { kind: 'dragon' })), one('foes: kind __proto__', set('f1', { kind: '__proto__' })),
+    one('foes: room', () => {}), one('foes: kind unknown', set('f1', { kind: 'basilisk' })), one('foes: dragon ok', set('f1', { kind: 'dragon' })),
+    one('foes: four dragons ok (100)', (g) => { g.entities = Array.from({ length: 4 }, (_, k) => ({ id: 'q' + k, type: 'foe', kind: 'dragon', cell: [9 + k, 2], start: 'asleep' })); g.links = []; }),
+    one('foes: four dragons and a bat (101)', (g) => { g.entities = [...Array.from({ length: 4 }, (_, k) => ({ id: 'q' + k, type: 'foe', kind: 'dragon', cell: [9 + k, 2], start: 'asleep' })), { id: 'b', type: 'foe', kind: 'bat', cell: [2, 2], start: 'asleep' }]; g.links = []; }),
+    one('foes: flier on void (start cell rule)', (g) => { g.entities = [{ id: 'b', type: 'foe', kind: 'bat', cell: [5, 5], start: 'idle' }]; g.links = []; }), one('foes: kind __proto__', set('f1', { kind: '__proto__' })),
     one('foes: kind number', set('f1', { kind: 1 })), one('foes: start bad', set('f1', { start: 'awake' })), one('foes: group bad', set('f1', { group: '1x' })),
     one('foes: group number', set('f1', { group: 3 })), one('foes: no group ok', (g) => { delete ent('f3')(g).group; g.links = g.links.filter((l) => l.id !== 3); }),
     one('foes: extra key', set('f1', { hp: 3 })), one('foes: on wall', set('f1', { cell: [8, 2] })), one('foes: on pit', set('f1', { cell: [5, 5] })),

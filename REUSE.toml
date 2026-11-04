@@ -32,3 +32,17 @@ path = ["public/assets/fonts/vt323-*"]
 precedence = "override"
 SPDX-FileCopyrightText = "2011 The VT323 Project Authors"
 SPDX-License-Identifier = "OFL-1.1"
+
+# The bestiary's Lantern Delve foes take their names and base stats from Rogue 5.4 (spec §4.9.5, decision #60);
+# Rogue's notice ships with the game as public/legal/rogue-licence.txt.
+[[annotations]]
+path = ["public/js/sim/data/bestiary.v1.json"]
+precedence = "override"
+SPDX-FileCopyrightText = ["2026 SilverDay Media", "1980-1983, 1985, 1999 Michael Toy, Ken Arnold and Glenn Wichman"]
+SPDX-License-Identifier = "MIT AND LicenseRef-Rogue"
+
+[[annotations]]
+path = ["public/legal/rogue-licence.txt"]
+precedence = "override"
+SPDX-FileCopyrightText = "1980-1983, 1985, 1999 Michael Toy, Ken Arnold and Glenn Wichman"
+SPDX-License-Identifier = "LicenseRef-Rogue"

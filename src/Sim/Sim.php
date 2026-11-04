@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.11';
+    public const CORE_VERSION = 'm0.12';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -1534,7 +1534,7 @@ final class Sim
      */
     private static function freshFoe(array $def, string $st): array
     {
-        return ['st' => $st, 'x' => $def['x'], 'z' => $def['z'], 'hp' => $def['kind']['strikes'], 't' => 0, 'atk' => $def['kind']['firstAttack'], 'stun' => 0, 'wake' => false, 'gx' => -1, 'gz' => -1];
+        return ['st' => $st, 'x' => $def['x'], 'z' => $def['z'], 'hp' => $def['kind']['strikes'], 't' => 0, 'atk' => $def['kind']['firstAttack'], 'stun' => 0, 'wake' => false, 'gx' => -1, 'gz' => -1, 'rg' => 0, 'ft' => 0, 'fa' => 0];
     }
 
     private static function isAwake(string $st): bool
@@ -1601,6 +1601,9 @@ final class Sim
                 self::requestWake($world, $state, $n, $events);
             } elseif ($f['st'] === 'idle') {
                 if ($kind === 'pebble') {
+                    if ($world->foes[$n]['kind']['speed'] === 0) {
+                        continue; // R-FOE-7: the flytrap takes no goal
+                    }
                     $state['foes'][$n]['gx'] = $x;
                     $state['foes'][$n]['gz'] = $z;
                     $state['foes'][$n]['t'] = 300;
@@ -1910,12 +1913,14 @@ final class Sim
             self::requestWake($world, $state, $n, $events);
         }
         $f = $state['foes'][$n];
-        $dx = $f['x'] - $state['player']['x'];
-        $dz = $f['z'] - $state['player']['z'];
-        $d = max(1, IntMath::isqrt($dx * $dx + $dz * $dz));
-        $f['x'] += IntMath::idiv($dx * self::KNOCKBACK, $d);
-        $f['z'] += IntMath::idiv($dz * self::KNOCKBACK, $d);
-        self::pushOut($world, $state, $f, $def['kind']['radius'], $f['x'], $f['z'], false, !$def['kind']['fly']);
+        if ($def['kind']['speed'] > 0) { // R-STRIKE-2: the flytrap isn't knocked back
+            $dx = $f['x'] - $state['player']['x'];
+            $dz = $f['z'] - $state['player']['z'];
+            $d = max(1, IntMath::isqrt($dx * $dx + $dz * $dz));
+            $f['x'] += IntMath::idiv($dx * self::KNOCKBACK, $d);
+            $f['z'] += IntMath::idiv($dz * self::KNOCKBACK, $d);
+            self::pushOut($world, $state, $f, $def['kind']['radius'], $f['x'], $f['z'], false, !$def['kind']['fly']);
+        }
         $state['foes'][$n] = $f;
         $events[] = ['e' => 'hit', 'id' => $def['id'], 'hp' => $f['hp']];
         if ($f['hp'] > 0) {
@@ -2022,13 +2027,26 @@ final class Sim
     }
 
     /** @param array<string,mixed> $f */
-    private static function walkTo(array &$f, int $speed, int $gx, int $gz): void
+    /** @param array<string,mixed> $f @param array{int,int}|null $flit */
+    private static function walkTo(array &$f, int $speed, int $gx, int $gz, ?array $flit = null): void
     {
         $ex = $gx - $f['x'];
         $ez = $gz - $f['z'];
         $e = max(1, IntMath::isqrt($ex * $ex + $ez * $ez));
-        $f['x'] += IntMath::idiv($ex * $speed, 30 * $e);
-        $f['z'] += IntMath::idiv($ez * $speed, 30 * $e);
+        if ($flit === null) {
+            $f['x'] += IntMath::idiv($ex * $speed, 30 * $e);
+            $f['z'] += IntMath::idiv($ez * $speed, 30 * $e);
+            return;
+        }
+        // R-FOE-10: |ex·2^14| < 2^32
+        self::drift($f, $speed, IntMath::idiv($ex * SineTable::TRIG_ONE, $e) + $flit[0], IntMath::idiv($ez * SineTable::TRIG_ONE, $e) + $flit[1]);
+    }
+
+    /** R-FOE-10: move along v (scaled by 2^14) at the kind's speed; |vx·speed| < 2^15·4500 < 2^28. @param array<string,mixed> $f */
+    private static function drift(array &$f, int $speed, int $vx, int $vz): void
+    {
+        $f['x'] += IntMath::idiv($vx * $speed, 30 * SineTable::TRIG_ONE);
+        $f['z'] += IntMath::idiv($vz * $speed, 30 * SineTable::TRIG_ONE);
     }
 
     /**
@@ -2068,6 +2086,22 @@ final class Sim
         foreach (array_keys($state['foes']) as $n) { // R-FOE-4
             if ($state['foes'][$n]['wake'] && self::awakeCount($state) < World::MAX_AWAKE) {
                 self::requestWake($world, $state, $n, $events);
+            }
+        }
+        foreach ($defs as $n => $def) { // R-FOE-11
+            $kind = $def['kind'];
+            $st = $state['foes'][$n]['st'];
+            if ($kind['regen'] === 0 || $st === 'dormant' || $st === 'dead') {
+                continue;
+            }
+            if ($state['foes'][$n]['hp'] < $kind['strikes']) {
+                $state['foes'][$n]['rg'] += 1;
+                if ($state['foes'][$n]['rg'] === $kind['regen']) {
+                    $state['foes'][$n]['hp'] += 1;
+                    $state['foes'][$n]['rg'] = 0;
+                }
+            } else {
+                $state['foes'][$n]['rg'] = 0;
             }
         }
         $lit = $p['oil'] > 0 && !$p['hooded'] && $p['hung'] < 0;
@@ -2115,10 +2149,25 @@ final class Sim
                 $state['foes'][$n] = $f;
                 continue;
             }
+            $flit = null;
+            $moved = false;
+            $wound = false;
+            if ($kind['flit'] === 1) { // R-FOE-10
+                if ($f['ft'] > 0) {
+                    $f['ft'] -= 1;
+                }
+                if ($f['ft'] === 0) {
+                    $f['ft'] = 8 + Rng::below($state['rng'], 9);
+                    $f['fa'] = Rng::below($state['rng'], 4096);
+                }
+                $flit = [IntMath::idiv(9 * SineTable::cos($f['fa']), 10), IntMath::idiv(9 * SineTable::sin($f['fa']), 10)];
+            }
+            $still = $kind['speed'] === 0; // R-FOE-6: the flytrap never moves
             if ($f['st'] === 'hunting') {
                 $d = max(1, IntMath::isqrt($dx * $dx + $dz * $dz));
                 if ($d < $kind['reach'] && $f['atk'] === 0) {
                     $f['t'] = $kind['wind'];
+                    $wound = true;
                 } elseif ($d > intdiv(3 * $kind['reach'], 4)) {
                     $fi = IntMath::fdiv($f['x'], self::CELL_MM);
                     $fj = IntMath::fdiv($f['z'], self::CELL_MM);
@@ -2149,18 +2198,22 @@ final class Sim
                         }
                     }
                     if ($gx >= 0) {
-                        self::walkTo($f, $kind['speed'], $gx, $gz);
+                        self::walkTo($f, $kind['speed'], $gx, $gz, $flit);
+                        $moved = true;
                     }
                 }
             } else { // idle
                 $sx = $f['x'] - $p['x'];
                 $sz = $f['z'] - $p['z'];
-                if ($sx * $sx + $sz * $sz <= $sight * $sight && self::losFrom($world, $state, $f['x'], $f['z'], $p['x'], $p['z'])) {
+                $see = $still ? $kind['reach'] : $sight; // R-FOE-7
+                if ($sx * $sx + $sz * $sz <= $see * $see && self::losFrom($world, $state, $f['x'], $f['z'], $p['x'], $p['z'])) {
                     $f['st'] = 'hunting';
                     $f['t'] = 0;
                     $f['gx'] = -1;
                     $f['gz'] = -1;
                     $events[] = ['e' => 'foe', 'id' => $def['id'], 'st' => 'hunting'];
+                } elseif ($still) {
+                    // no goal: it never moves
                 } elseif ($f['gx'] < 0) {
                     if ($f['t'] > 0) {
                         $f['t'] -= 1;
@@ -2185,7 +2238,8 @@ final class Sim
                         }
                     }
                 } else {
-                    self::walkTo($f, $kind['speed'], $f['gx'], $f['gz']);
+                    self::walkTo($f, $kind['speed'], $f['gx'], $f['gz'], $flit);
+                    $moved = true;
                     $f['t'] -= 1;
                     if ((IntMath::fdiv($f['x'], self::CELL_MM) === IntMath::fdiv($f['gx'], self::CELL_MM) && IntMath::fdiv($f['z'], self::CELL_MM) === IntMath::fdiv($f['gz'], self::CELL_MM)) || $f['t'] <= 0) {
                         $f['gx'] = -1;
@@ -2193,6 +2247,13 @@ final class Sim
                         $f['t'] = 30 + Rng::below($state['rng'], 61);
                     }
                 }
+            }
+            if ($flit !== null && !$moved && !$wound) {
+                self::drift($f, $kind['speed'], $flit[0], $flit[1]); // R-FOE-10
+            }
+            if ($still) {
+                $state['foes'][$n] = $f;
+                continue;
             }
             // Separation from the other foes, then the walls and props.
             foreach ($defs as $m => $odef) {

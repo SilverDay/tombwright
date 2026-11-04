@@ -1,0 +1,349 @@
+{
+ "name": "0036-delve-fight",
+ "core": "m0.12",
+ "seed": 36,
+ "mode": "practice",
+ "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAOAQIACgEBAwMBAgAOAQIADgECAAUBBAUFAQIADgECAAsBAQQCAQIADgERAA==\"},\"start\":{\"cell\":[3,4]},\"zones\":[{\"id\":\"d\",\"name\":\"D\",\"rects\":[[1,1,14,8]],\"ceil\":5000}],\"entities\":[{\"id\":\"bat\",\"type\":\"foe\",\"kind\":\"bat\",\"cell\":[8,2],\"start\":\"hunting\"},{\"id\":\"kes\",\"type\":\"foe\",\"kind\":\"kestrel\",\"cell\":[12,4],\"start\":\"idle\"},{\"id\":\"tro\",\"type\":\"foe\",\"kind\":\"troll\",\"cell\":[13,2],\"start\":\"asleep\"},{\"id\":\"gri\",\"type\":\"foe\",\"kind\":\"griffin\",\"cell\":[13,7],\"start\":\"idle\"},{\"id\":\"fly\",\"type\":\"foe\",\"kind\":\"flytrap\",\"cell\":[4,4],\"start\":\"idle\"},{\"id\":\"sna\",\"type\":\"foe\",\"kind\":\"snake\",\"cell\":[2,7],\"start\":\"asleep\"},{\"id\":\"zom\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,8],\"start\":\"dormant\",\"group\":\"dead\"},{\"id\":\"emu\",\"type\":\"foe\",\"kind\":\"emu\",\"cell\":[2,2],\"start\":\"idle\"}],\"links\":[{\"id\":1,\"when\":{\"foesDefeated\":\"fly\"},\"do\":[{\"spawnFoes\":\"dead\"},{\"message\":\"the flytrap falls\"}]}]}",
+ "inputs": [
+  [
+   400,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 1,
+    "target": 0
+   }
+  ],
+  [
+   200,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 1,
+    "target": 0
+   }
+  ],
+  [
+   300,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 1,
+    "target": 0
+   }
+  ],
+  [
+   300,
+   {
+    "move": [
+     127,
+     30
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 128,
+    "target": 0
+   }
+  ],
+  [
+   400,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 1,
+    "target": 0
+   }
+  ]
+ ],
+ "ticks": 1601,
+ "hashEvery": 300,
+ "hashes": {
+  "0": "8263442047b8929dedc2af4eaaae14f8",
+  "300": "92f392780ad7a2ac24624db906ccfed3",
+  "600": "8137b6a4086b3d7cba890bc87c730569",
+  "900": "8f35db87956096bde24cbeef09e2cc8c",
+  "1200": "bca992ea9a152f949de7435759455ee5",
+  "1500": "18fe6b724ab91e801d819c376ca68a21"
+ },
+ "final": "9f09dbe35d5b7bf769bcb50cf5bd25ee",
+ "finalState": {
+  "v": 1,
+  "core": "m0.12",
+  "world": "fe93e81c67a5a6ec091b917b8c05f3f0",
+  "mode": "practice",
+  "tick": 1601,
+  "rng": [
+   2954635980,
+   240559799,
+   2028220368,
+   2473418903
+  ],
+  "player": {
+   "x": 8400,
+   "z": 10800,
+   "vx": 0,
+   "vz": 0,
+   "rx": 0,
+   "rz": 0,
+   "yaw": 3072,
+   "pitch": 0,
+   "hp": 0,
+   "calm": 0,
+   "oil": 2969760,
+   "hooded": false,
+   "hung": -1,
+   "flasks": 1,
+   "pebbles": 10,
+   "probeCd": 0,
+   "pebbleCd": 0,
+   "strikeCd": 2,
+   "busy": 0,
+   "busyOn": -1
+  },
+  "doors": [],
+  "deaths": 2,
+  "dead": {
+   "cause": "beast",
+   "at": 1578
+  },
+  "sprung": [],
+  "pits": [],
+  "marked": [],
+  "bridge": [],
+  "floor": [],
+  "flying": [],
+  "taken": [],
+  "eyes": [],
+  "zone": 0,
+  "sealed": [],
+  "revealed": [],
+  "mirrors": [],
+  "chests": [],
+  "sealing": [],
+  "foes": [
+   {
+    "st": "dead",
+    "x": 9487,
+    "z": 9273,
+    "hp": 0,
+    "t": 3,
+    "atk": 0,
+    "stun": 9,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 3,
+    "fa": 2617
+   },
+   {
+    "st": "dead",
+    "x": 10068,
+    "z": 9929,
+    "hp": 0,
+    "t": 8,
+    "atk": 0,
+    "stun": 9,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
+   },
+   {
+    "st": "asleep",
+    "x": 32400,
+    "z": 6000,
+    "hp": 8,
+    "t": 0,
+    "atk": 15,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
+   },
+   {
+    "st": "dead",
+    "x": 10274,
+    "z": 11050,
+    "hp": 0,
+    "t": 0,
+    "atk": 7,
+    "stun": 9,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 168,
+    "ft": 0,
+    "fa": 0
+   },
+   {
+    "st": "dead",
+    "x": 10800,
+    "z": 10800,
+    "hp": 0,
+    "t": 0,
+    "atk": 0,
+    "stun": 9,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
+   },
+   {
+    "st": "asleep",
+    "x": 6000,
+    "z": 18000,
+    "hp": 1,
+    "t": 0,
+    "atk": 15,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
+   },
+   {
+    "st": "hunting",
+    "x": 12810,
+    "z": 10816,
+    "hp": 2,
+    "t": 0,
+    "atk": 0,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
+   },
+   {
+    "st": "hunting",
+    "x": 8215,
+    "z": 9629,
+    "hp": 1,
+    "t": 0,
+    "atk": 0,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
+   }
+  ],
+  "groups": [
+   "defeated",
+   "defeated",
+   "awake",
+   "defeated",
+   "defeated",
+   "awake",
+   "spawned",
+   "awake"
+  ],
+  "blows": [],
+  "braziers": [],
+  "boss": null,
+  "won": null,
+  "bellSets": [],
+  "links": [
+   {
+    "val": false,
+    "active": false,
+    "spent": true,
+    "pend": [],
+    "m": [
+     1290
+    ]
+   }
+  ],
+  "checkpoints": [
+   {
+    "zone": 0,
+    "x": 8400,
+    "z": 10800,
+    "yaw": 0,
+    "life": {
+     "hp": 3000,
+     "oil": 3000000,
+     "hooded": false,
+     "hung": -1,
+     "flasks": 1,
+     "pebbles": 10,
+     "revealed": [],
+     "mirrors": [],
+     "chests": [],
+     "groups": [
+      "awake",
+      "awake",
+      "awake",
+      "awake",
+      "awake",
+      "awake",
+      "dormant",
+      "awake"
+     ],
+     "braziers": [],
+     "boss": null,
+     "doors": [],
+     "floor": [],
+     "taken": [],
+     "bellSets": [],
+     "links": [
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      }
+     ]
+    }
+   }
+  ],
+  "cp": 0,
+  "prevButtons": 1
+ }
+}

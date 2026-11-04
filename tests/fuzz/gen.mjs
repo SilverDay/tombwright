@@ -1,16 +1,19 @@
 // Differential fuzz cases (spec §6.4 point 2, §15): random small tombs and random input streams.
 // A case is fully determined by its number, so any mismatch can be regenerated: node tests/fuzz/run.mjs --case N.
 // Everything here is drawn from the sim's own xoshiro128** (R-RNG-*), never Math.random.
+import { readFileSync } from 'node:fs';
 import * as Sim from '../../public/js/sim/sim.js';
 import { rngSeed, rngBelow } from '../../public/js/sim/rng.js';
 import { b64encode, rleEncode, CELL } from '../../public/js/sim/world.js';
 import {
-  GLOAMHOLLOW, trapRoom, toolRoom, bellRoom, linkRoom, mirrorRoom, maskRoom, foeRoom, propRoom, crowdRoom,
+  GLOAMHOLLOW, trapRoom, toolRoom, bellRoom, linkRoom, mirrorRoom, maskRoom, foeRoom, propRoom, crowdRoom, delveRoom,
 } from '../golden/generate.mjs';
 
 const utf8 = (s) => new TextEncoder().encode(s);
 const loads = (text) => { try { Sim.load(utf8(text)); return true; } catch { return false; } };
 const MODES = ['delve', 'practice', 'ironman'];
+// Every kind in the bestiary (R-FOE-1); the loader keeps a foe only while the threat budget allows.
+const FOE_KINDS = Object.keys(JSON.parse(readFileSync(new URL('../../public/js/sim/data/bestiary.v1.json', import.meta.url), 'utf8')).foes);
 
 /** Where an entity is, in mm (cell centre or pos), for steering; null for entities without a place. */
 function placeOf(e) {
@@ -136,7 +139,7 @@ function randomTomb(r) {
   // Foes and at most one boss.
   const groups = [];
   for (let n = below(7); n > 0; n--) {
-    const e = { id: id('f'), type: 'foe', kind: pick(['warden', 'crawler']), cell: floor(), start: pick(['asleep', 'idle', 'hunting', 'dormant']) };
+    const e = { id: id('f'), type: 'foe', kind: pick(FOE_KINDS), cell: floor(), start: pick(['asleep', 'idle', 'hunting', 'dormant']) };
     if (chance(70)) { e.group = pick(['g1', 'g2', 'g3']); }
     add(e); if (ents.at(-1)?.id === e.id && e.group && !groups.includes(e.group)) groups.push(e.group);
   }
@@ -194,7 +197,7 @@ const BASES = [
   (r) => randomTomb(r), (r) => randomTomb(r), (r) => randomTomb(r), (r) => randomTomb(r),
   (r) => gloamhollowFrom(r), (r) => gloamhollowFrom(r), (r) => linkRoom(1 + rngBelow(r, 65536) * 16384 + rngBelow(r, 16384)),
   () => trapRoom(), () => toolRoom([2, 4]), () => toolRoom([10, 4], false), () => bellRoom(), () => mirrorRoom(),
-  () => maskRoom(), () => maskRoom([6, 5], true), () => foeRoom(), () => crowdRoom(), () => propRoom(),
+  () => maskRoom(), () => maskRoom([6, 5], true), () => foeRoom(), () => crowdRoom(), () => propRoom(), () => delveRoom(), () => delveRoom([12, 4]),
 ];
 
 /** Case n: { n, gdf (exact text, R-GDF-0), seed, mode, ticks, driver } — the driver picks inputs while it plays. */

@@ -1,6 +1,6 @@
 {
  "name": "0031-foes-crowd-fuzz",
- "core": "m0.11",
+ "core": "m0.12",
  "seed": 31,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAHAQEABgECAAcBAQAGAQIABwEBAAIBAQMDAQIABwEBAAYBAgAEAQIEAQEBAAYBAgAHAQEABgECAA4BAgAOAREA\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"w\",\"name\":\"W\",\"rects\":[[1,1,7,8]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[8,7,1,2]],\"ceil\":3000},{\"id\":\"e\",\"name\":\"E\",\"rects\":[[9,1,6,8]],\"ceil\":4200,\"checkpoint\":{\"cell\":[10,6],\"yaw\":1024}}],\"entities\":[{\"id\":\"q0\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[9,1],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q1\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[10,1],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[11,1],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q3\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[12,1],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q4\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[13,1],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q5\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[9,2],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q6\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[10,2],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q7\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[11,2],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q8\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[12,2],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"q9\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[13,2],\"start\":\"dormant\",\"group\":\"all\"},{\"id\":\"m1\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[3,7],\"start\":\"asleep\",\"group\":\"mix\"},{\"id\":\"m2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[2,2],\"start\":\"dormant\",\"group\":\"mix\"}],\"links\":[{\"id\":1,\"when\":{\"inZone\":\"w\"},\"do\":[{\"spawnFoes\":\"all\"}]},{\"id\":2,\"when\":{\"foesDefeated\":\"all\"},\"do\":[{\"message\":\"all down\"}]}]}",
@@ -5742,42 +5742,42 @@
  "ticks": 9017,
  "hashEvery": 300,
  "hashes": {
-  "0": "12c8d859f6a6180d916f6a8539c00955",
-  "300": "983ab7f3b38efe31ebcef3a1e3f86ea5",
-  "600": "deb860aadc362b583f0590caa8c28091",
-  "900": "db3cd726d710bf8f831041dc20cf5bfa",
-  "1200": "5423b8f67beb494beffef62358259fa4",
-  "1500": "30effcfd0612c8c483a6011d54371f5f",
-  "1800": "be13fa7fb4843361d9485a31a4885ab0",
-  "2100": "032f2c8f4a2adc7d8109eb5e9c9c2ae6",
-  "2400": "d2da35e7b79dfd955a9c1d32ef13e943",
-  "2700": "46dc278d671678597c63f086055c3d16",
-  "3000": "21eb34fe24d0193cc6f9eaf27338f522",
-  "3300": "7ffc8c937166b3f60a5f9fb61942b62d",
-  "3600": "b5572e111ef0e725c4baad50aa2d4254",
-  "3900": "47f2993afd45f9f461d9bf169f875803",
-  "4200": "0ffca8a0cec68af831ed3bf7b1c9de43",
-  "4500": "adec325fa12c4f1ee6e064702e4bd161",
-  "4800": "3755a271e69b963d0dd7ebe8d8be6002",
-  "5100": "066b5c3c891bfa3eb045286ece3890c7",
-  "5400": "9057883538346b521d99c1040042696a",
-  "5700": "8ed67ce4ac193f47fe58e14b8e145f9a",
-  "6000": "6012856f38e156806e022e536b5dad5f",
-  "6300": "954fab60d0c5daa50326a04b86209e87",
-  "6600": "dd8845d5c49fcae03546dd8677575a12",
-  "6900": "ff68e8760038243729cde78930463e56",
-  "7200": "60696f83a230df34346be8777e8e6aac",
-  "7500": "e8fabc9e4106610cb34103d44e75c693",
-  "7800": "57aa61c15489edc4f2d686c2f4c6a18c",
-  "8100": "499a6ae1f4961b6c061abe3543d11bcb",
-  "8400": "0d85e4290ff57771264b98defafb79b8",
-  "8700": "8efea9ee71198ed4c98bc08c113fe0c8",
-  "9000": "1b9069606abe76732246f9a7cb7d80e3"
+  "0": "6afb14ceaf8ffcfa4f066b868f688aec",
+  "300": "3fdf4e9675ae058877b1454bd59e69b6",
+  "600": "90b3278b336e12b3f77e66190efa351b",
+  "900": "630dffa77c683f5717af096b4ffe9c5c",
+  "1200": "953b67d7d749e909f6477d73e809e78e",
+  "1500": "185b2ff4283a258be11f8368fb854671",
+  "1800": "45365076cffe0d7328046e0fecd749c6",
+  "2100": "4f2f832079e9978628960cb044492303",
+  "2400": "64b18f5840e000241a80abc2dfdc16e9",
+  "2700": "ff4d6b5692751f2ff7407ea625652344",
+  "3000": "7df217da624698839e52dac8956c6d26",
+  "3300": "0e90d66b4f637b9113e246d0f11867fd",
+  "3600": "a6b35880e96fa256e9cb4772c271bdab",
+  "3900": "b133ef1caa090b5a119971b8251d5212",
+  "4200": "8d7520e92a97749f746f62194c5073ae",
+  "4500": "67bc76528d4b40a8192266b71414a853",
+  "4800": "8f2a6614e7137b68233ed3c21c392aab",
+  "5100": "dfaf6766d9bb603efa077bbc4adaf91b",
+  "5400": "cc9a3a217ee9db6bdd51c665b98b9570",
+  "5700": "749f1b03483ac6e12993db51590b9a1e",
+  "6000": "dd6903e550be280b02d95af3f856e4f3",
+  "6300": "66a29cff2675a4fb8465755eace5447c",
+  "6600": "9a76dd9eb4ee8af8602071aefc2c0d9f",
+  "6900": "9665498cb5ad3b508024639756a2cb35",
+  "7200": "6421e64fac75600055092b339adc8a4a",
+  "7500": "e19accbeabad332519220bd3b3dbd21a",
+  "7800": "8019e18daa6114e5b1de96ac05109192",
+  "8100": "39deda066d0653a13f497c668b0dcaa5",
+  "8400": "e9ca29620cbde06c9d60afef05af96e2",
+  "8700": "67582e74ddafd9918644cca4c0f42687",
+  "9000": "3578e58a1423a24a2965fddb71b9201e"
  },
- "final": "27df5445d477a6de44adac10c9889f4d",
+ "final": "869ded707df38da23f1b873946cab4da",
  "finalState": {
   "v": 1,
-  "core": "m0.11",
+  "core": "m0.12",
   "world": "d8393ae808047635bec41e0b6f6195b6",
   "mode": "practice",
   "tick": 9017,
@@ -5848,7 +5848,10 @@
     "stun": 0,
     "wake": false,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    },
    {
     "st": "hunting",
@@ -5860,7 +5863,10 @@
     "stun": 0,
     "wake": false,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    },
    {
     "st": "hunting",
@@ -5872,7 +5878,10 @@
     "stun": 0,
     "wake": false,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    },
    {
     "st": "hunting",
@@ -5884,7 +5893,10 @@
     "stun": 0,
     "wake": false,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    },
    {
     "st": "hunting",
@@ -5896,7 +5908,10 @@
     "stun": 0,
     "wake": false,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    },
    {
     "st": "hunting",
@@ -5908,7 +5923,10 @@
     "stun": 0,
     "wake": false,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    },
    {
     "st": "hunting",
@@ -5920,7 +5938,10 @@
     "stun": 0,
     "wake": false,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    },
    {
     "st": "dormant",
@@ -5932,7 +5953,10 @@
     "stun": 0,
     "wake": true,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    },
    {
     "st": "dormant",
@@ -5944,7 +5968,10 @@
     "stun": 0,
     "wake": true,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    },
    {
     "st": "dormant",
@@ -5956,7 +5983,10 @@
     "stun": 0,
     "wake": true,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    },
    {
     "st": "hunting",
@@ -5968,7 +5998,10 @@
     "stun": 0,
     "wake": false,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    },
    {
     "st": "dormant",
@@ -5980,7 +6013,10 @@
     "stun": 0,
     "wake": false,
     "gx": -1,
-    "gz": -1
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0
    }
   ],
   "groups": [
