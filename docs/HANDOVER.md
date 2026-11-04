@@ -27,8 +27,8 @@ This file says where the work stands and what to do next.
   with `$siteUrl`, `/play/gloamhollow` -> `templates/game.php`); the client takes the tomb name from the path
   (allow-list in `boot()`, `public/js/game/main.js`); the banner is in the README and `REUSE.toml` marks the images all
   rights reserved (`LICENSES/LicenseRef-SilverDay-AllRightsReserved.txt`, spec §13 excludes the wordmark from CC BY-SA).
-  The GitHub social-preview image (`public/assets/images/tombwright-og-1200x630.jpg`) still has to be uploaded by hand
-  in the repo settings - only the owner can.
+  The owner has uploaded the social-preview image (`public/assets/images/tombwright-og-1200x630.jpg`) in the repo
+  settings.
 
 ## Next: step 7d, then M2
 
