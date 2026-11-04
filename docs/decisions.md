@@ -61,9 +61,11 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 54 | 2026-11-04 | **Walkthrough for the port:** a new Playwright spec plays the Tombwright client against the sim state directly; the reference walkthrough keeps running against `Gloamhollow.html`. | Owner |
 | 55 | 2026-11-04 | **Step 6 split:** 6a the page at `/` (served by `index.php` with the CSP), the 30 Hz sim loop, the three.js world and entities, keyboard and mouse, a playable HUD; 6b every panel, prompt, toast, death and win card, the touch stick and audio; 6c the new walkthrough passing on the port. One commit each. | Owner |
 | 56 | 2026-11-04 | **Dressing in the GDF:** torches, inscriptions, masons' marks, decor and zone `tint` / `walls` are GDF data the sim validates and otherwise ignores (R-DRESS-*, core m0.11), so the client and later the editor read them from the tomb itself. Item and bell display names stay client text (#23). Resolves the open note that `tint` was rejected. | Owner |
+| 57 | 2026-11-04 | **Foes and traps (Q11):** foes never set off traps. Walking foes treat lethal cells as walls (R-FOE-5); traps stay predictable. | Owner |
+| 58 | 2026-11-04 | **Bestiary tuning (Q12):** `bestiary.v1.json` ships with the §4.9.1 conversion as it stands; any retuning goes into `bestiary.v2` (old dungeons keep the version they were proven with). | Owner |
+| 59 | 2026-11-04 | **Lantern Delve source:** the owner adds Lantern Delve's source under `reference/lantern-delve/`; its foes' sprites, sounds and timings are ported from it, as Gloamhollow's were. | Owner |
 
 ## Still open (spec §17)
 
 Q1 async only · Q3 guest play · Q4 breached-password check (external API or local list) · Q5 user content licence ·
-Q6 DSA scope (legal) · Q7 player rating · Q8 monetisation · Q9 name and domain · Q10 languages ·
-Q11 foes and traps · Q12 bestiary tuning.
+Q6 DSA scope (legal) · Q7 player rating · Q8 monetisation · Q9 name and domain · Q10 languages.
