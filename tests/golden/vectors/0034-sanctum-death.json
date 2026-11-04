@@ -1,0 +1,713 @@
+{
+ "name": "0034-sanctum-death",
+ "core": "m0.10",
+ "seed": 41,
+ "mode": "delve",
+ "gdf": "{\"gdf\":1,\"bestiary\":1,\"meta\":{\"title\":\"Gloamhollow\",\"lang\":\"en\",\"authorId\":0},\"grid\":{\"w\":44,\"h\":63,\"cells\":\"OgACAQoFAgEEAAgBEgACAQoFAgEEAAgBEgACAQQFBAYCBQIBBAAIARIAAgEEBQEGAgUBBgIFAgEEAggBEgACAQIGAgUBBgIFAwYCAQQACAESAAIBAQUBBgIFAQYFBQIBBAAIARIAAgEBBQQGBQUCAQQACAESAAIBBAUDBgMFAgEIAAECFQACAQoFAgEIAAECFQABAhUAAQIVAAECFQABAhUAAQISAAkBCAAHAQEAAQISAAkBCAAHAQICEgAJAQgABwEUAAkBCAAHARQACQEIAAcBFAAJAQkAAQIBAAECAQABAhUACQEJAAECAQABCAEAAQgVAAkBCQABAhkACQEJAAECBgAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQ4AAQIIAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQCAgEBBwIBAQcCAQEHAwEHAAsBAQAJAQQAAgEBBwIBAQcCAQEHAwEHAAsBAQAJARcACwEBAAkBFwALAQEACQEXAAsBBQABAhsACwEFAAECGwALAQUAAQIqAAMBAQQHAQEEBwEZAAcBAQQDAQEEBwEZAAMBAQQDAQEECwEqAAECKwABAisAAQIpAAIDAQECAycAAgMDAScABAMBAScAAwMCAScAAwMBAQEDJwACAwIBAQMnAAIDAQECAycAAwECAycAAQEEAycAAgEDAycAAQMBAQMDJwABAwIBAgMnAAIDAQECAycABQEpAAECKwABAisAAQIoAAcBJQAHASUABwElAAcBJQAHASUAAwEBAAMBMgA=\"},\"zones\":[{\"id\":\"vest\",\"name\":\"the Vestibule\",\"rects\":[[31,56,7,6]],\"ceil\":4200,\"checkpoint\":{\"cell\":[34,60],\"yaw\":0}},{\"id\":\"hall\",\"name\":\"the Hall of the Kneeling Bearers\",\"rects\":[[32,39,5,14]],\"ceil\":4600,\"checkpoint\":{\"cell\":[34,52],\"yaw\":0}},{\"id\":\"mouth\",\"name\":\"the Mouth of the Gallery\",\"rects\":[[33,33,3,3]],\"ceil\":3600,\"checkpoint\":{\"cell\":[34,34],\"yaw\":1024}},{\"id\":\"gallery\",\"name\":\"the Gallery of Waking Eyes\",\"rects\":[[17,33,16,3]],\"ceil\":3600},{\"id\":\"bells\",\"name\":\"the Garden of Bells\",\"rects\":[[14,21,9,9]],\"ceil\":5400,\"checkpoint\":{\"cell\":[18,28],\"yaw\":0}},{\"id\":\"breath\",\"name\":\"the Breathing Hall\",\"rects\":[[27,24,12,3]],\"ceil\":4200,\"checkpoint\":{\"cell\":[27,25],\"yaw\":3072}},{\"id\":\"vault\",\"name\":\"the Mirror Vault\",\"rects\":[[33,12,9,9]],\"ceil\":4600,\"checkpoint\":{\"cell\":[37,19],\"yaw\":0}},{\"id\":\"script\",\"name\":\"the Scriptorium\",\"rects\":[[32,1,8,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[36,6],\"yaw\":0}},{\"id\":\"chasm\",\"name\":\"the Chasm of the Unlit Road\",\"rects\":[[14,1,14,9]],\"ceil\":6500,\"checkpoint\":{\"cell\":[26,5],\"yaw\":1024}},{\"id\":\"masks\",\"name\":\"the Antechamber of Masks\",\"rects\":[[6,13,7,5]],\"ceil\":4200,\"checkpoint\":{\"cell\":[10,14],\"yaw\":2048}},{\"id\":\"way\",\"name\":\"the Dreamer's Way\",\"rects\":[[7,19,1,3]],\"ceil\":3000,\"checkpoint\":{\"cell\":[7,19],\"yaw\":2048}},{\"id\":\"sanctum\",\"name\":\"the Sanctum of the Candle-Eater\",\"rects\":[[2,22,11,11]],\"ceil\":6200,\"checkpoint\":{\"cell\":[7,24],\"yaw\":2048,\"reach\":\"effect\"}}],\"start\":{\"cell\":[7,20]},\"exit\":{\"cell\":[7,27],\"requires\":\"heart\"},\"entities\":[{\"id\":\"vest\",\"type\":\"door\",\"cell\":[34,55],\"style\":\"stone\",\"opens\":\"interact\"},{\"id\":\"bell\",\"type\":\"door\",\"cell\":[23,25],\"style\":\"grate\",\"opens\":\"trigger\"},{\"id\":\"vault\",\"type\":\"door\",\"cell\":[36,11],\"style\":\"stone\",\"opens\":\"trigger\"},{\"id\":\"script\",\"type\":\"door\",\"cell\":[31,4],\"style\":\"stone\",\"opens\":\"interact\"},{\"id\":\"mSleep\",\"type\":\"door\",\"cell\":[7,18],\"style\":\"mask\",\"opens\":\"key\",\"key\":\"crescent\",\"face\":\"sleep\"},{\"id\":\"mWeep\",\"type\":\"door\",\"cell\":[9,18],\"style\":\"mask\",\"opens\":\"interact\",\"face\":\"weep\"},{\"id\":\"mLaugh\",\"type\":\"door\",\"cell\":[11,18],\"style\":\"mask\",\"opens\":\"interact\",\"face\":\"laugh\"},{\"id\":\"slab1\",\"type\":\"slab\",\"cell\":[32,51]},{\"id\":\"slab2\",\"type\":\"slab\",\"cell\":[35,47]},{\"id\":\"chain\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[35,33],\"value\":60},{\"id\":\"coins\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[14,21],\"value\":40},{\"id\":\"censer\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[33,24],\"value\":150},{\"id\":\"ring\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[22,8],\"value\":250},{\"id\":\"opal\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[41,14],\"value\":300,\"hidden\":true},{\"id\":\"f1\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[32,57]},{\"id\":\"f2\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[38,26]},{\"id\":\"f3\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[40,20]},{\"id\":\"f4\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[3,23]},{\"id\":\"f5\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[11,23]},{\"id\":\"rub1\",\"type\":\"item\",\"kind\":\"rubble\",\"cell\":[33,35]},{\"id\":\"rub2\",\"type\":\"item\",\"kind\":\"rubble\",\"cell\":[27,1]},{\"id\":\"eyes\",\"type\":\"eyes\",\"zone\":\"gallery\",\"wake\":30},{\"id\":\"vent1\",\"type\":\"vent\",\"cells\":[[29,24],[29,25],[29,26]],\"period\":108,\"phase\":0,\"warn\":27,\"fire\":33},{\"id\":\"vent2\",\"type\":\"vent\",\"cells\":[[32,24],[32,25],[32,26]],\"period\":108,\"phase\":36,\"warn\":27,\"fire\":33},{\"id\":\"vent3\",\"type\":\"vent\",\"cells\":[[35,24],[35,25],[35,26]],\"period\":108,\"phase\":72,\"warn\":27,\"fire\":33},{\"id\":\"statue1\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[77520,118800],\"yaw\":3072},{\"id\":\"statue2\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[77520,106800],\"yaw\":3072},{\"id\":\"statue3\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[77520,99600],\"yaw\":3072},{\"id\":\"statue4\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[77520,94800],\"yaw\":3072},{\"id\":\"statue5\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[88080,123600],\"yaw\":1024},{\"id\":\"statue6\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[88080,116400],\"yaw\":1024},{\"id\":\"statue7\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[88080,109200],\"yaw\":1024},{\"id\":\"statue8\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[88080,104400],\"yaw\":1024},{\"id\":\"stele1\",\"type\":\"prop\",\"kind\":\"stele\",\"pos\":[87900,126200],\"yaw\":3770},{\"id\":\"tree1\",\"type\":\"prop\",\"kind\":\"tree\",\"pos\":[37200,54000],\"yaw\":0},{\"id\":\"tree2\",\"type\":\"prop\",\"kind\":\"tree\",\"pos\":[51600,54000],\"yaw\":0},{\"id\":\"tree3\",\"type\":\"prop\",\"kind\":\"tree\",\"pos\":[37200,68400],\"yaw\":0},{\"id\":\"tree4\",\"type\":\"prop\",\"kind\":\"tree\",\"pos\":[51600,68400],\"yaw\":0},{\"id\":\"post1\",\"type\":\"prop\",\"kind\":\"post\",\"pos\":[40512,61200],\"yaw\":0},{\"id\":\"post2\",\"type\":\"prop\",\"kind\":\"post\",\"pos\":[48288,61200],\"yaw\":0},{\"type\":\"bell\",\"id\":\"great\",\"cell\":[17,25],\"size\":3,\"patina\":0,\"note\":98},{\"type\":\"bell\",\"id\":\"green\",\"cell\":[18,25],\"size\":1,\"patina\":2,\"note\":330},{\"type\":\"bell\",\"id\":\"brown\",\"cell\":[19,25],\"size\":2,\"patina\":1,\"note\":196},{\"id\":\"plinth1\",\"type\":\"prop\",\"kind\":\"plinth\",\"pos\":[39600,68400],\"yaw\":0},{\"id\":\"A\",\"type\":\"mirror\",\"cell\":[36,14],\"start\":\"/\"},{\"id\":\"B\",\"type\":\"mirror\",\"cell\":[36,18],\"start\":\"/\"},{\"id\":\"C\",\"type\":\"mirror\",\"cell\":[40,18],\"start\":\"\\\\\"},{\"id\":\"D\",\"type\":\"mirror\",\"cell\":[40,12],\"start\":\"/\"},{\"id\":\"E\",\"type\":\"mirror\",\"cell\":[38,12],\"start\":\"/\"},{\"id\":\"lectern1\",\"type\":\"prop\",\"kind\":\"lectern\",\"pos\":[85200,10800],\"yaw\":0},{\"type\":\"chest\",\"id\":\"gilded\",\"cell\":[33,2],\"wall\":\"n\",\"style\":\"gilded\",\"trap\":\"needles\"},{\"type\":\"chest\",\"id\":\"plain\",\"cell\":[38,2],\"wall\":\"n\",\"style\":\"plain\",\"trap\":\"none\"},{\"id\":\"brazier1\",\"type\":\"brazier\",\"cell\":[4,24],\"lit\":false},{\"id\":\"brazier2\",\"type\":\"brazier\",\"cell\":[10,24],\"lit\":false},{\"id\":\"brazier3\",\"type\":\"brazier\",\"cell\":[4,30],\"lit\":false},{\"id\":\"brazier4\",\"type\":\"brazier\",\"cell\":[10,30],\"lit\":false},{\"id\":\"sarcophagus1\",\"type\":\"prop\",\"kind\":\"sarcophagus\",\"pos\":[18000,75600],\"yaw\":0},{\"type\":\"lampHook\",\"id\":\"hook\",\"cell\":[33,14],\"dir\":\"e\"},{\"type\":\"crystal\",\"id\":\"crystal\",\"cell\":[38,12],\"wall\":\"n\"},{\"id\":\"rubies\",\"type\":\"item\",\"kind\":\"treasure\",\"in\":\"gilded\",\"value\":400},{\"id\":\"crescent\",\"type\":\"item\",\"kind\":\"key\",\"in\":\"plain\"},{\"id\":\"f6\",\"type\":\"item\",\"kind\":\"flask\",\"in\":\"plain\"},{\"id\":\"weep\",\"type\":\"alcove\",\"cell\":[9,19],\"kind\":\"drown\",\"door\":\"mWeep\"},{\"id\":\"laugh\",\"type\":\"alcove\",\"cell\":[11,19],\"kind\":\"tip\",\"door\":\"mLaugh\"},{\"id\":\"warden1\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[14,24],\"start\":\"dormant\",\"group\":\"keepers\"},{\"id\":\"warden2\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[22,24],\"start\":\"dormant\",\"group\":\"keepers\"},{\"id\":\"crawler1\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[41,19],\"start\":\"dormant\",\"group\":\"crawlers\"},{\"id\":\"crawler2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[41,13],\"start\":\"dormant\",\"group\":\"crawlers\"},{\"id\":\"ilvaris\",\"type\":\"boss\",\"kind\":\"eater\",\"pos\":[18000,71200],\"zone\":\"sanctum\"},{\"id\":\"heart\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[7,31],\"value\":1000,\"hidden\":true},{\"id\":\"bells\",\"type\":\"bellSet\",\"bells\":[\"great\",\"green\",\"brown\"],\"order\":[1,2,0]}],\"links\":[{\"id\":1,\"when\":{\"bellsSolved\":\"bells\"},\"delay\":27,\"do\":[{\"openDoor\":\"bell\"},{\"message\":\"The three notes hang in the air together. With a long rattle, the bronze grate in the east wall rises.\"}]},{\"id\":2,\"when\":{\"bellsWrong\":\"bells\"},\"repeat\":true,\"delay\":20,\"do\":[{\"damage\":28},{\"message\":\"The bells clash horribly. Darts spit from the stone trees around you.\"}]},{\"id\":3,\"when\":{\"sequence\":[{\"bellsWrong\":\"bells\"},{\"bellsWrong\":\"bells\"}]},\"delay\":20,\"do\":[{\"spawnFoes\":\"keepers\"},{\"message\":\"The bells clash. Darts spit from the stone trees, and the soil heaves: two of the garden’s keepers claw their way up.\"}]},{\"id\":17,\"when\":{\"lanternHung\":true},\"do\":[{\"spawnFoes\":\"crawlers\"}]},{\"id\":18,\"when\":{\"lanternHung\":true},\"delay\":48,\"do\":[{\"message\":\"Something skitters in the dark at the far end of the vault. Two things.\"}]},{\"id\":19,\"when\":{\"foesDefeated\":\"keepers\"},\"do\":[{\"message\":\"The last of the keepers falls apart into dry roots and bone.\"}]},{\"id\":20,\"when\":{\"foesDefeated\":\"crawlers\"},\"do\":[{\"message\":\"The vault is quiet again.\"}]},{\"id\":21,\"when\":{\"enterZone\":\"sanctum\"},\"do\":[{\"wakeBoss\":\"ilvaris\"},{\"message\":\"Soot lifts from the sarcophagus and stands up into a thin shape with a crown of snuffed candles. It turns its face toward your lantern, and opens its mouth.\"}]},{\"id\":22,\"when\":{\"bossDefeated\":true},\"do\":[{\"reveal\":\"heart\"},{\"setCheckpoint\":\"sanctum\"},{\"message\":\"Ilvaris comes apart. Every light she ever swallowed pours out of her at once, cold and blue, and rushes up into the dark. The lid of the sarcophagus slides aside.\"}]},{\"id\":23,\"when\":{\"itemTaken\":\"heart\"},\"do\":[{\"message\":\"You lift the Heart of Embers. Far above, stone cracks, and a shaft of real daylight falls into the middle of the sanctum.\"}]},{\"id\":4,\"when\":{\"interact\":\"vest\"},\"do\":[{\"message\":\"The door is not locked. It swings down into the floor with a breath of very old air.\"}]},{\"id\":5,\"when\":{\"interact\":\"script\"},\"do\":[{\"message\":\"The door sinks into the floor. Cold air rises from somewhere far below.\"}]},{\"id\":6,\"when\":{\"interact\":\"bell\"},\"repeat\":true,\"do\":[{\"message\":\"The bronze grate will not move. Something in this garden must raise it.\"}]},{\"id\":7,\"when\":{\"interact\":\"vault\"},\"repeat\":true,\"do\":[{\"message\":\"The door has no handle and no keyhole. It does not move.\"}]},{\"id\":9,\"when\":{\"doorOpen\":\"mWeep\"},\"do\":[{\"message\":\"“Weep with me, traveller, and pass,” the weeping face sighs, and its door sinks into the floor.\"}]},{\"id\":10,\"when\":{\"doorOpen\":\"mLaugh\"},\"do\":[{\"message\":\"“Ha! Come through, come through, the way is short!” the laughing face cackles, and its door sinks into the floor.\"}]},{\"id\":11,\"when\":{\"doorOpen\":\"mSleep\"},\"do\":[{\"message\":\"The crescent key turns. The sleeping face does not wake, but its door sinks into the floor.\"}]},{\"id\":12,\"when\":{\"all\":[{\"interact\":\"mSleep\"},{\"not\":{\"hasItem\":\"crescent\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"The sleeping face says nothing. Beneath its chin is a keyhole shaped like a crescent moon.\"}]},{\"id\":13,\"when\":{\"all\":[{\"interact\":\"mWeep\"},{\"not\":{\"doorOpen\":\"mWeep\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"This door is sealed. The face above it looks satisfied.\"}]},{\"id\":14,\"when\":{\"all\":[{\"interact\":\"mLaugh\"},{\"not\":{\"doorOpen\":\"mLaugh\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"This door is sealed. The face above it looks satisfied.\"}]},{\"id\":15,\"when\":{\"itemTaken\":\"crescent\"},\"do\":[{\"message\":\"Inside the plain chest: a crescent-shaped key of black iron, and a flask of lamp oil.\"}]},{\"id\":16,\"when\":{\"itemTaken\":\"rubies\"},\"do\":[{\"message\":\"You lift the gilded lid. Inside, on rotten velvet: a fistful of rubies.\"}]},{\"id\":8,\"when\":{\"beamHits\":\"crystal\"},\"do\":[{\"openDoor\":\"vault\"},{\"reveal\":\"opal\"},{\"message\":\"The beam strikes the crystal, which blazes like a small sun. With a deep grinding, the north door sinks into the floor, and in the glare something glints in a crack of the east wall.\"}]}]}",
+ "inputs": [
+  [
+   90,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1500,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 128,
+    "target": 0
+   }
+  ],
+  [
+   300,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ]
+ ],
+ "ticks": 1891,
+ "hashEvery": 300,
+ "hashes": {
+  "0": "1a648cb168958fb7d0faa49386e069e0",
+  "300": "25ad84c45f8119f9b3d2bc0babd4b9eb",
+  "600": "7a80d42ee71f7107948c2bd77b7d8501",
+  "900": "07da75f8ea0b28d4e121dda36176b9f5",
+  "1200": "96d963800fcd5d2bed99c28ae557fc6a",
+  "1500": "16f3c6aa5b71a8024ba8792cfe1fb29a",
+  "1800": "276d648835e43bb704544c1d274fb832"
+ },
+ "final": "1224fa7fae6d4c231b5bc7a911dd3112",
+ "finalState": {
+  "v": 1,
+  "core": "m0.10",
+  "world": "65b1b3801e27131ab42bf4b5cf6fda46",
+  "mode": "delve",
+  "tick": 1891,
+  "rng": [
+   2443700855,
+   3359966579,
+   4039155144,
+   2176818564
+  ],
+  "player": {
+   "x": 18000,
+   "z": 64472,
+   "vx": 0,
+   "vz": 3198,
+   "rx": 0,
+   "rz": 23,
+   "yaw": 2048,
+   "pitch": 0,
+   "hp": 1200,
+   "calm": 4,
+   "oil": 1772233,
+   "hooded": false,
+   "hung": -1,
+   "flasks": 1,
+   "pebbles": 10,
+   "probeCd": 0,
+   "pebbleCd": 0,
+   "strikeCd": 0,
+   "busy": 0,
+   "busyOn": -1
+  },
+  "doors": [
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   },
+   {
+    "open": false,
+    "t": 0
+   }
+  ],
+  "deaths": 1,
+  "dead": null,
+  "sprung": [],
+  "pits": [],
+  "marked": [],
+  "bridge": [],
+  "floor": [],
+  "flying": [],
+  "taken": [],
+  "eyes": [
+   0
+  ],
+  "zone": 11,
+  "sealed": [],
+  "revealed": [],
+  "mirrors": [
+   0,
+   0,
+   1,
+   0,
+   0
+  ],
+  "chests": [
+   {
+    "look": false,
+    "sprung": false,
+    "open": false
+   },
+   {
+    "look": false,
+    "sprung": false,
+    "open": false
+   }
+  ],
+  "sealing": [],
+  "foes": [
+   {
+    "st": "dormant",
+    "x": 34800,
+    "z": 58800,
+    "hp": 3,
+    "t": 0,
+    "atk": 18,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1
+   },
+   {
+    "st": "dormant",
+    "x": 54000,
+    "z": 58800,
+    "hp": 3,
+    "t": 0,
+    "atk": 18,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1
+   },
+   {
+    "st": "dormant",
+    "x": 99600,
+    "z": 46800,
+    "hp": 2,
+    "t": 0,
+    "atk": 18,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1
+   },
+   {
+    "st": "dormant",
+    "x": 99600,
+    "z": 32400,
+    "hp": 2,
+    "t": 0,
+    "atk": 18,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1
+   }
+  ],
+  "groups": [
+   "dormant",
+   "dormant"
+  ],
+  "blows": [],
+  "braziers": [
+   false,
+   false,
+   false,
+   false
+  ],
+  "boss": {
+   "st": "stalk",
+   "x": 18000,
+   "z": 65342,
+   "hp": 6,
+   "phase": 1,
+   "t": 0,
+   "atk": 45,
+   "feedCd": 0,
+   "target": -1,
+   "feedHits": 0
+  },
+  "won": null,
+  "bellSets": [
+   {
+    "seq": [],
+    "solved": false
+   }
+  ],
+  "links": [
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": []
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     0,
+     -1,
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": []
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": []
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": []
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": []
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": []
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": []
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": true,
+    "pend": [],
+    "m": [
+     1626
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     -1
+    ]
+   }
+  ],
+  "checkpoints": [
+   {
+    "zone": 10,
+    "x": 18000,
+    "z": 49200,
+    "yaw": 0,
+    "life": {
+     "hp": 3000,
+     "oil": 3000000,
+     "hooded": false,
+     "hung": -1,
+     "flasks": 1,
+     "pebbles": 10,
+     "revealed": [],
+     "mirrors": [
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     "chests": [
+      {
+       "look": false,
+       "sprung": false,
+       "open": false
+      },
+      {
+       "look": false,
+       "sprung": false,
+       "open": false
+      }
+     ],
+     "groups": [
+      "dormant",
+      "dormant"
+     ],
+     "braziers": [
+      false,
+      false,
+      false,
+      false
+     ],
+     "boss": "asleep",
+     "doors": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+     ],
+     "floor": [],
+     "taken": [],
+     "bellSets": [
+      {
+       "seq": [],
+       "solved": false
+      }
+     ],
+     "links": [
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": []
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        0,
+        -1,
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": []
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": []
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": []
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": []
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": []
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": []
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      }
+     ]
+    }
+   }
+  ],
+  "cp": 0,
+  "prevButtons": 0
+ }
+}

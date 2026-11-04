@@ -43,6 +43,8 @@ final class World
     private const KEYS_CHEST = ['id', 'type', 'cell', 'wall', 'style', 'trap'];
     private const KEYS_ALCOVE = ['id', 'type', 'cell', 'kind', 'door'];
     private const KEYS_FOE = ['id', 'type', 'kind', 'cell', 'start'];
+    private const KEYS_BRAZIER = ['id', 'type', 'cell', 'lit'];
+    private const KEYS_BOSS = ['id', 'type', 'kind', 'pos', 'zone'];
     private const FOE_STARTS = ['asleep', 'idle', 'hunting', 'dormant'];
     public const MAX_FOES = 24;
     public const MAX_AWAKE = 8;
@@ -122,6 +124,10 @@ final class World
         private readonly array $alcoveAt,
         public readonly array $foes,
         public readonly array $groups,
+        public readonly array $braziers,
+        public readonly ?array $boss,
+        public readonly ?array $bossBox,
+        public readonly ?array $exit,
     ) {
     }
 
@@ -308,13 +314,63 @@ final class World
                 throw new \RangeException('checkpoint cell taken');
             }
         }
+        // R-BOSS-2: the boss starts inside her zone; her box is the zone's bounding box inset by 700 mm.
+        $bossBox = null;
+        if ($ents['boss'] !== null) {
+            $b = $ents['boss'];
+            $x0 = PHP_INT_MAX;
+            $z0 = PHP_INT_MAX;
+            $x1 = PHP_INT_MIN;
+            $z1 = PHP_INT_MIN;
+            foreach ($gdf['zones'][$b['zone']]['rects'] as [$rx, $ry, $rw, $rh]) {
+                $x0 = min($x0, $rx * self::CELL_MM);
+                $z0 = min($z0, $ry * self::CELL_MM);
+                $x1 = max($x1, ($rx + $rw) * self::CELL_MM);
+                $z1 = max($z1, ($ry + $rh) * self::CELL_MM);
+            }
+            $bossBox = ['x0' => $x0 + 700, 'z0' => $z0 + 700, 'x1' => $x1 - 700, 'z1' => $z1 - 700];
+            if ($b['x'] < $bossBox['x0'] || $b['x'] > $bossBox['x1'] || $b['z'] < $bossBox['z0'] || $b['z'] > $bossBox['z1']) {
+                throw new \RangeException('boss outside her zone');
+            }
+        }
+        // R-EXIT-1: the exit cell and its requirement.
+        $exit = null;
+        if (array_key_exists('exit', $gdf)) {
+            $e = $gdf['exit'];
+            if (!is_array($e) || array_is_list($e) || !self::hasExactKeys($e, array_key_exists('requires', $e) ? ['cell', 'requires'] : ['cell'])) {
+                throw new \RangeException('exit keys');
+            }
+            $k = self::cellIndex($e['cell'], $w, $h);
+            $code = ord($grid[$k]);
+            if ($code !== self::ROOM && $code !== self::CORR) {
+                throw new \RangeException('exit cell');
+            }
+            $item = 0;
+            $boss = false;
+            if (array_key_exists('requires', $e)) {
+                if ($e['requires'] === 'bossDefeated') {
+                    if ($ents['boss'] === null) {
+                        throw new \RangeException('exit requires a boss');
+                    }
+                    $boss = true;
+                } else {
+                    $r = is_string($e['requires']) ? ($ents['byId'][$e['requires']] ?? null) : null;
+                    if ($r === null || $r['type'] !== 'item' || $r['kind'] === 'rubble') {
+                        throw new \RangeException('exit requires');
+                    }
+                    $item = $r['n'];
+                }
+            }
+            $exit = ['x' => $e['cell'][0] * self::CELL_MM + intdiv(self::CELL_MM, 2), 'z' => $e['cell'][1] * self::CELL_MM + intdiv(self::CELL_MM, 2), 'item' => $item, 'boss' => $boss];
+        }
         // R-FOE-2: a GDF with foes names its bestiary version.
-        if (($ents['foes'] !== [] || array_key_exists('bestiary', $gdf)) && ($gdf['bestiary'] ?? null) !== Bestiary::VERSION) {
+        if (($ents['foes'] !== [] || $ents['boss'] !== null || array_key_exists('bestiary', $gdf)) && ($gdf['bestiary'] ?? null) !== Bestiary::VERSION) {
             throw new \RangeException('bestiary version');
         }
         // R-LINK-*: compile the links against the entity and zone ids.
         $links = Links::compile(array_key_exists('links', $gdf) ? $gdf['links'] : [], [
             'ents' => $ents['byId'], 'zones' => array_flip(array_column($zs['zones'], 'id')), 'groups' => $ents['groupIds'],
+            'cpZones' => array_map(static fn (array $z): bool => $z['cp'] !== null, $zs['zones']),
         ]);
         // R-WORLD-3: world id = first 16 bytes of SHA-256 over the canonical GDF, as hex.
         $id = substr(hash('sha256', Canonical::encode($gdf)), 0, 32);
@@ -323,7 +379,7 @@ final class World
             $ents['ventAt'], $ents['vents'], $zs['zoneOf'], $zs['zones'], $zs['zoneOf'][$startK] ?? -1,
             $ents['items'], $ents['eyes'], $ents['bells'], $ents['bellSets'], $links,
             $ents['hooks'], $ents['mirrors'], $ents['crystals'], $ents['chests'], $ents['alcoves'], $ents['alcoveAt'],
-            $ents['foes'], $ents['groups'],
+            $ents['foes'], $ents['groups'], $ents['braziers'], $ents['boss'], $bossBox, $exit,
         );
     }
 
@@ -475,6 +531,8 @@ final class World
         $foes = [];
         $groups = [];
         $groupIds = [];
+        $braziers = [];
+        $bosses = [];
         foreach ($list as $e) {
             if (!is_array($e) || array_is_list($e) || !is_string($e['id'] ?? null) || preg_match(self::ID_RE, $e['id']) !== 1) {
                 throw new \RangeException('entity id');
@@ -726,6 +784,42 @@ final class World
                     'id' => $e['id'], 'k' => $k, 'x' => $ci * self::CELL_MM + intdiv(self::CELL_MM, 2), 'z' => $cj * self::CELL_MM + intdiv(self::CELL_MM, 2),
                     'kind' => $kind, 'start' => $e['start'], 'group' => $g,
                 ];
+            } elseif ($type === 'brazier') {
+                if (!self::hasExactKeys($e, self::KEYS_BRAZIER)) {
+                    throw new \RangeException('brazier keys');
+                }
+                if (!is_bool($e['lit'])) {
+                    throw new \RangeException('brazier lit');
+                }
+                $k = self::cellIndex($e['cell'], $w, $h);
+                $code = ord($grid[$k]);
+                if ($code !== self::ROOM && $code !== self::CORR) {
+                    throw new \RangeException('brazier cell');
+                }
+                [$ci, $cj] = $e['cell'];
+                $x = $ci * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                $z = $cj * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                $props[] = ['circle' => true, 'x' => $x, 'z' => $z, 'r' => 550, 'x0' => $x - 550, 'x1' => $x + 550, 'z0' => $z - 550, 'z1' => $z + 550];
+                $refs[] = ['type' => 'brazier', 'brazier' => count($braziers)];
+                $braziers[] = ['id' => $e['id'], 'k' => $k, 'x' => $x, 'z' => $z, 'reach' => 2300, 'lit' => $e['lit']];
+            } elseif ($type === 'boss') {
+                if (!self::hasExactKeys($e, self::KEYS_BOSS)) {
+                    throw new \RangeException('boss keys');
+                }
+                $kind = Bestiary::boss($e['kind']);
+                if ($kind === null) {
+                    throw new \RangeException('boss kind');
+                }
+                $pos = $e['pos'];
+                if (!is_array($pos) || !array_is_list($pos) || count($pos) !== 2 || !is_int($pos[0]) || !is_int($pos[1])) {
+                    throw new \RangeException('boss pos');
+                }
+                $zi = is_string($e['zone']) ? array_search($e['zone'], $zoneIds, true) : false;
+                if ($zi === false || $bosses !== []) {
+                    throw new \RangeException('boss zone / count');
+                }
+                $refs[] = ['type' => 'boss'];
+                $bosses[] = ['id' => $e['id'], 'kind' => $kind, 'x' => $pos[0], 'z' => $pos[1], 'zone' => $zi];
             } elseif ($type === 'alcove') {
                 if (!self::hasExactKeys($e, self::KEYS_ALCOVE)) {
                     throw new \RangeException('alcove keys');
@@ -877,6 +971,11 @@ final class World
                 throw new \RangeException('chest cell taken');
             }
         }
+        foreach ($braziers as $b) {
+            if (isset($doorAt[$b['k']]) || isset($slab[$b['k']])) {
+                throw new \RangeException('brazier cell taken');
+            }
+        }
         // R-FOE-2: foes on free cells (walkers not on lethal ones), the caps and the threat budget.
         $threat = 0;
         $awake = 0;
@@ -925,7 +1024,8 @@ final class World
             'bells' => $bells, 'bellSets' => $bellSets, 'byId' => $byId,
             'hooks' => $hooks, 'mirrors' => $mirrors, 'crystals' => $crystals,
             'chests' => $chests, 'alcoves' => $alcoves, 'alcoveAt' => $alcoveAt,
-            'foes' => $foes, 'groups' => $groups, 'groupIds' => $groupIds];
+            'foes' => $foes, 'groups' => $groups, 'groupIds' => $groupIds,
+            'braziers' => $braziers, 'boss' => $bosses[0] ?? null];
     }
 
     /**

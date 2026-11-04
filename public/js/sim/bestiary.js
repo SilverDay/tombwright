@@ -3,10 +3,13 @@
 import { sha256Hex } from './sha256.js';
 
 export const BESTIARY_VERSION = 1;
-export const BESTIARY_SHA256 = 'd25a43054fbf61da11568c6e6ebe4972fa8eca811b163345cdd10681899905fe';
+export const BESTIARY_SHA256 = 'be0276708112bbe96049a97638a6182d66d11699d497a304a1ac65bfcb301b25';
 const FIELDS = ['tier', 'strikes', 'damage', 'speed', 'radius', 'reach', 'wind', 'cooldown', 'rise', 'firstAttack'];
 
-let kinds = null;
+const BOSS_FIELDS = ['strikes', 'damage', 'oilHit', 'radius', 'speed', 'speed2', 'wakeAtk', 'wind', 'hitRange', 'windRange', 'seekWindRange',
+  'stop', 'reel', 'feed', 'feed2', 'feedReach', 'feedCd', 'phase2Atk', 'phase2FeedCd', 'atk', 'atk2', 'tearWind', 'solidRange', 'drainRange', 'drain', 'drain2'];
+
+let kinds = null, bosses = null;
 
 /** Load and verify bestiary.v1.json from its bytes. */
 export function loadBestiary(bytes) {
@@ -20,6 +23,18 @@ export function loadBestiary(bytes) {
     m.set(kind, Object.freeze({ ...f, fly: f.mover === 'fly' }));
   }
   kinds = m;
+  const bm = new Map();
+  for (const [kind, f] of Object.entries(b.bosses)) {
+    for (const k of BOSS_FIELDS) if (!Number.isSafeInteger(f[k])) throw new Error('bestiary: boss ' + kind + '.' + k);
+    bm.set(kind, Object.freeze({ ...f }));
+  }
+  bosses = bm;
+}
+
+/** R-BOSS-1: a boss kind's numbers, or undefined. */
+export function bossKind(kind) {
+  if (bosses === null) throw new Error('bestiary not loaded');
+  return typeof kind === 'string' ? bosses.get(kind) : undefined;
 }
 
 /** The kind's numbers, or undefined for an unknown kind. */

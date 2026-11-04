@@ -1,6 +1,6 @@
 {
  "name": "0009-ironman",
- "core": "m0.9",
+ "core": "m0.10",
  "seed": 9,
  "mode": "ironman",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIAAQEBAwIBAQMCAQEFAgEBBgEBAgAMAQIADAECAAwBAgAEAQEEAgEBBwIBAQgBAQIABwEBBwQBDwA=\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,3,7]],\"ceil\":4200},{\"id\":\"b\",\"name\":\"B\",\"rects\":[[4,1,3,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[5,4],\"yaw\":3072}},{\"id\":\"c\",\"name\":\"C\",\"rects\":[[7,1,3,4],[7,5,3,3]],\"ceil\":6500,\"checkpoint\":{\"cell\":[8,4],\"yaw\":3072,\"reach\":\"enter\"}},{\"id\":\"d\",\"name\":\"D\",\"rects\":[[10,1,3,7]],\"ceil\":3000,\"checkpoint\":{\"cell\":[11,4],\"yaw\":1024,\"reach\":\"effect\"}}],\"entities\":[{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[2,2]},{\"id\":\"v1\",\"type\":\"vent\",\"cells\":[[8,6],[8,7]],\"period\":60,\"phase\":10,\"warn\":15,\"fire\":20}]}",
@@ -35,12 +35,12 @@
  "ticks": 104,
  "hashEvery": 300,
  "hashes": {
-  "0": "c1b7b35da6ae06916ba22683dfc54a84"
+  "0": "db30e500641064b6238f21997283b6bb"
  },
- "final": "eb431e70685bd7eec47c7a975b76b370",
+ "final": "65ec4f55e96d9d5620e9c1318c077892",
  "finalState": {
   "v": 1,
-  "core": "m0.9",
+  "core": "m0.10",
   "world": "3105c26a5fe9b85dd09aca967c41891f",
   "mode": "ironman",
   "tick": 104,
@@ -68,7 +68,9 @@
    "pebbles": 10,
    "probeCd": 0,
    "pebbleCd": 0,
-   "strikeCd": 0
+   "strikeCd": 0,
+   "busy": 0,
+   "busyOn": -1
   },
   "doors": [],
   "deaths": 1,
@@ -95,6 +97,9 @@
   "foes": [],
   "groups": [],
   "blows": [],
+  "braziers": [],
+  "boss": null,
+  "won": null,
   "bellSets": [],
   "links": [],
   "checkpoints": [
@@ -114,6 +119,8 @@
      "mirrors": [],
      "chests": [],
      "groups": [],
+     "braziers": [],
+     "boss": null,
      "doors": [],
      "floor": [],
      "taken": [],
@@ -137,6 +144,8 @@
      "mirrors": [],
      "chests": [],
      "groups": [],
+     "braziers": [],
+     "boss": null,
      "doors": [],
      "floor": [],
      "taken": [],

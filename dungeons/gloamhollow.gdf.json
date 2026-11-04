@@ -258,7 +258,7 @@
    7,
    27
   ],
-  "requires": "bossDefeated"
+  "requires": "heart"
  },
  "entities": [
   {
@@ -808,6 +808,42 @@
    "trap": "none"
   },
   {
+   "id": "brazier1",
+   "type": "brazier",
+   "cell": [
+    4,
+    24
+   ],
+   "lit": false
+  },
+  {
+   "id": "brazier2",
+   "type": "brazier",
+   "cell": [
+    10,
+    24
+   ],
+   "lit": false
+  },
+  {
+   "id": "brazier3",
+   "type": "brazier",
+   "cell": [
+    4,
+    30
+   ],
+   "lit": false
+  },
+  {
+   "id": "brazier4",
+   "type": "brazier",
+   "cell": [
+    10,
+    30
+   ],
+   "lit": false
+  },
+  {
    "id": "sarcophagus1",
    "type": "prop",
    "kind": "sarcophagus",
@@ -917,6 +953,27 @@
    ],
    "start": "dormant",
    "group": "crawlers"
+  },
+  {
+   "id": "ilvaris",
+   "type": "boss",
+   "kind": "eater",
+   "pos": [
+    18000,
+    71200
+   ],
+   "zone": "sanctum"
+  },
+  {
+   "id": "heart",
+   "type": "item",
+   "kind": "treasure",
+   "cell": [
+    7,
+    31
+   ],
+   "value": 1000,
+   "hidden": true
   },
   {
    "id": "bells",
@@ -1029,6 +1086,48 @@
    "do": [
     {
      "message": "The vault is quiet again."
+    }
+   ]
+  },
+  {
+   "id": 21,
+   "when": {
+    "enterZone": "sanctum"
+   },
+   "do": [
+    {
+     "wakeBoss": "ilvaris"
+    },
+    {
+     "message": "Soot lifts from the sarcophagus and stands up into a thin shape with a crown of snuffed candles. It turns its face toward your lantern, and opens its mouth."
+    }
+   ]
+  },
+  {
+   "id": 22,
+   "when": {
+    "bossDefeated": true
+   },
+   "do": [
+    {
+     "reveal": "heart"
+    },
+    {
+     "setCheckpoint": "sanctum"
+    },
+    {
+     "message": "Ilvaris comes apart. Every light she ever swallowed pours out of her at once, cold and blue, and rushes up into the dark. The lid of the sarcophagus slides aside."
+    }
+   ]
+  },
+  {
+   "id": 23,
+   "when": {
+    "itemTaken": "heart"
+   },
+   "do": [
+    {
+     "message": "You lift the Heart of Embers. Far above, stone cracks, and a shaft of real daylight falls into the middle of the sanctum."
     }
    ]
   },

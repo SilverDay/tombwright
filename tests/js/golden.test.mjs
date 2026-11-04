@@ -375,3 +375,45 @@ test('Gloamhollow: the second wrong ringing raises the keepers (link 3), who ris
   for (let k = 0; k < 39; k++) step();
   assert.equal(st.foes[w1].st, 'hunting');
 });
+
+// Step 5e (R-BRAZIER-*, R-BOSS-*, R-EXIT-1), on Gloamhollow's Sanctum.
+function replayTo(name) {
+  const v = JSON.parse(readFileSync(DIR + name + '.json', 'utf8'));
+  const world = Sim.load(utf8(v.gdf)), st = Sim.init(world, v.seed, v.mode), events = [];
+  for (const inp of expand(v.inputs)) for (const e of Sim.step(world, st, inp)) events.push({ t: st.tick - 1, ...e });
+  return { world, st, events };
+}
+
+test('the Sanctum is won with the Heart in the daylight shaft, and the run then refuses steps (R-EXIT-1)', () => {
+  const { world, st, events } = replayTo('0033-sanctum-won');
+  assert.equal(st.boss.st, 'dead');
+  assert.equal(events.at(-1).e, 'won');
+  assert.equal(st.won, events.at(-1).t);
+  assert.ok(events.some((e) => e.e === 'checkpoint' && e.zone === 'sanctum'), 'setCheckpoint on her death');
+  assert.throws(() => Sim.step(world, st, { move: [0, 0], yaw: 0, pitch: 0, buttons: 0, target: 0 }), /run is won/);
+  // The Sanctum checkpoint must hold the revealed Heart, or a death before taking it would hide it for good.
+  const g = JSON.parse(GLOAMHOLLOW), heart = g.entities.findIndex((e) => e.id === 'heart') + 1, zi = g.zones.findIndex((z) => z.id === 'sanctum');
+  assert.ok(st.checkpoints.find((c) => c.zone === zi).life.revealed.includes(heart));
+});
+
+test('dying to the boss puts her back asleep at full strength on rise (R-BOSS-6)', () => {
+  const { st, events } = replayTo('0034-sanctum-death');
+  assert.ok(events.some((e) => e.e === 'death' && e.cause === 'eater'));
+  const risen = events.findIndex((e) => e.e === 'rise');
+  assert.ok(risen > 0 && events.slice(risen).some((e) => e.e === 'boss' && e.st === 'stalk'), 'she wakes again when you walk back in');
+  assert.equal(st.boss.hp, 6);
+});
+
+test('lighting a brazier keeps the player still for 30 ticks (R-BRAZIER-2)', () => {
+  const world = Sim.load(utf8(GLOAMHOLLOW)), st = Sim.init(world, 1, 'delve'), g = JSON.parse(GLOAMHOLLOW);
+  const num = (id) => g.entities.findIndex((e) => e.id === id) + 1;
+  st.player.x = 4 * 2400 + 1200; st.player.z = 24 * 2400 + 1200 + 1800; st.zone = g.zones.findIndex((z) => z.id === 'sanctum'); // 1.8 m from brazier1
+  const step = (o = {}) => Sim.step(world, st, { move: [0, 0], yaw: 0, pitch: 0, buttons: 0, target: 0, ...o });
+  assert.deepEqual(step({ buttons: Sim.BTN.interact, target: num('brazier1') }), [{ e: 'busy', id: 'brazier1' }]);
+  const x0 = st.player.x, z0 = st.player.z;
+  let lit = -1;
+  for (let k = 1; k <= 30 && lit < 0; k++) { if (step({ move: [127, 0], yaw: 2048 }).some((e) => e.e === 'brazier')) lit = k; }
+  assert.equal(lit, 29, 'lit at the end of the 30th busy tick');
+  assert.deepEqual([st.player.x, st.player.z], [x0, z0], 'no movement while busy');
+  assert.equal(st.braziers[0], true);
+});

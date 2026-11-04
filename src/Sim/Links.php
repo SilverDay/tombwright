@@ -17,11 +17,11 @@ final class Links
     private const MAX_DEPTH = 4;
     private const MAX_TRIGGERS = 16;
     private const MAX_MESSAGE_BYTES = 1000;
-    private const EVENTS = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired', 'foesDefeated'];
-    private const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'lanternHung', 'bellsSolved', 'beamHits', 'linkActive', 'foesAlive'];
+    private const EVENTS = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired', 'foesDefeated', 'bossDefeated'];
+    private const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'lanternHung', 'bellsSolved', 'beamHits', 'linkActive', 'foesAlive', 'bossAwake', 'lightLit'];
     private const GATES = ['all', 'any', 'atLeast', 'sequence', 'not'];
     private const GATE_OPTS = ['all' => ['within'], 'any' => ['within'], 'atLeast' => ['k', 'within'], 'sequence' => ['within', 'strict', 'onWrong'], 'not' => []];
-    private const EFFECTS = ['spawnFoes', 'openDoor', 'closeDoor', 'sealDoor', 'reveal', 'hide', 'damage', 'message'];
+    private const EFFECTS = ['wakeBoss', 'lightOn', 'lightOff', 'setCheckpoint', 'spawnFoes', 'openDoor', 'closeDoor', 'sealDoor', 'reveal', 'hide', 'damage', 'message'];
     private const LINK_KEYS = ['id', 'when', 'do', 'undo', 'repeat', 'delay'];
 
     private static function bad(string $what): never
@@ -123,6 +123,17 @@ final class Links
                 $out[] = ['kind' => $kind, 'text' => $v];
             } elseif ($kind === 'spawnFoes') {
                 $out[] = ['kind' => $kind, 'group' => self::group($v, $ctx)];
+            } elseif ($kind === 'wakeBoss') {
+                self::entity($v, $ctx, static fn (array $r): bool => $r['type'] === 'boss');
+                $out[] = ['kind' => $kind];
+            } elseif ($kind === 'lightOn' || $kind === 'lightOff') {
+                $out[] = ['kind' => $kind, 'brazier' => self::entity($v, $ctx, static fn (array $r): bool => $r['type'] === 'brazier')['brazier']];
+            } elseif ($kind === 'setCheckpoint') {
+                $z = self::zone($v, $ctx);
+                if (!$ctx['cpZones'][$z]) {
+                    self::bad('setCheckpoint zone');
+                }
+                $out[] = ['kind' => $kind, 'zone' => $z];
             } elseif ($kind === 'reveal' || $kind === 'hide') {
                 $out[] = ['kind' => $kind, 'item' => self::entity($v, $ctx, static fn (array $r): bool => $r['type'] === 'item' && $r['hidden'])['n']];
             } else {
@@ -181,7 +192,7 @@ final class Links
         $takeable = static fn (array $r): bool => $r['type'] === 'item' && $r['kind'] !== 'rubble';
         switch ($kind) {
             case 'interact':
-                return self::entity($v, $c['ctx'], static fn (array $r): bool => in_array($r['type'], ['door', 'item', 'bell', 'lampHook', 'mirror', 'chest'], true))['n'];
+                return self::entity($v, $c['ctx'], static fn (array $r): bool => in_array($r['type'], ['door', 'item', 'bell', 'lampHook', 'mirror', 'chest', 'brazier'], true))['n'];
             case 'itemTaken':
             case 'hasItem':
                 return self::entity($v, $c['ctx'], $takeable)['n'];
@@ -200,6 +211,20 @@ final class Links
             case 'foesDefeated':
             case 'foesAlive':
                 return self::group($v, $c['ctx']);
+            case 'bossDefeated':
+            case 'bossAwake':
+                $has = false;
+                foreach ($c['ctx']['ents'] as $r) {
+                    if ($r['type'] === 'boss') {
+                        $has = true;
+                    }
+                }
+                if ($v !== true || !$has) {
+                    self::bad($kind);
+                }
+                return 0;
+            case 'lightLit':
+                return self::entity($v, $c['ctx'], static fn (array $r): bool => $r['type'] === 'brazier')['brazier'];
             case 'beamHits':
                 return self::entity($v, $c['ctx'], static fn (array $r): bool => $r['type'] === 'crystal')['crystal'];
             case 'lanternHooded':

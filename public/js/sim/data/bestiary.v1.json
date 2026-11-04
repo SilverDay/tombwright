@@ -3,5 +3,8 @@
  "foes": {
   "warden": { "tier": 2, "strikes": 3, "damage": 14, "speed": 2200, "radius": 400, "reach": 1600, "wind": 17, "cooldown": 39, "rise": 39, "firstAttack": 18, "mover": "walk" },
   "crawler": { "tier": 1, "strikes": 2, "damage": 9, "speed": 2900, "radius": 380, "reach": 1400, "wind": 13, "cooldown": 33, "rise": 0, "firstAttack": 18, "mover": "walk" }
+ },
+ "bosses": {
+  "eater": { "strikes": 6, "damage": 20, "oilHit": 240000, "radius": 600, "speed": 1750, "speed2": 2350, "wakeAtk": 45, "wind": 21, "hitRange": 2200, "windRange": 1700, "seekWindRange": 1450, "stop": 1200, "reel": 9, "feed": 69, "feed2": 51, "feedReach": 1300, "feedCd": 42, "phase2Atk": 27, "phase2FeedCd": 45, "atk": 48, "atk2": 36, "tearWind": 18, "solidRange": 3600, "drainRange": 5500, "drain": 3000, "drain2": 4500 }
  }
 }

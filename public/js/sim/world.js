@@ -5,7 +5,7 @@ import { assertInt, fdiv } from './int.js';
 import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
 import { compileLinks } from './links.js';
-import { foeKind, BESTIARY_VERSION } from './bestiary.js';
+import { foeKind, bossKind, BESTIARY_VERSION } from './bestiary.js';
 
 // GDF cell codes (spec §7.1).
 export const CELL = Object.freeze({ WALL: 0, ROOM: 1, CORR: 2, PLATE: 3, HPIT: 4, VOID: 5, BRIDGE: 6, VENT: 7, ALCOVE: 8 });
@@ -31,7 +31,7 @@ const PROP_KINDS = new Map([
 const KEYS = {
   door: ['id', 'type', 'cell', 'style', 'opens'], doorMask: ['id', 'type', 'cell', 'style', 'opens', 'face'],
   chest: ['id', 'type', 'cell', 'wall', 'style', 'trap'], alcove: ['id', 'type', 'cell', 'kind', 'door'],
-  foe: ['id', 'type', 'kind', 'cell', 'start'],
+  foe: ['id', 'type', 'kind', 'cell', 'start'], brazier: ['id', 'type', 'cell', 'lit'], boss: ['id', 'type', 'kind', 'pos', 'zone'],
   slab: ['id', 'type', 'cell'], prop: ['id', 'type', 'kind', 'pos', 'yaw'],
   vent: ['id', 'type', 'cells', 'period', 'phase', 'warn', 'fire'],
   item: ['id', 'type', 'kind', 'cell'], treasure: ['id', 'type', 'kind', 'cell', 'value'],
@@ -173,13 +173,40 @@ function worldFrom(gdf) {
   // R-ZONE-2: checkpoint cells hold no door or slab (props were checked in loadEntities).
   for (const k of zs.cpCells) if (ents.doorAt[k] >= 0 || ents.slab[k]) throw new RangeError('checkpoint cell taken');
   // R-LINK-*: compile the links against the entity and zone ids.
+  // R-BOSS-2: the boss starts inside her zone; her box is the zone's bounding box inset by 700 mm.
+  let bossBox = null;
+  if (ents.boss !== null) {
+    const b = ents.boss, rects = gdf.zones[b.zone].rects;
+    let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+    for (const [rx, ry, rw, rh] of rects) { x0 = Math.min(x0, rx * CELL_MM); z0 = Math.min(z0, ry * CELL_MM); x1 = Math.max(x1, (rx + rw) * CELL_MM); z1 = Math.max(z1, (ry + rh) * CELL_MM); }
+    bossBox = Object.freeze({ x0: x0 + 700, z0: z0 + 700, x1: x1 - 700, z1: z1 - 700 });
+    if (b.x < bossBox.x0 || b.x > bossBox.x1 || b.z < bossBox.z0 || b.z > bossBox.z1) throw new RangeError('boss outside her zone');
+  }
+  // R-EXIT-1: the exit cell and its requirement.
+  let exit = null;
+  if (Object.hasOwn(gdf, 'exit')) {
+    const e = gdf.exit;
+    if (!isObj(e) || !hasExactKeys(e, Object.hasOwn(e, 'requires') ? ['cell', 'requires'] : ['cell'])) throw new RangeError('exit keys');
+    const k = cellIndex(e.cell, w, h);
+    if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR) throw new RangeError('exit cell');
+    let item = 0, boss = false;
+    if (Object.hasOwn(e, 'requires')) {
+      if (e.requires === 'bossDefeated') { if (ents.boss === null) throw new RangeError('exit requires a boss'); boss = true; }
+      else {
+        const r = typeof e.requires === 'string' ? ents.byId.get(e.requires) : undefined;
+        if (r === undefined || r.type !== 'item' || r.kind === 'rubble') throw new RangeError('exit requires');
+        item = r.n;
+      }
+    }
+    exit = Object.freeze({ x: e.cell[0] * CELL_MM + CELL_MM / 2, z: e.cell[1] * CELL_MM + CELL_MM / 2, item, boss });
+  }
   // R-FOE-2: a GDF with foes names its bestiary version.
-  if ((ents.foes.length > 0 || Object.hasOwn(gdf, 'bestiary')) && gdf.bestiary !== BESTIARY_VERSION) throw new RangeError('bestiary version');
-  const links = compileLinks(gdf.links, { ents: ents.byId, zones: new Map(zs.zoneIds.map((id, n) => [id, n])), groups: ents.groupIds });
+  if ((ents.foes.length > 0 || ents.boss !== null || Object.hasOwn(gdf, 'bestiary')) && gdf.bestiary !== BESTIARY_VERSION) throw new RangeError('bestiary version');
+  const links = compileLinks(gdf.links, { ents: ents.byId, zones: new Map(zs.zoneIds.map((id, n) => [id, n])), groups: ents.groupIds, cpZones: zs.zones.map((z) => z.cp !== null) });
   // R-WORLD-3: world id = first 16 bytes of SHA-256 over the canonical GDF, as hex.
   const id = toHex(sha256(canonicalBytes(gdf)).subarray(0, 16));
   const world = Object.freeze({ id, w, h, start: Object.freeze({ i: si, j: sj }) });
-  GRIDS.set(world, { grid, zoneOf: zs.zoneOf, zones: zs.zones, startZone: zs.zoneOf[startK], ...ents, links });
+  GRIDS.set(world, { grid, zoneOf: zs.zoneOf, zones: zs.zones, startZone: zs.zoneOf[startK], ...ents, links, bossBox, exit });
   return world;
 }
 
@@ -246,7 +273,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
   const ids = new Set(), doorAt = new Int16Array(w * h).fill(-1), slab = new Uint8Array(w * h);
   const doors = [], props = [], refs = [], vents = [], ventAt = new Int16Array(w * h).fill(-1), items = [], eyes = [];
   const bells = [], bellSets = [], byId = new Map(), hooks = [], mirrors = [], crystals = [];
-  const chests = [], alcoves = [], alcoveAt = new Int16Array(w * h).fill(-1), foes = [], groups = [], groupIds = new Map();
+  const chests = [], alcoves = [], alcoveAt = new Int16Array(w * h).fill(-1), foes = [], groups = [], groupIds = new Map(), braziers = [], bosses = [];
   for (const e of list) {
     if (!isObj(e) || typeof e.id !== 'string' || !ID_RE.test(e.id)) throw new RangeError('entity id');
     if (ids.has(e.id)) throw new RangeError('duplicate entity id');
@@ -367,6 +394,24 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       const [ci, cj] = e.cell;
       refs.push({ type: 'foe', foe: foes.length });
       foes.push({ id: e.id, k, x: ci * CELL_MM + CELL_MM / 2, z: cj * CELL_MM + CELL_MM / 2, kind, start: e.start, group: g });
+    } else if (e.type === 'brazier') {
+      if (!hasExactKeys(e, KEYS.brazier)) throw new RangeError('brazier keys');
+      if (typeof e.lit !== 'boolean') throw new RangeError('brazier lit');
+      const k = cellIndex(e.cell, w, h);
+      if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR) throw new RangeError('brazier cell');
+      const [ci, cj] = e.cell, x = ci * CELL_MM + CELL_MM / 2, z = cj * CELL_MM + CELL_MM / 2;
+      props.push(Object.freeze({ circle: true, x, z, r: 550, x0: x - 550, x1: x + 550, z0: z - 550, z1: z + 550 }));
+      refs.push({ type: 'brazier', brazier: braziers.length });
+      braziers.push({ id: e.id, k, x, z, reach: 2300, lit: e.lit });
+    } else if (e.type === 'boss') {
+      if (!hasExactKeys(e, KEYS.boss)) throw new RangeError('boss keys');
+      const kind = bossKind(e.kind);
+      if (kind === undefined) throw new RangeError('boss kind');
+      if (!Array.isArray(e.pos) || e.pos.length !== 2 || !e.pos.every(isInt)) throw new RangeError('boss pos');
+      const zi = typeof e.zone === 'string' ? zoneIds.indexOf(e.zone) : -1;
+      if (zi < 0 || bosses.length > 0) throw new RangeError('boss zone / count');
+      refs.push({ type: 'boss' });
+      bosses.push({ id: e.id, kind, x: e.pos[0], z: e.pos[1], zone: zi });
     } else if (e.type === 'alcove') {
       if (!hasExactKeys(e, KEYS.alcove)) throw new RangeError('alcove keys');
       if (e.kind !== 'drown' && e.kind !== 'tip') throw new RangeError('alcove kind');
@@ -440,6 +485,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
     a.door = r.door;
   }
   for (const c of chests) if (doorAt[c.k] >= 0 || slab[c.k]) throw new RangeError('chest cell taken');
+  for (const b of braziers) if (doorAt[b.k] >= 0 || slab[b.k]) throw new RangeError('brazier cell taken');
   // R-FOE-2: foes on free cells (walkers not on lethal ones), the caps and the threat budget.
   let threat = 0, awake = 0;
   for (const f of foes) {
@@ -467,6 +513,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
     hooks: Object.freeze(hooks), mirrors: Object.freeze(mirrors), crystals: Object.freeze(crystals),
     chests: Object.freeze(chests.map((c) => Object.freeze({ ...c, contents: Object.freeze(c.contents) }))),
     alcoves: Object.freeze(alcoves.map((a) => Object.freeze({ id: a.id, k: a.k, drown: a.drown, door: a.door }))), alcoveAt,
+    braziers: Object.freeze(braziers.map(Object.freeze)), boss: bosses.length > 0 ? Object.freeze(bosses[0]) : null,
     foes: Object.freeze(foes.map(Object.freeze)), groups: Object.freeze(groups.map((g) => Object.freeze({ id: g.id, foes: Object.freeze(g.foes), dormant: g.dormant }))), groupIds,
     bellSets: Object.freeze(bellSets.map((b) => Object.freeze({ id: b.id, bells: Object.freeze(b.bells), order: b.order }))),
     doorAt, slab, ventAt, vents: Object.freeze(vents), items: Object.freeze(items.map(Object.freeze)), eyes: Object.freeze(eyes), doors: Object.freeze(doors.map((d) => Object.freeze({ id: d.id, k: d.k, cx: d.cx, cz: d.cz, interact: d.interact, key: d.key }))), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
@@ -509,6 +556,12 @@ export function ventAt(world, k) { const W = GRIDS.get(world), v = W.ventAt[k]; 
 export function zoneAt(world, k) { return GRIDS.get(world).zoneOf[k]; }
 export function worldZones(world) { return GRIDS.get(world).zones; }
 export function startZone(world) { return GRIDS.get(world).startZone; }
+
+/** R-BRAZIER-*, R-BOSS-*, R-EXIT-1 (frozen; boss and exit may be null). */
+export function worldBraziers(world) { return GRIDS.get(world).braziers; }
+export function worldBoss(world) { return GRIDS.get(world).boss; }
+export function worldBossBox(world) { return GRIDS.get(world).bossBox; }
+export function worldExit(world) { return GRIDS.get(world).exit; }
 
 /** R-FOE-*: the foes and groups, in entity order / order of first appearance (frozen). */
 export function worldFoes(world) { return GRIDS.get(world).foes; }

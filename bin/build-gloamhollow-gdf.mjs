@@ -85,6 +85,11 @@ const ALCOVES_E = [
   { id: 'weep', type: 'alcove', cell: [9, 19], kind: 'drown', door: 'mWeep' },
   { id: 'laugh', type: 'alcove', cell: [11, 19], kind: 'tip', door: 'mLaugh' },
 ];
+// The Sanctum (Gloamhollow BRAZIERS, spawnBoss, killBoss, takeHeart, SHAFT; R-BRAZIER-*, R-BOSS-*, R-EXIT-1): four unlit
+// braziers, Ilvaris asleep on the sarcophagus (cx(7), cz(29) + 0.4 m), the Heart of Embers hidden in it.
+const BRAZIERS = [[4, 24], [10, 24], [4, 30], [10, 30]].map(([i, j], n) => ({ id: `brazier${n + 1}`, type: 'brazier', cell: [i, j], lit: false }));
+const BOSS = { id: 'ilvaris', type: 'boss', kind: 'eater', pos: [7 * 2400 + 1200, 29 * 2400 + 1200 + 400], zone: 'sanctum' };
+const HEART = { id: 'heart', type: 'item', kind: 'treasure', cell: [7, 31], value: 1000, hidden: true };
 // The tomb's keepers (Gloamhollow spawnWardens / spawnCrawlers; R-FOE-*): two bone gardeners rise in the Garden of
 // Bells after the second wrong ringing, two gloam crawlers wake in the Mirror Vault when the lantern is first hung.
 const FOES = [
@@ -111,6 +116,11 @@ const LINKS = [
   { id: 18, when: { lanternHung: true }, delay: 48, do: [{ message: 'Something skitters in the dark at the far end of the vault. Two things.' }] },
   { id: 19, when: { foesDefeated: 'keepers' }, do: [{ message: 'The last of the keepers falls apart into dry roots and bone.' }] },
   { id: 20, when: { foesDefeated: 'crawlers' }, do: [{ message: 'The vault is quiet again.' }] },
+  { id: 21, when: { enterZone: 'sanctum' }, do: [{ wakeBoss: 'ilvaris' }, { message: 'Soot lifts from the sarcophagus and stands up into a thin shape with a crown of snuffed candles. It turns its face toward your lantern, and opens its mouth.' }] },
+  // Reveal before setCheckpoint: the checkpoint saves the life as it is at that point in the list (R-LINK-8).
+  { id: 22, when: { bossDefeated: true }, do: [{ reveal: 'heart' }, { setCheckpoint: 'sanctum' },
+    { message: 'Ilvaris comes apart. Every light she ever swallowed pours out of her at once, cold and blue, and rushes up into the dark. The lid of the sarcophagus slides aside.' }] },
+  { id: 23, when: { itemTaken: 'heart' }, do: [{ message: 'You lift the Heart of Embers. Far above, stone cracks, and a shaft of real daylight falls into the middle of the sanctum.' }] },
   { id: 4, when: { interact: 'vest' }, do: [{ message: 'The door is not locked. It swings down into the floor with a breath of very old air.' }] },
   { id: 5, when: { interact: 'script' }, do: [{ message: 'The door sinks into the floor. Cold air rises from somewhere far below.' }] },
   { id: 6, when: { interact: 'bell' }, repeat: true, do: [{ message: 'The bronze grate will not move. Something in this garden must raise it.' }] },
@@ -165,7 +175,7 @@ const gdf = {
     ...(z.cp ? { checkpoint: { cell: [z.cp[0], z.cp[1]], yaw: z.cp[2], ...(z.reach ? { reach: z.reach } : {}) } } : {}),
   })),
   start: { cell: [34, 60] },
-  exit: { cell: [7, 27], requires: 'bossDefeated' },
+  exit: { cell: [7, 27], requires: 'heart' },  // the daylight shaft: carry the Heart into it (decision #50)
   entities: [
     ...DOORS.map((d) => ({ id: d.id, type: 'door', cell: d.cell, style: d.style, opens: d.opens, ...(d.key ? { key: d.key } : {}), ...(d.face ? { face: d.face } : {}) })),
     ...PRE_SLABS.map(([i, j], n) => ({ id: `slab${n + 1}`, type: 'slab', cell: [i, j] })),
@@ -179,10 +189,10 @@ const gdf = {
       // The mirrors stand between the plinth and the lectern in Gloamhollow's obstacle list.
       if (kind === 'lectern') return [...MIRRORS.map(([id, i, j, start]) => ({ id, type: 'mirror', cell: [i, j], start })), prop];
       // The chests stand between the lectern and the braziers / sarcophagus in Gloamhollow's obstacle list.
-      if (kind === 'sarcophagus') return [...CHESTS.map((c) => ({ type: 'chest', ...c })), prop];
+      if (kind === 'sarcophagus') return [...CHESTS.map((c) => ({ type: 'chest', ...c })), ...BRAZIERS, prop];
       return [prop];
     }),
-    { type: 'lampHook', ...HOOK }, { type: 'crystal', ...CRYSTAL }, ...IN_CHESTS, ...ALCOVES_E, ...FOES,
+    { type: 'lampHook', ...HOOK }, { type: 'crystal', ...CRYSTAL }, ...IN_CHESTS, ...ALCOVES_E, ...FOES, BOSS, HEART,
     { id: 'bells', type: 'bellSet', bells: BELLS.map((b) => b.id), order: BELL_ORDER.map((id) => BELLS.findIndex((b) => b.id === id)) },
   ],
   links: LINKS,

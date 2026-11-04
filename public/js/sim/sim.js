@@ -8,12 +8,12 @@ import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
 import {
   loadWorld, solidCell, assertWorld, worldProps, worldDoors, entityRef, cellCode, slabAt, ventAt, zoneAt, worldZones, startZone,
-  worldItems, worldEyes, sightBlocked, worldBells, worldBellSets, worldLinks, worldHooks, worldMirrors, worldCrystals, worldChests, alcoveAt, worldFoes, worldGroups, MAX_AWAKE,
+  worldItems, worldEyes, sightBlocked, worldBells, worldBellSets, worldLinks, worldHooks, worldMirrors, worldCrystals, worldChests, alcoveAt, worldFoes, worldGroups, MAX_AWAKE, worldBraziers, worldBoss, worldBossBox, worldExit,
   CELL, DOOR_FULL, DOOR_STEP, DOOR_CLOSE_STEP,
 } from './world.js';
 import { runLinks, initLinkState, copyLinkState } from './links.js';
 
-export const CORE_VERSION = 'm0.9';
+export const CORE_VERSION = 'm0.10';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -81,7 +81,7 @@ export function init(world, seed, mode) {
       vx: 0, vz: 0, rx: 0, rz: 0,   // velocity mm/s; sub-mm remainders in 1/30 mm (R-MOVE-3)
       yaw: 0, pitch: 0,
       hp: HP_FULL, calm: CALM_MAX, oil: 100 * OIL_UNIT, hooded: false, hung: -1, // R-HP-1, R-HOOK-1
-      flasks: 1, pebbles: 10, probeCd: 0, pebbleCd: 0, strikeCd: 0, // R-OIL-3, R-PEB-1, R-TOOL-2, R-STRIKE-1
+      flasks: 1, pebbles: 10, probeCd: 0, pebbleCd: 0, strikeCd: 0, busy: 0, busyOn: -1, // R-OIL-3, R-PEB-1, R-TOOL-2, R-STRIKE-1, R-BRAZIER-2
     },
     doors: worldDoors(world).map(() => ({ open: false, t: 0 })), // R-DOOR-2
     deaths: 0,
@@ -102,7 +102,10 @@ export function init(world, seed, mode) {
     sealing: [],             // R-ALCOVE-2: doors about to close, { door, left }
     foes: worldFoes(world).map((f) => freshFoe(f, f.start)), // R-FOE-3
     groups: worldGroups(world).map((g) => (g.dormant ? 'dormant' : 'awake')),
-    blows: [],               // R-STRIKE-1: { foe, at }
+    blows: [],               // R-STRIKE-1: { foe, at } (foe -1: the boss)
+    braziers: worldBraziers(world).map((b) => b.lit),         // R-BRAZIER-1
+    boss: worldBoss(world) === null ? null : freshBoss(worldBoss(world)), // R-BOSS-2
+    won: null,               // R-EXIT-1: the tick the run was won
     bellSets: worldBellSets(world).map(() => ({ seq: [], solved: false })), // R-BELL-2
     links: initLinkState(worldLinks(world)),                               // R-LINK-4
     checkpoints: [],        // R-CP-1
@@ -120,9 +123,15 @@ function lifeOf(state) {
     hp: p.hp, oil: p.oil, hooded: p.hooded, hung: p.hung, flasks: p.flasks, pebbles: p.pebbles,
     revealed: state.revealed.slice(), mirrors: state.mirrors.slice(),
     chests: state.chests.map((c) => ({ look: c.look, sprung: c.sprung, open: c.open })), groups: state.groups.slice(),
+    braziers: state.braziers.slice(), boss: state.boss === null ? null : state.boss.st === 'asleep' ? 'asleep' : state.boss.st === 'dead' ? 'dead' : 'awake',
     doors: state.doors.map((d) => d.open), floor: state.floor.map((f) => ({ x: f.x, z: f.z })), taken: state.taken.slice(),
     bellSets: copyBellSets(state.bellSets), links: copyLinkState(state.links),
   };
+}
+
+/** R-BOSS-2: the boss as she starts (and comes back, R-BOSS-6). */
+function freshBoss(def) {
+  return { st: 'asleep', x: def.x, z: def.z, hp: def.kind.strikes, phase: 1, t: 0, atk: 0, feedCd: 0, target: -1, feedHits: 0 };
 }
 
 /** R-FOE-3: a foe as it starts (or comes back, R-FOE-8). */
@@ -138,6 +147,7 @@ export function step(world, state, input) {
   if (state.world !== world.id) throw new Error('state belongs to another world');
   if (state.core !== CORE_VERSION) throw new Error('state from another core version'); // R-WORLD-3
   if (state.dead !== null && state.mode === 'ironman') throw new Error('the run is over'); // R-DEATH-3
+  if (state.won !== null) throw new Error('the run is won');                                 // R-EXIT-1
   checkInput(input);
   const events = [];
   const pressed = input.buttons & ~state.prevButtons; // R-INPUT-2: rising edges
@@ -149,11 +159,14 @@ export function step(world, state, input) {
     landPebbles(world, state, events);
   } else {
     const batch = [];                                 // R-LINK-5: batch 0
+    const wasBusy = state.player.busy > 0;            // R-FOE-7: no running noise while busy
     live(world, state, input, pressed, events, batch);
-    if (state.dead === null) updateFoes(world, state, input, events, batch); // R-FOE-6
+    const on = () => state.dead === null && state.won === null;
+    if (on()) updateFoes(world, state, input, events, batch, wasBusy); // R-FOE-6
+    if (on()) updateBoss(world, state, events, batch);       // R-BOSS-4
     landPebbles(world, state, events);
-    if (state.dead === null) links(world, state, batch, events); // R-LINK-7
-    if (state.dead === null) regenerate(state.player);             // R-HP-1
+    if (on()) links(world, state, batch, events); // R-LINK-7
+    if (on()) regenerate(state.player);             // R-HP-1
   }
 
   state.prevButtons = input.buttons;
@@ -186,6 +199,8 @@ function links(world, state, batch, events) {
         case 'lanternHung': return (p.hung >= 0) === arg;
         case 'bellsSolved': return state.bellSets[arg].solved;
         case 'beamHits': return beamHits(world, state, arg);
+        case 'bossAwake': return state.boss.st !== 'asleep' && state.boss.st !== 'dead';
+        case 'lightLit': return state.braziers[arg];
         case 'foesAlive': return worldGroups(world)[arg].foes.some((n) => { const st = state.foes[n].st; return st !== 'dormant' && st !== 'dead'; });
         case 'linkActive': return state.links[worldLinks(world).findIndex((l) => l.id === arg)].active;
       }
@@ -195,6 +210,16 @@ function links(world, state, batch, events) {
       let changed = false;
       for (const fx of list) {
         if (fx.kind === 'message') { events.push({ e: 'message', text: fx.text }); continue; }
+        if (fx.kind === 'wakeBoss') {                      // R-BOSS-3
+          if (state.boss.st === 'asleep') { state.boss.st = 'stalk'; state.boss.atk = worldBoss(world).kind.wakeAtk; changed = true; events.push({ e: 'boss', st: 'stalk' }); }
+          continue;
+        }
+        if (fx.kind === 'lightOn' || fx.kind === 'lightOff') {
+          const lit = fx.kind === 'lightOn';
+          if (state.braziers[fx.brazier] !== lit) { state.braziers[fx.brazier] = lit; changed = true; events.push({ e: 'brazier', id: worldBraziers(world)[fx.brazier].id, lit }); }
+          continue;
+        }
+        if (fx.kind === 'setCheckpoint') { reachCheckpoint(world, state, fx.zone, events); changed = true; continue; }
         if (fx.kind === 'spawnFoes') {                     // R-FOE-4
           let woke = false;
           for (const n of worldGroups(world)[fx.group].foes) if (state.foes[n].st === 'dormant' && !state.foes[n].wake) { requestWake(world, state, n, events); woke = true; }
@@ -253,7 +278,9 @@ function live(world, state, input, pressed, events, batch) {
     state.sealing = keep;
   }
 
-  // R-TOOL-1: tool presses, in button order, from where the player stood before moving.
+  // R-TOOL-1: tool presses, in button order, from where the player stood before moving (none while busy, R-BRAZIER-2).
+  const busy = p.busy > 0;
+  if (busy) pressed = 0;
   if (pressed & BTN.hood) {
     if (p.hung >= 0) events.push({ e: 'msg', k: 'lanternHung' });                     // R-HOOK-2
     else if (p.oil > 0) { p.hooded = !p.hooded; events.push({ e: 'hood', on: p.hooded }); } // R-OIL-2
@@ -264,10 +291,10 @@ function live(world, state, input, pressed, events, batch) {
   if (pressed & BTN.oil) pourOil(p, events);
   if ((pressed & BTN.interact) && input.target !== 0) interact(world, state, input.target, events, batch); // R-ACT-1
   if (state.dead !== null) { moveDoors(state); return; } // R-CHEST-2: the needles (doors still move, R-DEATH-2)
-  if ((input.buttons & BTN.strike) && p.strikeCd === 0) swing(world, state, events);   // R-STRIKE-1: held, not pressed
+  if (!busy && (input.buttons & BTN.strike) && p.strikeCd === 0) swing(world, state, events); // R-STRIKE-1: held, not pressed
 
   // R-MOVE-2: normalise the move vector to length <= 127.
-  let [fw, st] = input.move;
+  let [fw, st] = busy ? [0, 0] : input.move;
   const m2 = fw * fw + st * st;
   if (m2 > 127 * 127) { const len = isqrt(m2); fw = idiv(fw * 127, len); st = idiv(st * 127, len); }
   const speed = (input.buttons & BTN.run) ? RUN_MM_S : WALK_MM_S;
@@ -305,6 +332,11 @@ function live(world, state, input, pressed, events, batch) {
   if (cause !== null) { die(state, cause, events); return; }
   if (wakeEyes(world, state, events)) { die(state, 'eyes', events); return; }
   pickPebbles(state);
+  const ex = worldExit(world);                          // R-EXIT-1
+  if (ex !== null && (ex.boss ? state.boss.st === 'dead' : ex.item === 0 || state.taken.includes(ex.item))) {
+    const dx = p.x - ex.x, dz = p.z - ex.z;             // squares < 2^36
+    if (dx * dx + dz * dz < 1000 * 1000) { state.won = state.tick; events.push({ e: 'won' }); return; }
+  }
 
   // R-OIL-1/2: the lantern burns; at 0 it goes out and un-hoods.
   if (p.oil > 0) {
@@ -315,6 +347,10 @@ function live(world, state, input, pressed, events, batch) {
   if (p.probeCd > 0) p.probeCd -= 1;
   if (p.pebbleCd > 0) p.pebbleCd -= 1;
   if (p.strikeCd > 0) p.strikeCd -= 1;
+  if (p.busy > 0) {                                     // R-BRAZIER-2: the brazier catches
+    p.busy -= 1;
+    if (p.busy === 0) { state.braziers[p.busyOn] = true; events.push({ e: 'brazier', id: worldBraziers(world)[p.busyOn].id, lit: true }); p.busyOn = -1; }
+  }
 }
 
 /** R-TOOL-1: the point at distance d (mm) ahead of the player, for yaw sine/cosine sy, cy. */
@@ -499,8 +535,13 @@ function swing(world, state, events) {
     if (d === 0 || d > STRIKE_REACH + idiv(6 * defs[n].kind.radius, 10) || 2 * (dx * -sy + dz * -cy) < d * TRIG_ONE) return;
     if (best < 0 || d < bd) { best = n; bd = d; }
   });
+  const B = state.boss;
+  if (B !== null && B.st !== 'asleep' && B.st !== 'dead') {   // R-BOSS-5: she is a target too (foes win ties)
+    const dx = B.x - p.x, dz = B.z - p.z, d = isqrt(dx * dx + dz * dz), r = worldBoss(world).kind.radius;
+    if (d > 0 && d <= STRIKE_REACH + idiv(6 * r, 10) && 2 * (dx * -sy + dz * -cy) >= d * TRIG_ONE && (best === -1 || d < bd)) { best = -2; bd = d; }
+  }
   noise(world, state, p.x, p.z, NOISE_SWING, 'swing', events);
-  if (best >= 0) state.blows.push({ foe: best, at: state.tick + BLOW_DELAY });
+  if (best !== -1) state.blows.push({ foe: best === -2 ? -1 : best, at: state.tick + BLOW_DELAY });
 }
 
 /** R-STRIKE-2 */
@@ -557,16 +598,16 @@ function walkTo(f, speed, gx, gz) {
 }
 
 /** R-FOE-6 */
-function updateFoes(world, state, input, events, batch) {
+function updateFoes(world, state, input, events, batch, wasBusy) {
   const defs = worldFoes(world);
-  if (defs.length === 0) return;
   const p = state.player, tick = state.tick;
   if (state.blows.length > 0) {
     const keep = [];
-    for (const b of state.blows) if (b.at !== tick) keep.push(b); else landBlow(world, state, b.foe, events, batch);
+    for (const b of state.blows) if (b.at !== tick) keep.push(b); else if (b.foe < 0) bossBlow(world, state, events, batch); else landBlow(world, state, b.foe, events, batch);
     state.blows = keep;
   }
-  if ((input.buttons & BTN.run) && (input.move[0] !== 0 || input.move[1] !== 0)) noise(world, state, p.x, p.z, NOISE_RUN, 'run', events);
+  if (defs.length === 0) return;
+  if (!wasBusy && (input.buttons & BTN.run) && (input.move[0] !== 0 || input.move[1] !== 0)) noise(world, state, p.x, p.z, NOISE_RUN, 'run', events);
   state.foes.forEach((f, n) => { if (f.wake && awakeCount(state) < MAX_AWAKE) requestWake(world, state, n, events); }); // R-FOE-4
   const lit = p.oil > 0 && !p.hooded && p.hung < 0, sight = lit ? SIGHT_LIT : SIGHT_DARK;
   const fields = { walk: null, fly: null };
@@ -658,6 +699,12 @@ function checkpoint(world, state, events) {
   if (z < 0) return;
   const cp = worldZones(world)[z].cp;
   if (cp === null || !cp.enter || z <= state.checkpoints[state.cp].zone) return;
+  reachCheckpoint(world, state, z, events);
+}
+
+/** R-CP-2 (and `setCheckpoint`): zone z's checkpoint becomes the current one, with the life as it is now. */
+function reachCheckpoint(world, state, z, events) {
+  const cp = worldZones(world)[z].cp;
   const entry = { zone: z, x: cp.x, z: cp.z, yaw: cp.yaw, life: lifeOf(state) };
   let n = state.checkpoints.findIndex((c) => c.zone === z);
   if (n < 0) { n = state.checkpoints.length; state.checkpoints.push(entry); } else state.checkpoints[n] = entry;
@@ -729,6 +776,10 @@ function rise(world, state, target, events) {
   state.flying = [];
   state.groups = life.groups.slice();
   state.blows = [];
+  state.braziers = life.braziers.slice();
+  if (state.boss !== null && life.boss !== 'dead') state.boss = freshBoss(worldBoss(world)); // R-BOSS-6
+  else if (state.boss !== null) state.boss.st = 'dead';
+  p.busy = 0; p.busyOn = -1;
   // R-FOE-8: defeated groups stay dead; foes starting awake or asleep come back as they started; foes of spawned
   // groups that started dormant come back hunting, in entity order, while fewer than 8 are awake (else they wait).
   state.foes = worldFoes(world).map((def) => {
@@ -756,6 +807,7 @@ function interact(world, state, n, events, batch) {
   if (ref && ref.type === 'lampHook') { useHook(world, state, n, ref.hook, events, batch); return; }
   if (ref && ref.type === 'mirror') { turnMirror(world, state, n, ref.mirror, events, batch); return; }
   if (ref && ref.type === 'chest') { openChest(world, state, n, ref.chest, events, batch); return; }
+  if (ref && ref.type === 'brazier') { useBrazier(world, state, n, ref.brazier, events, batch); return; }
   if (!ref || ref.type !== 'door') return;
   const def = worldDoors(world)[ref.door], d = state.doors[ref.door], p = state.player;
   if (d.open) return;
@@ -766,6 +818,102 @@ function interact(world, state, n, events, batch) {
   if (!def.interact && !(def.key > 0 && state.taken.includes(def.key))) return; // R-DOOR-1: interact or key
   d.open = true;
   events.push({ e: 'door', id: def.id, open: true });
+}
+
+/** R-BRAZIER-2 */
+function useBrazier(world, state, n, bi, events, batch) {
+  const p = state.player, b = worldBraziers(world)[bi], dx = p.x - b.x, dz = p.z - b.z; // squares < 2^36
+  if (state.braziers[bi] || (state.boss !== null && state.boss.st === 'dead')) return;
+  if (dx * dx + dz * dz > b.reach * b.reach || !lineOfSight(world, state, b.x, b.z)) return;
+  batch.push(['interact', n]);
+  if (p.oil > 0 && p.hung < 0) { p.busy = 30; p.busyOn = bi; events.push({ e: 'busy', id: b.id }); }
+  else events.push({ e: 'msg', k: 'needLight' });
+}
+
+/** R-BOSS-4: one tick of the boss. */
+function updateBoss(world, state, events, batch) {
+  const B = state.boss;
+  if (B === null || B.st === 'asleep' || B.st === 'dead') return;
+  const def = worldBoss(world), K = def.kind, p = state.player, box = worldBossBox(world), braziers = worldBraziers(world);
+  const dx = p.x - B.x, dz = p.z - B.z, d = Math.max(1, isqrt(dx * dx + dz * dz)); // squares < 2^36
+  B.atk = Math.max(0, B.atk - 1); B.feedCd = Math.max(0, B.feedCd - 1);
+  if (d < K.drainRange && p.oil > 0 && p.hung < 0) {
+    const drain = B.phase === 2 ? K.drain2 : K.drain;
+    p.oil = Math.max(0, p.oil - idiv(drain * (5 * K.drainRange - 3 * d), 5 * K.drainRange)); // < 2^27
+    if (p.oil === 0) { p.hooded = false; events.push({ e: 'msg', k: 'lanternOut' }); }
+  }
+  const speed = B.phase === 2 ? K.speed2 : K.speed;
+  const move = (gx, gz, spd) => {
+    const ex = gx - B.x, ez = gz - B.z, e = Math.max(1, isqrt(ex * ex + ez * ez));
+    B.x += idiv(ex * spd, 30 * e); B.z += idiv(ez * spd, 30 * e);
+    pushOut(world, state, B, K.radius, B.x, B.z, false);
+    B.x = clamp(B.x, box.x0, box.x1); B.z = clamp(B.z, box.z0, box.z1);
+  };
+  if (B.st === 'stalk') {
+    let tgt = -1, td = 0;
+    if (B.feedCd === 0) braziers.forEach((b, n) => {
+      if (!state.braziers[n]) return;
+      const ex = b.x - B.x, ez = b.z - B.z, dd = ex * ex + ez * ez;
+      if (tgt < 0 || dd < td) { tgt = n; td = dd; }
+    });
+    if (tgt >= 0) { B.target = tgt; B.st = 'seek'; }
+    else if (d < K.windRange && B.atk === 0) { B.st = 'wind'; B.t = K.wind; }
+    else if (d > K.stop) move(p.x, p.z, speed);
+  } else if (B.st === 'seek') {
+    const b = braziers[B.target], ex = b.x - B.x, ez = b.z - B.z;
+    if (!state.braziers[B.target]) B.st = 'stalk';
+    else if (d < K.seekWindRange && B.atk === 0) { B.st = 'wind'; B.t = K.wind; }
+    else if (ex * ex + ez * ez < K.feedReach * K.feedReach) { B.st = 'feed'; B.t = B.phase === 2 ? K.feed2 : K.feed; B.feedHits = 0; events.push({ e: 'boss', st: 'feed' }); }
+    else move(b.x, b.z, idiv(speed * 11, 10));
+  } else if (B.st === 'feed') {
+    B.t -= 1;
+    if (B.t === 0 || !state.braziers[B.target]) {
+      if (state.braziers[B.target]) { state.braziers[B.target] = false; events.push({ e: 'brazier', id: braziers[B.target].id, lit: false }); }
+      B.st = 'stalk'; B.feedCd = K.feedCd;
+    }
+  } else if (B.st === 'wind') {
+    B.t -= 1;
+    if (B.t === 0) {
+      if (d < K.hitRange) {
+        if (p.oil > 0) { p.oil = Math.max(0, p.oil - K.oilHit); if (p.oil === 0) { p.hooded = false; events.push({ e: 'msg', k: 'lanternOut' }); } }
+        hurt(state, K.damage, events, 'eater');
+      }
+      B.st = 'stalk'; B.atk = B.phase === 2 ? K.atk2 : K.atk;
+    }
+  } else if (B.st === 'reel') {
+    B.t -= 1;
+    if (B.t === 0) B.st = 'stalk';
+  }
+}
+
+/** R-BOSS-4: is a lit brazier within her solid range? */
+function bossSolid(world, state) {
+  const B = state.boss, r = worldBoss(world).kind.solidRange;
+  return worldBraziers(world).some((b, n) => { const ex = b.x - B.x, ez = b.z - B.z; return state.braziers[n] && ex * ex + ez * ez < r * r; });
+}
+
+/** R-BOSS-5: a blow on the boss. */
+function bossBlow(world, state, events, batch) {
+  const B = state.boss, def = worldBoss(world), K = def.kind;
+  if (B.st === 'dead' || B.st === 'asleep') return;
+  if (!bossSolid(world, state)) { events.push({ e: 'boss', smoke: true }); return; }
+  B.hp -= 1;
+  events.push({ e: 'hit', id: def.id, hp: B.hp });
+  if (B.hp === 0) {
+    B.st = 'dead';
+    state.braziers = state.braziers.map(() => true);
+    batch.push(['bossDefeated', 0]);
+    events.push({ e: 'bossDead' });
+    return;
+  }
+  if (B.phase === 1 && B.hp <= 3) {
+    B.phase = 2; B.st = 'stalk'; B.atk = K.phase2Atk; B.feedCd = K.phase2FeedCd;
+    state.braziers = state.braziers.map(() => false);
+    events.push({ e: 'boss', phase: 2 });
+    return;
+  }
+  if (B.st === 'feed') { B.feedHits += 1; if (B.feedHits >= 2) { B.st = 'wind'; B.t = K.tearWind; } }
+  else if (B.st !== 'wind') { B.st = 'reel'; B.t = K.reel; }
 }
 
 /** R-CHEST-2 */
@@ -895,6 +1043,10 @@ function pushOut(world, state, e, r, ox, oz, isPlayer, walker = false) {
         const dx = e.x - qx, dz = e.z - qz, d2 = dx * dx + dz * dz;
         if (d2 > 0 && d2 < r * r) { const d = isqrt(d2); e.x = qx + idiv(dx * r, d); e.z = qz + idiv(dz * r, d); }
       }
+    }
+    if (isPlayer && state.boss !== null && state.boss.st !== 'dead') { // R-BOSS-5: so does the boss
+      const B = state.boss, dx = e.x - B.x, dz = e.z - B.z, d2 = dx * dx + dz * dz, rr = r + idiv(85 * worldBoss(world).kind.radius, 100);
+      if (d2 > 0 && d2 < rr * rr) { const d = isqrt(d2); e.x = B.x + idiv(dx * rr, d); e.z = B.z + idiv(dz * rr, d); }
     }
     for (let n = 0; n < defs.length; n++) {            // R-MOVE-4: the foes push the player (Gloamhollow r + 0.85·ρ)
       const f = state.foes[n];

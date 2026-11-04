@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.9';
+    public const CORE_VERSION = 'm0.10';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -118,7 +118,7 @@ final class Sim
                 'vx' => 0, 'vz' => 0, 'rx' => 0, 'rz' => 0,
                 'yaw' => 0, 'pitch' => 0,
                 'hp' => self::HP_FULL, 'calm' => self::CALM_MAX, 'oil' => 100 * self::OIL_UNIT, 'hooded' => false, 'hung' => -1, // R-HP-1, R-HOOK-1
-                'flasks' => 1, 'pebbles' => 10, 'probeCd' => 0, 'pebbleCd' => 0, 'strikeCd' => 0, // R-OIL-3, R-PEB-1, R-TOOL-2, R-STRIKE-1
+                'flasks' => 1, 'pebbles' => 10, 'probeCd' => 0, 'pebbleCd' => 0, 'strikeCd' => 0, 'busy' => 0, 'busyOn' => -1, // R-OIL-3, R-PEB-1, R-TOOL-2, R-STRIKE-1, R-BRAZIER-2
             ],
             'doors' => array_map(static fn (): array => ['open' => false, 't' => 0], $world->doors), // R-DOOR-2
             'deaths' => 0,
@@ -139,7 +139,10 @@ final class Sim
             'sealing' => [],      // R-ALCOVE-2
             'foes' => array_map(static fn (array $f): array => self::freshFoe($f, $f['start']), $world->foes), // R-FOE-3
             'groups' => array_map(static fn (array $g): string => $g['dormant'] ? 'dormant' : 'awake', $world->groups),
-            'blows' => [],        // R-STRIKE-1
+            'blows' => [],        // R-STRIKE-1 (foe -1: the boss)
+            'braziers' => array_map(static fn (array $b): bool => $b['lit'], $world->braziers), // R-BRAZIER-1
+            'boss' => $world->boss === null ? null : self::freshBoss($world->boss), // R-BOSS-2
+            'won' => null,        // R-EXIT-1
             'bellSets' => array_map(static fn (): array => ['seq' => [], 'solved' => false], $world->bellSets), // R-BELL-2
             'links' => Links::initState($world->links), // R-LINK-4
             'checkpoints' => [],  // R-CP-1
@@ -164,6 +167,8 @@ final class Sim
         return [
             'hp' => $p['hp'], 'oil' => $p['oil'], 'hooded' => $p['hooded'], 'hung' => $p['hung'], 'flasks' => $p['flasks'], 'pebbles' => $p['pebbles'],
             'revealed' => $state['revealed'], 'mirrors' => $state['mirrors'], 'chests' => $state['chests'], 'groups' => $state['groups'],
+            'braziers' => $state['braziers'],
+            'boss' => $state['boss'] === null ? null : ($state['boss']['st'] === 'asleep' ? 'asleep' : ($state['boss']['st'] === 'dead' ? 'dead' : 'awake')),
             'doors' => array_map(static fn (array $d): bool => $d['open'], $state['doors']),
             'floor' => $state['floor'], 'taken' => $state['taken'],
             'bellSets' => $state['bellSets'], 'links' => $state['links'],
@@ -186,6 +191,9 @@ final class Sim
         if ($state['dead'] !== null && $state['mode'] === 'ironman') {
             throw new \InvalidArgumentException('the run is over'); // R-DEATH-3
         }
+        if ($state['won'] !== null) {
+            throw new \InvalidArgumentException('the run is won'); // R-EXIT-1
+        }
         self::checkInput($input);
         $events = [];
         $pressed = $input['buttons'] & ~$state['prevButtons'];
@@ -199,15 +207,19 @@ final class Sim
             self::landPebbles($world, $state, $events);
         } else {
             $batch = [];                                  // R-LINK-5: batch 0
+            $wasBusy = $state['player']['busy'] > 0;      // R-FOE-7: no running noise while busy
             self::live($world, $state, $input, $pressed, $events, $batch);
-            if ($state['dead'] === null) {
-                self::updateFoes($world, $state, $input, $events, $batch); // R-FOE-6
+            if ($state['dead'] === null && $state['won'] === null) {
+                self::updateFoes($world, $state, $input, $events, $batch, $wasBusy); // R-FOE-6
+            }
+            if ($state['dead'] === null && $state['won'] === null) {
+                self::updateBoss($world, $state, $events); // R-BOSS-4
             }
             self::landPebbles($world, $state, $events);
-            if ($state['dead'] === null) {
+            if ($state['dead'] === null && $state['won'] === null) {
                 self::links($world, $state, $batch, $events); // R-LINK-7
             }
-            if ($state['dead'] === null) {
+            if ($state['dead'] === null && $state['won'] === null) {
                 // R-HP-1: regeneration once calm, then calm counts on (after the links, so a hurt tick doesn't heal).
                 if ($state['player']['hp'] < self::HP_FULL && $state['player']['calm'] > 150) {
                     $state['player']['hp'] = min(self::HP_FULL, $state['player']['hp'] + self::HP_REGEN);
@@ -283,6 +295,29 @@ final class Sim
         foreach ($list as $fx) {
             if ($fx['kind'] === 'message') {
                 $events[] = ['e' => 'message', 'text' => $fx['text']];
+                continue;
+            }
+            if ($fx['kind'] === 'wakeBoss') { // R-BOSS-3
+                if ($state['boss']['st'] === 'asleep') {
+                    $state['boss']['st'] = 'stalk';
+                    $state['boss']['atk'] = $world->boss['kind']['wakeAtk'];
+                    $changed = true;
+                    $events[] = ['e' => 'boss', 'st' => 'stalk'];
+                }
+                continue;
+            }
+            if ($fx['kind'] === 'lightOn' || $fx['kind'] === 'lightOff') {
+                $lit = $fx['kind'] === 'lightOn';
+                if ($state['braziers'][$fx['brazier']] !== $lit) {
+                    $state['braziers'][$fx['brazier']] = $lit;
+                    $changed = true;
+                    $events[] = ['e' => 'brazier', 'id' => $world->braziers[$fx['brazier']]['id'], 'lit' => $lit];
+                }
+                continue;
+            }
+            if ($fx['kind'] === 'setCheckpoint') {
+                self::reachCheckpoint($world, $state, $fx['zone'], $events);
+                $changed = true;
                 continue;
             }
             if ($fx['kind'] === 'spawnFoes') { // R-FOE-4
@@ -373,6 +408,10 @@ final class Sim
                 return $state['bellSets'][$arg]['solved'];
             case 'beamHits':
                 return self::beamHits($world, $state, $arg);
+            case 'bossAwake':
+                return $state['boss']['st'] !== 'asleep' && $state['boss']['st'] !== 'dead';
+            case 'lightLit':
+                return $state['braziers'][$arg];
             case 'foesAlive':
                 foreach ($world->groups[$arg]['foes'] as $n) {
                     if ($state['foes'][$n]['st'] !== 'dormant' && $state['foes'][$n]['st'] !== 'dead') {
@@ -420,7 +459,11 @@ final class Sim
             $state['sealing'] = $keep;
         }
         $p = &$state['player'];
-        // R-TOOL-1: tool presses, in button order, from where the player stood before moving.
+        // R-TOOL-1: tool presses, in button order, from where the player stood before moving (none while busy, R-BRAZIER-2).
+        $busy = $p['busy'] > 0;
+        if ($busy) {
+            $pressed = 0;
+        }
         if ($pressed & self::BTN_HOOD) {
             if ($p['hung'] >= 0) { // R-HOOK-2
                 $events[] = ['e' => 'msg', 'k' => 'lanternHung'];
@@ -448,12 +491,12 @@ final class Sim
             self::moveDoors($state); // R-CHEST-2: the needles (doors still move, R-DEATH-2)
             return;
         }
-        if (($input['buttons'] & self::BTN_STRIKE) && $state['player']['strikeCd'] === 0) {
+        if (!$busy && ($input['buttons'] & self::BTN_STRIKE) && $state['player']['strikeCd'] === 0) {
             self::swing($world, $state, $events); // R-STRIKE-1: held, not pressed
         }
         $p = &$state['player'];
 
-        [$fw, $st] = $input['move'];
+        [$fw, $st] = $busy ? [0, 0] : $input['move'];
         $m2 = $fw * $fw + $st * $st;
         if ($m2 > 127 * 127) {
             $len = IntMath::isqrt($m2);
@@ -514,6 +557,16 @@ final class Sim
             return;
         }
         self::pickPebbles($state);
+        $ex = $world->exit; // R-EXIT-1
+        if ($ex !== null && ($ex['boss'] ? $state['boss']['st'] === 'dead' : ($ex['item'] === 0 || in_array($ex['item'], $state['taken'], true)))) {
+            $dx = $state['player']['x'] - $ex['x'];
+            $dz = $state['player']['z'] - $ex['z'];
+            if ($dx * $dx + $dz * $dz < 1000 * 1000) {
+                $state['won'] = $state['tick'];
+                $events[] = ['e' => 'won'];
+                return;
+            }
+        }
         $p = &$state['player'];
         // R-OIL-1/2: the lantern burns; at 0 it goes out and un-hoods.
         if ($p['oil'] > 0) {
@@ -532,6 +585,14 @@ final class Sim
         }
         if ($p['strikeCd'] > 0) {
             $p['strikeCd'] -= 1;
+        }
+        if ($p['busy'] > 0) { // R-BRAZIER-2: the brazier catches
+            $p['busy'] -= 1;
+            if ($p['busy'] === 0) {
+                $state['braziers'][$p['busyOn']] = true;
+                $events[] = ['e' => 'brazier', 'id' => $world->braziers[$p['busyOn']]['id'], 'lit' => true];
+                $p['busyOn'] = -1;
+            }
         }
         unset($p);
     }
@@ -907,6 +968,18 @@ final class Sim
         if ($cp === null || !$cp['enter'] || $z <= $state['checkpoints'][$state['cp']]['zone']) {
             return;
         }
+        self::reachCheckpoint($world, $state, $z, $events);
+    }
+
+    /**
+     * R-CP-2 (and `setCheckpoint`): zone z's checkpoint becomes the current one, with the life as it is now.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    public static function reachCheckpoint(World $world, array &$state, int $z, array &$events): void
+    {
+        $cp = $world->zones[$z]['cp'];
         $entry = ['zone' => $z, 'x' => $cp['x'], 'z' => $cp['z'], 'yaw' => $cp['yaw'], 'life' => self::lifeOf($state)];
         $n = -1;
         foreach ($state['checkpoints'] as $k => $c) {
@@ -1144,6 +1217,14 @@ final class Sim
         $state['flying'] = [];
         $state['groups'] = $life['groups'];
         $state['blows'] = [];
+        $state['braziers'] = $life['braziers'];
+        if ($state['boss'] !== null && $life['boss'] !== 'dead') { // R-BOSS-6
+            $state['boss'] = self::freshBoss($world->boss);
+        } elseif ($state['boss'] !== null) {
+            $state['boss']['st'] = 'dead';
+        }
+        $state['player']['busy'] = 0;
+        $state['player']['busyOn'] = -1;
         // R-FOE-8: defeated groups stay dead; others come back as they started; spawned dormant ones hunt, capped.
         $state['foes'] = [];
         foreach ($world->foes as $def) {
@@ -1192,6 +1273,10 @@ final class Sim
         }
         if ($ref !== null && $ref['type'] === 'chest') {
             self::openChest($world, $state, $n, $ref['chest'], $events, $batch);
+            return;
+        }
+        if ($ref !== null && $ref['type'] === 'brazier') {
+            self::useBrazier($world, $state, $n, $ref['brazier'], $events, $batch);
             return;
         }
         if ($ref === null || $ref['type'] !== 'door') {
@@ -1408,6 +1493,17 @@ final class Sim
                     }
                 }
             }
+            if ($isPlayer && $state['boss'] !== null && $state['boss']['st'] !== 'dead') { // R-BOSS-5: so does the boss
+                $dx = $e['x'] - $state['boss']['x'];
+                $dz = $e['z'] - $state['boss']['z'];
+                $d2 = $dx * $dx + $dz * $dz;
+                $rr = $r + intdiv(85 * $world->boss['kind']['radius'], 100);
+                if ($d2 > 0 && $d2 < $rr * $rr) {
+                    $d = IntMath::isqrt($d2);
+                    $e['x'] = $state['boss']['x'] + IntMath::idiv($dx * $rr, $d);
+                    $e['z'] = $state['boss']['z'] + IntMath::idiv($dz * $rr, $d);
+                }
+            }
             if ($isPlayer) { // R-MOVE-4: the foes push the player (Gloamhollow r + 0.85·ρ)
                 foreach ($world->foes as $n => $def) {
                     $f = $state['foes'][$n];
@@ -1550,10 +1646,249 @@ final class Sim
                 $bd = $d;
             }
         }
-        self::noise($world, $state, $p['x'], $p['z'], self::NOISE_SWING, 'swing', $events);
-        if ($best >= 0) {
-            $state['blows'][] = ['foe' => $best, 'at' => $state['tick'] + self::BLOW_DELAY];
+        $B = $state['boss'];
+        if ($B !== null && $B['st'] !== 'asleep' && $B['st'] !== 'dead') { // R-BOSS-5: she is a target too (foes win ties)
+            $dx = $B['x'] - $p['x'];
+            $dz = $B['z'] - $p['z'];
+            $d = IntMath::isqrt($dx * $dx + $dz * $dz);
+            $r = $world->boss['kind']['radius'];
+            if ($d > 0 && $d <= self::STRIKE_REACH + intdiv(6 * $r, 10) && 2 * ($dx * -$sy + $dz * -$cy) >= $d * SineTable::TRIG_ONE && ($best === -1 || $d < $bd)) {
+                $best = -2;
+                $bd = $d;
+            }
         }
+        self::noise($world, $state, $p['x'], $p['z'], self::NOISE_SWING, 'swing', $events);
+        if ($best !== -1) {
+            $state['blows'][] = ['foe' => $best === -2 ? -1 : $best, 'at' => $state['tick'] + self::BLOW_DELAY];
+        }
+    }
+
+    /**
+     * R-BOSS-2: the boss as she starts (and comes back, R-BOSS-6).
+     *
+     * @param array<string,mixed> $def
+     * @return array<string,mixed>
+     */
+    private static function freshBoss(array $def): array
+    {
+        return ['st' => 'asleep', 'x' => $def['x'], 'z' => $def['z'], 'hp' => $def['kind']['strikes'], 'phase' => 1, 't' => 0, 'atk' => 0, 'feedCd' => 0, 'target' => -1, 'feedHits' => 0];
+    }
+
+    /**
+     * R-BRAZIER-2
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     * @param list<array{string,int}> $batch
+     */
+    private static function useBrazier(World $world, array &$state, int $n, int $bi, array &$events, array &$batch): void
+    {
+        $b = $world->braziers[$bi];
+        if ($state['braziers'][$bi] || ($state['boss'] !== null && $state['boss']['st'] === 'dead')) {
+            return;
+        }
+        $dx = $state['player']['x'] - $b['x'];
+        $dz = $state['player']['z'] - $b['z'];
+        if ($dx * $dx + $dz * $dz > $b['reach'] * $b['reach'] || !self::lineOfSight($world, $state, $b['x'], $b['z'])) {
+            return;
+        }
+        $batch[] = ['interact', $n];
+        if ($state['player']['oil'] > 0 && $state['player']['hung'] < 0) {
+            $state['player']['busy'] = 30;
+            $state['player']['busyOn'] = $bi;
+            $events[] = ['e' => 'busy', 'id' => $b['id']];
+        } else {
+            $events[] = ['e' => 'msg', 'k' => 'needLight'];
+        }
+    }
+
+    /**
+     * R-BOSS-4: one tick of the boss.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function updateBoss(World $world, array &$state, array &$events): void
+    {
+        $B = $state['boss'];
+        if ($B === null || $B['st'] === 'asleep' || $B['st'] === 'dead') {
+            return;
+        }
+        $K = $world->boss['kind'];
+        $box = $world->bossBox;
+        $p = $state['player'];
+        $dx = $p['x'] - $B['x'];
+        $dz = $p['z'] - $B['z'];
+        $d = max(1, IntMath::isqrt($dx * $dx + $dz * $dz));
+        $B['atk'] = max(0, $B['atk'] - 1);
+        $B['feedCd'] = max(0, $B['feedCd'] - 1);
+        if ($d < $K['drainRange'] && $p['oil'] > 0 && $p['hung'] < 0) {
+            $drain = $B['phase'] === 2 ? $K['drain2'] : $K['drain'];
+            $state['player']['oil'] = max(0, $p['oil'] - IntMath::idiv($drain * (5 * $K['drainRange'] - 3 * $d), 5 * $K['drainRange'])); // < 2^27
+            if ($state['player']['oil'] === 0) {
+                $state['player']['hooded'] = false;
+                $events[] = ['e' => 'msg', 'k' => 'lanternOut'];
+            }
+        }
+        $speed = $B['phase'] === 2 ? $K['speed2'] : $K['speed'];
+        $move = static function (array &$B, int $gx, int $gz, int $spd) use ($world, &$state, $K, $box): void {
+            $ex = $gx - $B['x'];
+            $ez = $gz - $B['z'];
+            $e = max(1, IntMath::isqrt($ex * $ex + $ez * $ez));
+            $B['x'] += IntMath::idiv($ex * $spd, 30 * $e);
+            $B['z'] += IntMath::idiv($ez * $spd, 30 * $e);
+            self::pushOut($world, $state, $B, $K['radius'], $B['x'], $B['z'], false);
+            $B['x'] = IntMath::clamp($B['x'], $box['x0'], $box['x1']);
+            $B['z'] = IntMath::clamp($B['z'], $box['z0'], $box['z1']);
+        };
+        if ($B['st'] === 'stalk') {
+            $tgt = -1;
+            $td = 0;
+            if ($B['feedCd'] === 0) {
+                foreach ($world->braziers as $n => $b) {
+                    if (!$state['braziers'][$n]) {
+                        continue;
+                    }
+                    $ex = $b['x'] - $B['x'];
+                    $ez = $b['z'] - $B['z'];
+                    $dd = $ex * $ex + $ez * $ez;
+                    if ($tgt < 0 || $dd < $td) {
+                        $tgt = $n;
+                        $td = $dd;
+                    }
+                }
+            }
+            if ($tgt >= 0) {
+                $B['target'] = $tgt;
+                $B['st'] = 'seek';
+            } elseif ($d < $K['windRange'] && $B['atk'] === 0) {
+                $B['st'] = 'wind';
+                $B['t'] = $K['wind'];
+            } elseif ($d > $K['stop']) {
+                $move($B, $p['x'], $p['z'], $speed);
+            }
+        } elseif ($B['st'] === 'seek') {
+            $b = $world->braziers[$B['target']];
+            $ex = $b['x'] - $B['x'];
+            $ez = $b['z'] - $B['z'];
+            if (!$state['braziers'][$B['target']]) {
+                $B['st'] = 'stalk';
+            } elseif ($d < $K['seekWindRange'] && $B['atk'] === 0) {
+                $B['st'] = 'wind';
+                $B['t'] = $K['wind'];
+            } elseif ($ex * $ex + $ez * $ez < $K['feedReach'] * $K['feedReach']) {
+                $B['st'] = 'feed';
+                $B['t'] = $B['phase'] === 2 ? $K['feed2'] : $K['feed'];
+                $B['feedHits'] = 0;
+                $events[] = ['e' => 'boss', 'st' => 'feed'];
+            } else {
+                $move($B, $b['x'], $b['z'], IntMath::idiv($speed * 11, 10));
+            }
+        } elseif ($B['st'] === 'feed') {
+            $B['t'] -= 1;
+            if ($B['t'] === 0 || !$state['braziers'][$B['target']]) {
+                if ($state['braziers'][$B['target']]) {
+                    $state['braziers'][$B['target']] = false;
+                    $events[] = ['e' => 'brazier', 'id' => $world->braziers[$B['target']]['id'], 'lit' => false];
+                }
+                $B['st'] = 'stalk';
+                $B['feedCd'] = $K['feedCd'];
+            }
+        } elseif ($B['st'] === 'wind') {
+            $B['t'] -= 1;
+            if ($B['t'] === 0) {
+                $B['st'] = 'stalk';
+                $B['atk'] = $B['phase'] === 2 ? $K['atk2'] : $K['atk'];
+                if ($d < $K['hitRange']) {
+                    $state['boss'] = $B;
+                    if ($state['player']['oil'] > 0) {
+                        $state['player']['oil'] = max(0, $state['player']['oil'] - $K['oilHit']);
+                        if ($state['player']['oil'] === 0) {
+                            $state['player']['hooded'] = false;
+                            $events[] = ['e' => 'msg', 'k' => 'lanternOut'];
+                        }
+                    }
+                    self::hurt($state, $K['damage'], $events, 'eater');
+                    return;
+                }
+            }
+        } elseif ($B['st'] === 'reel') {
+            $B['t'] -= 1;
+            if ($B['t'] === 0) {
+                $B['st'] = 'stalk';
+            }
+        }
+        $state['boss'] = $B;
+    }
+
+    /**
+     * R-BOSS-4: is a lit brazier within her solid range?
+     *
+     * @param array<string,mixed> $state
+     */
+    private static function bossSolid(World $world, array $state): bool
+    {
+        $r = $world->boss['kind']['solidRange'];
+        foreach ($world->braziers as $n => $b) {
+            $ex = $b['x'] - $state['boss']['x'];
+            $ez = $b['z'] - $state['boss']['z'];
+            if ($state['braziers'][$n] && $ex * $ex + $ez * $ez < $r * $r) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * R-BOSS-5: a blow on the boss.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     * @param list<array{string,int}> $batch
+     */
+    private static function bossBlow(World $world, array &$state, array &$events, array &$batch): void
+    {
+        $K = $world->boss['kind'];
+        $st = $state['boss']['st'];
+        if ($st === 'dead' || $st === 'asleep') {
+            return;
+        }
+        if (!self::bossSolid($world, $state)) {
+            $events[] = ['e' => 'boss', 'smoke' => true];
+            return;
+        }
+        $B = &$state['boss'];
+        $B['hp'] -= 1;
+        $events[] = ['e' => 'hit', 'id' => $world->boss['id'], 'hp' => $B['hp']];
+        if ($B['hp'] === 0) {
+            $B['st'] = 'dead';
+            unset($B);
+            $state['braziers'] = array_map(static fn (): bool => true, $state['braziers']);
+            $batch[] = ['bossDefeated', 0];
+            $events[] = ['e' => 'bossDead'];
+            return;
+        }
+        if ($B['phase'] === 1 && $B['hp'] <= 3) {
+            $B['phase'] = 2;
+            $B['st'] = 'stalk';
+            $B['atk'] = $K['phase2Atk'];
+            $B['feedCd'] = $K['phase2FeedCd'];
+            unset($B);
+            $state['braziers'] = array_map(static fn (): bool => false, $state['braziers']);
+            $events[] = ['e' => 'boss', 'phase' => 2];
+            return;
+        }
+        if ($B['st'] === 'feed') {
+            $B['feedHits'] += 1;
+            if ($B['feedHits'] >= 2) {
+                $B['st'] = 'wind';
+                $B['t'] = $K['tearWind'];
+            }
+        } elseif ($B['st'] !== 'wind') {
+            $B['st'] = 'reel';
+            $B['t'] = $K['reel'];
+        }
+        unset($B);
     }
 
     /**
@@ -1704,12 +2039,9 @@ final class Sim
      * @param list<array<string,mixed>> $events
      * @param list<array{string,int}> $batch
      */
-    private static function updateFoes(World $world, array &$state, array $input, array &$events, array &$batch): void
+    private static function updateFoes(World $world, array &$state, array $input, array &$events, array &$batch, bool $wasBusy): void
     {
         $defs = $world->foes;
-        if ($defs === []) {
-            return;
-        }
         $tick = $state['tick'];
         if ($state['blows'] !== []) {
             $keep = [];
@@ -1717,13 +2049,20 @@ final class Sim
                 if ($b['at'] !== $tick) {
                     $keep[] = $b;
                 } else {
-                    self::landBlow($world, $state, $b['foe'], $events, $batch);
+                    if ($b['foe'] < 0) {
+                        self::bossBlow($world, $state, $events, $batch);
+                    } else {
+                        self::landBlow($world, $state, $b['foe'], $events, $batch);
+                    }
                 }
             }
             $state['blows'] = $keep;
         }
+        if ($defs === []) {
+            return;
+        }
         $p = $state['player'];
-        if (($input['buttons'] & self::BTN_RUN) && ($input['move'][0] !== 0 || $input['move'][1] !== 0)) {
+        if (!$wasBusy && ($input['buttons'] & self::BTN_RUN) && ($input['move'][0] !== 0 || $input['move'][1] !== 0)) {
             self::noise($world, $state, $p['x'], $p['z'], self::NOISE_RUN, 'run', $events);
         }
         foreach (array_keys($state['foes']) as $n) { // R-FOE-4

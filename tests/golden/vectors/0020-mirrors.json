@@ -1,6 +1,6 @@
 {
  "name": "0020-mirrors",
- "core": "m0.9",
+ "core": "m0.10",
  "seed": 20,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":12,\"h\":8,\"cells\":\"DQAKAQIACgECAAoBAgAKAQIACgECAAoBDQA=\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"v\",\"name\":\"V\",\"rects\":[[1,1,6,6]],\"ceil\":4600},{\"id\":\"o\",\"name\":\"O\",\"rects\":[[7,1,4,6]],\"ceil\":4200}],\"entities\":[{\"id\":\"hook\",\"type\":\"lampHook\",\"cell\":[1,3],\"dir\":\"e\"},{\"id\":\"m1\",\"type\":\"mirror\",\"cell\":[4,3],\"start\":\"\\\\\"},{\"id\":\"m2\",\"type\":\"mirror\",\"cell\":[4,5],\"start\":\"/\"},{\"id\":\"cr\",\"type\":\"crystal\",\"cell\":[4,1],\"wall\":\"n\"},{\"id\":\"gem\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[6,1],\"value\":50,\"hidden\":true}],\"links\":[{\"id\":1,\"when\":{\"beamHits\":\"cr\"},\"do\":[{\"reveal\":\"gem\"},{\"message\":\"lit\"}]},{\"id\":2,\"when\":{\"beamHits\":\"cr\"},\"repeat\":true,\"do\":[{\"message\":\"on\"}],\"undo\":[{\"message\":\"off\"}]}]}",
@@ -256,13 +256,13 @@
  "ticks": 497,
  "hashEvery": 300,
  "hashes": {
-  "0": "9ba779a5cf9bfa34a173064aa8294578",
-  "300": "30418fed785df7e32bd40706812b3ea1"
+  "0": "31f7d562c2a79cc12b4cf14d210c1531",
+  "300": "7e85088937aa38f0bf78f88639e845b8"
  },
- "final": "2c4e1cbf3c3e3844f6b08b76624caffb",
+ "final": "174fb3d5d937ac11a52b7966db7e3747",
  "finalState": {
   "v": 1,
-  "core": "m0.9",
+  "core": "m0.10",
   "world": "057039bb08a087d1af806b6103e7c583",
   "mode": "delve",
   "tick": 497,
@@ -290,7 +290,9 @@
    "pebbles": 10,
    "probeCd": 0,
    "pebbleCd": 0,
-   "strikeCd": 0
+   "strikeCd": 0,
+   "busy": 0,
+   "busyOn": -1
   },
   "doors": [],
   "deaths": 0,
@@ -319,6 +321,9 @@
   "foes": [],
   "groups": [],
   "blows": [],
+  "braziers": [],
+  "boss": null,
+  "won": null,
   "bellSets": [],
   "links": [
    {
@@ -356,6 +361,8 @@
      ],
      "chests": [],
      "groups": [],
+     "braziers": [],
+     "boss": null,
      "doors": [],
      "floor": [],
      "taken": [],

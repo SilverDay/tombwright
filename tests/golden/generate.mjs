@@ -514,6 +514,56 @@ const gardenRun = () => {
   return [[1, I([0, 0], 0, X, 0, great)], [1, I()], [1, I([0, 0], 0, X, 0, great)], [80, I()], [1500, I([0, 0], 0, B.strike)], [600, I([60, 0], 1024, B.strike)]];
 };
 
+// Gloamhollow's Sanctum, played by a small bot (the inputs it chose are the vector, so this is still plain data).
+// It starts in the Dreamer's Way, walks in (Ilvaris wakes), lights the nearest unlit brazier, fights her whenever
+// she is solid, relights braziers she has eaten, pours oil when low, and once she is dead takes the Heart and walks
+// into the daylight shaft. Integer maths only, so regeneration is reproducible.
+function sanctum() { const g = JSON.parse(GLOAMHOLLOW); g.start = { cell: [7, 20] }; return JSON.stringify(g); }
+function aim(dx, dz) {                                   // the yaw whose forward (-sin, -cos) best matches (dx, dz)
+  let best = 0, bv = -Infinity;
+  for (let a = 0; a < 4096; a += 8) { const v = -isin(a) * dx - isin(a + 1024) * dz; if (v > bv) { bv = v; best = a; } }
+  return best;
+}
+export function sanctumBot(maxTicks = 7000) {
+  const gdf = sanctum(), g = JSON.parse(gdf), world = Sim.load(utf8(gdf)), st = Sim.init(world, 40, 'delve');
+  const num = (id) => g.entities.findIndex((e) => e.id === id) + 1;
+  const braziers = g.entities.filter((e) => e.type === 'brazier'), C = (c) => c * 2400 + 1200;
+  const inputs = [];
+  let prev = 0;
+  for (let t = 0; t < maxTicks && st.won === null; t++) {
+    const p = st.player, B = st.boss;
+    let move = [0, 0], yaw = p.yaw, buttons = 0, target = 0;
+    const go = (x, z, near) => { const dx = x - p.x, dz = z - p.z; yaw = aim(dx, dz); if (dx * dx + dz * dz > near * near) move = [127, 0]; };
+    if (st.dead !== null) { if (!(prev & B_.rise)) buttons = B_.rise; }
+    else if (p.busy > 0) { /* lighting */ }
+    else if (B.st === 'dead') {
+      const heart = num('heart');
+      if (!st.taken.includes(heart)) { go(C(7), C(31) + 1700, 400); if (Math.abs(p.z - (C(31) + 1700)) < 600 && Math.abs(p.x - C(7)) < 600 && !(prev & B_.interact)) { buttons = B_.interact; target = heart; } }
+      else if (p.z > C(29) && p.x > C(5)) go(C(4), C(31), 300);  // round the sarcophagus
+      else if (p.z > C(28)) go(C(4), C(27), 300);
+      else go(C(7), C(27), 0);
+    } else if (B.st === 'asleep') go(C(7), C(24), 0);
+    else if (p.oil < 30 * 30000 && p.flasks > 0 && !(prev & B_.oil)) buttons = B_.oil;
+    else {
+      const lit = st.braziers.some((x) => x);
+      if (!lit) {                                        // light the nearest unlit brazier
+        let bi = 0, bd = Infinity;
+        braziers.forEach((b, n) => { const dx = C(b.cell[0]) - p.x, dz = C(b.cell[1]) - p.z, d = dx * dx + dz * dz; if (d < bd) { bd = d; bi = n; } });
+        const b = braziers[bi];
+        go(C(b.cell[0]), C(b.cell[1]), 1800);
+        if (bd < 2200 * 2200 && !(prev & B_.interact)) { buttons = B_.interact; target = num(b.id); }
+      } else { go(B.x, B.z, 1500); buttons = B_.strike; }
+    }
+    const inp = { move, yaw, pitch: 0, buttons, target };
+    Sim.step(world, st, inp);
+    prev = buttons;
+    const last = inputs[inputs.length - 1];
+    if (last && JSON.stringify(last[1]) === JSON.stringify(inp)) last[0] += 1; else inputs.push([1, inp]);
+  }
+  return { gdf, inputs, won: st.won, deaths: st.deaths };
+}
+const B_ = Sim.BTN;
+
 // Vectors carry the GDF as its exact text: Sim.load takes bytes (R-GDF-0).
 export const GLOAMHOLLOW = readFileSync(ROOT + 'dungeons/gloamhollow.gdf.json', 'utf8');
 const utf8 = (s) => new TextEncoder().encode(s);
@@ -549,6 +599,8 @@ const VECTORS = {
   '0030-foes-practice-fuzz': { gdf: foeRoom([10, 6]), seed: 30, mode: 'practice', inputs: fuzz(0xF0E6, 9000, 5, 60) },
   '0031-foes-crowd-fuzz': { gdf: crowdRoom(), seed: 31, mode: 'practice', inputs: fuzz(0xC0D5, 9000, 13) },
   '0032-garden-keepers': { gdf: garden(), seed: 32, mode: 'delve', inputs: gardenRun() },
+  '0033-sanctum-won': (() => { const r = sanctumBot(); return { gdf: r.gdf, seed: 40, mode: 'delve', inputs: r.inputs }; })(),
+  '0034-sanctum-death': { gdf: sanctum(), seed: 41, mode: 'delve', inputs: [[90, I([127, 0], 2048)], [1500, I()], [1, I([0, 0], 0, B.rise)], [300, I([127, 0], 2048)]] },
   '0022-mirrors-practice-fuzz': { gdf: mirrorRoom([1, 3]), seed: 22, mode: 'practice', inputs: fuzz(0x3171, 9000, 4, 30) }, // slow, near the hook
 };
 
@@ -601,7 +653,7 @@ function gdfCases() {
     raw('not an object', utf8('[1,2]')), raw('null', utf8('null')), raw('trailing garbage', utf8(text(r) + 'x')),
     raw('too large', utf8(text(r).replace('"gdf":1', '"gdf":1,"pad":"' + 'a'.repeat(262144) + '"'))),
   ];
-  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw), ...mirrorCases(raw), ...chestCases(raw), ...foeCases(raw));
+  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw), ...mirrorCases(raw), ...chestCases(raw), ...foeCases(raw), ...bossCases(raw));
   return cases.map((c) => { try { return { ...c, ok: true, id: Sim.load(b64decodeBytes(c.bytes)).id }; } catch { return { ...c, ok: false }; } });
 }
 
@@ -870,6 +922,31 @@ function foeCases(raw) {
     one('foes: spawnFoes unknown', (g) => { g.links[0].do = [{ spawnFoes: 'zz' }]; }), one('foes: spawnFoes a foe id', (g) => { g.links[0].do = [{ spawnFoes: 'f1' }]; }),
     one('foes: group named like a foe ok', (g) => { ent('f2')(g).group = 'f1'; ent('f1')(g).group = 'f1'; g.links = g.links.filter((l) => l.id !== 2); }),
     one('foes: foesDefeated zone', (g) => { g.links[1].when = { foesDefeated: 'w' }; }), one('foes: foesAlive number', (g) => { g.links[2].when = { not: { foesAlive: 1 } }; }),
+  ];
+}
+
+// Braziers, the boss and the exit (R-BRAZIER-1, R-BOSS-2, R-EXIT-1, R-LINK-2/3): edits of Gloamhollow itself.
+function bossCases(raw) {
+  const base = JSON.parse(GLOAMHOLLOW);
+  const one = (name, f) => { const g = structuredClone(base); f(g); return raw(name, utf8(JSON.stringify(g))); };
+  const ent = (id) => (g) => g.entities.find((e) => e.id === id);
+  const set = (id, o) => (g) => Object.assign(ent(id)(g), o);
+  const link = (o) => (g) => { g.links.push({ id: 99, do: [{ message: 'x' }], ...o }); };
+  return [
+    one('boss: gloamhollow', () => {}), one('boss: kind unknown', set('ilvaris', { kind: 'warden' })), one('boss: pos outside zone', set('ilvaris', { pos: [5000, 71200] })),
+    one('boss: pos at the inset ok', set('ilvaris', { pos: [5500, 53500] })), one('boss: zone unknown', set('ilvaris', { zone: 'nope' })),
+    one('boss: two bosses', (g) => { g.entities.push({ ...ent('ilvaris')(g), id: 'ilvaris2' }); }), one('boss: no bestiary', (g) => { delete g.bestiary; }),
+    one('boss: pos 3', set('ilvaris', { pos: [1, 2, 3] })), one('boss: extra key', set('ilvaris', { hp: 6 })),
+    one('braziers: lit ok', set('brazier1', { lit: true })), one('braziers: lit number', set('brazier1', { lit: 1 })), one('braziers: on wall', set('brazier1', { cell: [1, 24] })),
+    one('braziers: on start', set('brazier1', { cell: [34, 60] })),
+    one('exit: none ok', (g) => { delete g.exit; }), one('exit: no requires ok', (g) => { g.exit = { cell: [7, 27] }; }), one('exit: requires boss ok', (g) => { g.exit.requires = 'bossDefeated'; }),
+    one('exit: requires rubble', (g) => { g.exit.requires = 'rub1'; }), one('exit: requires a door', (g) => { g.exit.requires = 'vest'; }), one('exit: requires unknown', (g) => { g.exit.requires = 'x'; }),
+    one('exit: on wall', (g) => { g.exit.cell = [0, 0]; }), one('exit: extra key', (g) => { g.exit.light = true; }),
+    one('exit: requires boss without one', (g) => { g.exit.requires = 'bossDefeated'; g.entities = g.entities.filter((e) => e.type !== 'boss'); g.links = g.links.filter((l) => ![21, 22].includes(l.id)); }),
+    one('links: wakeBoss a foe', link({ when: { inZone: 'vest' }, do: [{ wakeBoss: 'warden1' }] })), one('links: lightOn a door', link({ when: { inZone: 'vest' }, do: [{ lightOn: 'vest' }] })),
+    one('links: setCheckpoint no checkpoint', link({ when: { inZone: 'vest' }, do: [{ setCheckpoint: 'gallery' }] })), one('links: setCheckpoint ok', link({ when: { inZone: 'vest' }, do: [{ setCheckpoint: 'hall' }] })),
+    one('links: bossDefeated false', link({ when: { bossDefeated: false } })), one('links: bossAwake ok', link({ when: { bossAwake: true } })),
+    one('links: lightLit ok', link({ when: { lightLit: 'brazier2' } })), one('links: lightLit a bell', link({ when: { lightLit: 'great' } })),
   ];
 }
 
