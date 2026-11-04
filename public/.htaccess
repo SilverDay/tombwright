@@ -6,3 +6,14 @@ RewriteRule ^ index.php [QSA,L]
 <FilesMatch "\.bin$">
   ForceType application/octet-stream
 </FilesMatch>
+# Static files skip index.php, so they get their own headers (spec §11.4). Needs mod_headers; skipped without it.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|woff2|json|bin|txt)$">
+    Header set X-Content-Type-Options "nosniff"
+    Header set Cross-Origin-Resource-Policy "same-origin"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+  </FilesMatch>
+</IfModule>
+AddType text/javascript .js
+AddType font/woff2 .woff2
+AddCharset utf-8 .js .css .json .txt

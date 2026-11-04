@@ -1,7 +1,7 @@
 version = 1
 
 [[annotations]]
-path = ["src/**", "public/js/sim/**", "public/index.php", "bin/**", "config/**", "tests/**", "scripts/**", ".claude/**", ".github/**", "migrations/**", "templates/**"]
+path = ["src/**", "public/js/sim/**", "public/index.php", "bin/**", "config/**", "tests/**", "scripts/**", ".claude/**", ".github/**", "migrations/**", "templates/**", "public/js/game/**", "public/assets/css/**", "public/.htaccess"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 SilverDay Media"
 SPDX-License-Identifier = "MIT"
@@ -12,3 +12,23 @@ path = ["reference/gloamhollow/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 SilverDay Media"
 SPDX-License-Identifier = "MIT"
+
+# three.js r187, vendored unchanged (decision #52).
+[[annotations]]
+path = ["public/js/vendor/three/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2010-2026 three.js authors"
+SPDX-License-Identifier = "MIT"
+
+# Spectral and VT323, vendored as Latin woff2 (decision #53); licence texts beside them.
+[[annotations]]
+path = ["public/assets/fonts/spectral-*"]
+precedence = "override"
+SPDX-FileCopyrightText = "2017 The Spectral Project Authors"
+SPDX-License-Identifier = "OFL-1.1"
+
+[[annotations]]
+path = ["public/assets/fonts/vt323-*"]
+precedence = "override"
+SPDX-FileCopyrightText = "2011 The VT323 Project Authors"
+SPDX-License-Identifier = "OFL-1.1"
