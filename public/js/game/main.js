@@ -6,7 +6,9 @@ import * as Sim from '../sim/sim.js';
 import { loadSineTable } from '../sim/sine.js';
 import { loadBestiary, foeKind, bossKind } from '../sim/bestiary.js';
 import { b64decode, rleDecode } from '../sim/world.js';
+import { audioInit } from './audio.js';
 import { TombView, yawRad } from './render.js';
+import { UI } from './ui.js';
 import { SAY, DEATHS, TOMB_TEXT, FOE_NAMES, FLASK_NAME, READ_LABEL, FACE_NAME, cap } from './text.js';
 
 const $ = (id) => document.getElementById(id);
@@ -34,7 +36,7 @@ async function loadTomb(name) {
   const { w, h } = gdf.grid, grid = rleDecode(b64decode(gdf.grid.cells), w * h);
   // Official tombs only: their text is keyed by the route's name, never by the tomb's own (user-editable) title.
   const text = Object.hasOwn(TOMB_TEXT, name) ? TOMB_TEXT[name] : { items: {}, bells: {}, reads: {} };
-  return { world, gdf, grid, w, h, text, bestiary: (k) => foeKind(k) };
+  return { name, world, gdf, grid, w, h, text, bestiary: (k) => foeKind(k) };
 }
 
 // ------------------------------------------------------------------ what the player can use (Gloamhollow setupInteractions)
@@ -107,7 +109,12 @@ function makeWorldQueries(T) {
     for (let s = 1; s < n; s++) if (sightBlocked(st, Math.floor((x0 + dx * s / n) / S), Math.floor((z0 + dz * s / n) / S))) return false;
     return true;
   };
-  return { zoneOf, inB, solid, los, sightBlocked };
+  const alcoves = ents.filter((e) => e.type === 'alcove'), doors = ents.filter((e) => e.type === 'door');
+  const tipAt = new Map(alcoves.filter((a) => a.kind === 'tip').map((a) => [a.cell[1] * w + a.cell[0], doors.findIndex((d) => d.id === a.door)]));
+  const doorShutAt = (st, k) => doorShut(st, k);
+  const slabAt = (st, k) => slab.has(k) || st.sprung.includes(k);
+  const openAlcovePit = (st, k) => tipAt.has(k) && st.sealed.includes(tipAt.get(k));
+  return { zoneOf, inB, solid, los, sightBlocked, doorShutAt, slabAt, openAlcovePit };
 }
 
 // R-BEAM-1, traced for drawing: the hook's beam through the mirrors, in metres.
@@ -143,19 +150,42 @@ class Game {
     this.mode = 'title'; this.st = null; this.prev = null; this.acc = 0; this.log = [];
     this.lastHungMsg = -99; this.lowOilWarned = false; this.visited = new Set(); this.hungOnce = false; this.fresh = true;
     this.drive = null; // test hook: { move, yaw, pitch, buttons, target } replaces device input
+    this.ui = new UI(this, { reduced, coarse });
   }
 
-  start(seed) {
+  newGame(seed = crypto.getRandomValues(new Uint32Array(1))[0]) {
     const T = this.T;
-    this.st = Sim.init(T.world, seed >>> 0, 'delve'); this.prev = structuredClone(this.st);
-    this.look = { yaw: 0, pitch: 0 }; this.log = []; this.visited = new Set(); this.hungOnce = false; this.fresh = true;
-    this.mode = 'play'; $('intro').hidden = true;
+    this.ui.clearSave(); this.ui.fresh();
+    this.begin(Sim.init(T.world, seed >>> 0, 'delve'), { yaw: 0, pitch: 0 }, []);
+    this.say(T.text.intro ?? `You enter ${T.gdf.meta?.title ?? 'the tomb'}.`);
+    this.ui.save();
+  }
+
+  /** A saved delve goes on exactly where it was left (the sim state itself is saved, never edited). */
+  continueGame(s) {
+    if (!s) { this.newGame(); return; }
+    let st;
+    try { st = structuredClone(s.state); Sim.step(this.T.world, structuredClone(st), { move: [0, 0], yaw: 0, pitch: 0, buttons: 0, target: 0 }); } catch { this.newGame(); return; }
+    this.ui.restore(s);
+    const look = s.look && Number.isFinite(s.look.yaw) && Number.isFinite(s.look.pitch) ? { yaw: s.look.yaw, pitch: clamp(s.look.pitch, -1.2, 1.2) } : { yaw: yawRad(st.player.yaw), pitch: 0 };
+    this.begin(st, look, Array.isArray(s.visited) ? s.visited.filter(Number.isInteger) : []);
+    const z = st.checkpoints[st.cp].zone;
+    this.say(`You return to ${z >= 0 ? this.T.gdf.zones[z].name : 'the tomb'}. The tomb remembers you.`);
+    if (st.dead !== null) this.ui.showDeath(st.dead.cause);
+  }
+
+  begin(st, look, visited) {
+    this.st = st; this.prev = structuredClone(st);
+    this.look = look; this.log = []; this.visited = new Set(visited); this.hungOnce = false; this.fresh = true; this.lowOilWarned = false;
+    this.ui.hideOverlays();
+    this.mode = 'play';
     for (const z of ['bar', 'pframe']) $(z).hidden = false;
     const z = this.zoneAt(); if (z >= 0) this.visited.add(z);
-    this.say(T.text.intro ?? `You enter ${T.gdf.meta?.title ?? 'the tomb'}.`);
     this.hud(); this.setHints();
     if (!coarse) this.tryLock();
   }
+
+  applyLook(dx, dy) { this.look.yaw -= dx; this.look.pitch = clamp(this.look.pitch - dy, -1.2, 1.2); }
 
   zoneAt(st = this.st) { const p = st.player, i = Math.floor(p.x / S), j = Math.floor(p.z / S); return this.Q.inB(i, j) ? this.Q.zoneOf[j * this.T.w + i] : -1; }
   zoneName(z) { return z >= 0 ? this.T.gdf.zones[z].name : null; }
@@ -180,7 +210,7 @@ class Game {
 
   // One tick of input (R-INPUT-1) from the devices, or from the test hook.
   sample() {
-    if (this.drive) return this.drive;
+    if (this.drive) { const d = { ...this.drive, buttons: this.drive.buttons | this.pending }; this.pending = 0; return d; }
     const k = this.keys;
     let fw = 0, sd = 0;
     if (k.has('KeyW') || k.has('ArrowUp')) fw += 1;
@@ -192,12 +222,15 @@ class Game {
     const m = Math.hypot(fw, sd), sc = m > 1 ? 127 / m : 127;
     let buttons = this.held | this.pending; this.pending = 0;
     if (k.has('ShiftLeft') || k.has('ShiftRight')) buttons |= B.run;
+    let move = [Math.round(fw * sc), Math.round(sd * sc)];
+    const stick = this.ui.stickInput();
+    if (stick) { move = stick.move; if (stick.run) buttons |= B.run; }
     let target = 0;
     if (buttons & B.interact) {
       const o = this.nearest();
       if (o && o.read) { this.read(o.read); buttons &= ~B.interact; } else if (o) target = o.n;
     }
-    return { move: [Math.round(fw * sc), Math.round(sd * sc)], yaw: this.qYaw(), pitch: this.qPitch(), buttons, target };
+    return { move, yaw: this.qYaw(), pitch: this.qPitch(), buttons, target };
   }
   qYaw() { return ((Math.round(this.look.yaw * 4096 / TAU) % 4096) + 4096) % 4096; }
   qPitch() { return clamp(Math.round(this.look.pitch / 1.2 * 127), -127, 127); } // decision #22
@@ -206,10 +239,13 @@ class Game {
     const st = this.st;
     if (!st || st.won !== null || this.mode !== 'play') return;
     const input = this.sample();
+    if (this.mode !== 'play') return; // reading a text opened a panel this tick
     this.prev = structuredClone(st);
+    const before = { buttons: st.prevButtons };
     const events = Sim.step(this.T.world, st, input);
     this.log.push(input);
     for (const ev of events) { this.view.onEvent(ev, st); this.onEvent(ev, events); }
+    this.ui.afterTick(events, input, before);
     this.watchLantern();
     // Gloamhollow says "You enter …" the first time you reach a chamber (not a one-cell-wide way).
     const z = this.zoneAt(), Z = this.T.gdf.zones?.[z];
@@ -281,7 +317,6 @@ class Game {
     this.keys.clear(); this.held = 0;
     if (document.pointerLockElement) document.exitPointerLock();
     this.say(D.cause.replace('{who}', who));
-    this.deathNote = D.lesson;
     this.setHints();
   }
 
@@ -289,13 +324,10 @@ class Game {
 
   onWin() {
     this.mode = 'won'; if (document.pointerLockElement) document.exitPointerLock();
-    this.say('Into daylight.'); this.setHints();
+    this.keys.clear(); this.held = 0; this.setHints();
   }
 
-  read(t) {
-    // 6a: the text goes to the message line; the reader panel comes with step 6b.
-    this.say(`${t.title}. ${t.pages.join(' ')}`.replace(/\s+/g, ' '));
-  }
+  read(t) { this.ui.openRead(t); }
 
   say(text) {
     if (!text) return;
@@ -379,6 +411,7 @@ class Game {
     }
     if (window.__twNoRender) return;
     if (!this.st) return;
+    this.ui.frame(dt);
     this.hudT = (this.hudT ?? 0) + dt; if (this.hudT > 0.1) { this.hudT = 0; this.hud(); }
     this.prompt();
     const alpha = this.mode === 'play' ? clamp(this.acc / DT, 0, 1) : 1;
@@ -392,7 +425,7 @@ class Game {
     try { const p = v.requestPointerLock(); if (p && typeof p.catch === 'function') p.catch(() => {}); } catch { /* drag-to-look still works */ }
   }
   setHints() {
-    const play = this.mode === 'play' && this.st && this.st.dead === null, v = $('view');
+    const play = this.mode === 'play' && !!this.st && this.st.dead === null, v = $('view');
     $('hint').hidden = !(play && !coarse && document.pointerLockElement !== v);
     $('cross').hidden = !play;
   }
@@ -410,7 +443,7 @@ class Game {
     addEventListener('keyup', (e) => { this.keys.delete(e.code); if (e.code === 'Space') this.held &= ~B.strike; });
     addEventListener('blur', () => { this.keys.clear(); this.held = 0; });
     document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement !== v) this.held &= ~B.strike; this.setHints(); });
-    const applyLook = (dx, dy) => { this.look.yaw -= dx; this.look.pitch = clamp(this.look.pitch - dy, -1.2, 1.2); };
+    const applyLook = (dx, dy) => this.applyLook(dx, dy);
     document.addEventListener('mousemove', (e) => { if (document.pointerLockElement === v && this.mode === 'play') applyLook(e.movementX * 0.0022, e.movementY * 0.0022); });
     v.addEventListener('contextmenu', (e) => e.preventDefault());
     let drag = null;
@@ -421,24 +454,26 @@ class Game {
         if (document.pointerLockElement === v) { if (e.button === 0) this.held |= B.strike; else if (e.button === 2) this.pending |= B.probe; return; }
         this.tryLock(); drag = { x: e.clientX, y: e.clientY }; return;
       }
-      drag = { x: e.clientX, y: e.clientY, touch: true }; // touch stick and buttons come with step 6b
+      audioInit(); this.ui.touchDown(e);
     });
     v.addEventListener('pointermove', (e) => {
-      if (this.mode !== 'play' || !drag) return;
+      if (this.mode !== 'play') return;
+      if (e.pointerType !== 'mouse') { this.ui.touchMove(e); return; }
+      if (!drag) return;
       if (e.pointerType === 'mouse' && !(e.buttons & 1)) return;
       const k = drag.touch ? 0.0058 : 0.005; applyLook((e.clientX - drag.x) * k, (e.clientY - drag.y) * k); drag.x = e.clientX; drag.y = e.clientY;
     });
-    const end = (e) => { if (e.pointerType === 'mouse') this.held &= ~B.strike; drag = null; };
+    const end = (e) => { if (e.pointerType === 'mouse') this.held &= ~B.strike; else this.ui.touchUp(e); drag = null; };
     v.addEventListener('pointerup', end); v.addEventListener('pointercancel', end);
     const slot = (id, bit, hold) => {
       const el = $(id);
-      el.addEventListener('pointerdown', (e) => { e.preventDefault(); if (hold) this.held |= bit; else this.pending |= bit; try { el.setPointerCapture(e.pointerId); } catch { /* ignore */ } });
+      el.addEventListener('pointerdown', (e) => { e.preventDefault(); audioInit(); if (!this.ui.touchedOnce && e.pointerType !== 'mouse') { this.ui.touchedOnce = true; this.setHints(); } if (hold) this.held |= bit; else this.pending |= bit; try { el.setPointerCapture(e.pointerId); } catch { /* ignore */ } });
       const up = () => { if (hold) this.held &= ~bit; };
       el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
       el.addEventListener('click', (e) => e.preventDefault());
     };
     slot('sAtk', B.strike, true); slot('sHood', B.hood); slot('sProbe', B.probe); slot('sPeb', B.pebble); slot('sOil', B.oil);
-    $('prompt').addEventListener('click', (e) => { e.preventDefault(); if (this.st?.dead !== null) this.rise(); else this.pending |= B.interact; });
+    $('prompt').addEventListener('click', (e) => { e.preventDefault(); audioInit(); if (this.st?.dead !== null) this.rise(); else this.pending |= B.interact; });
   }
 }
 
@@ -455,10 +490,8 @@ async function boot() {
   game.bindInput();
   const resize = () => game.view.resize(innerWidth, innerHeight);
   addEventListener('resize', resize); if (window.visualViewport) visualViewport.addEventListener('resize', resize); resize();
-  const seed = () => crypto.getRandomValues(new Uint32Array(1))[0];
   $('goBtn').disabled = false;
-  $('goBtn').addEventListener('click', () => game.start(seed()));
-  $('goBtn').focus({ preventScroll: true });
+  game.ui.showTitle();
   // A first frame behind the title card.
   game.st = Sim.init(T.world, 0, 'delve'); game.prev = structuredClone(game.st);
   let last = performance.now();
@@ -469,7 +502,7 @@ async function boot() {
   if (window.__twTest === true) window.__tw = {
     game, Sim, T,
     get state() { return game.st; }, get mode() { return game.mode; }, get look() { return game.look; },
-    start: (s = 1) => game.start(s),
+    start: (s = 1) => game.newGame(s),
     tick(n = 1) { for (let k = 0; k < n; k++) game.tick(); },
     nearest: () => { const o = game.nearest(); return o ? { n: o.n ?? 0, label: o.label(game.st), read: o.read?.id ?? null } : null; },
   };
