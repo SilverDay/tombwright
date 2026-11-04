@@ -67,7 +67,16 @@ final class World
     public const DOOR_CLOSE_STEP = 33;
     private const ITEM_KINDS = ['flask', 'rubble', 'treasure', 'key'];
     private const KEYS_ZONE = ['id', 'name', 'rects', 'ceil'];
-    private const KEYS_ZONE_CP = ['id', 'name', 'rects', 'ceil', 'checkpoint'];
+    // R-DRESS-*: renderer-only entities and zone keys; validated, never read by a rule.
+    private const KEYS_TORCH = ['id', 'type', 'cell', 'wall'];
+    private const KEYS_MARKS = ['id', 'type', 'cells'];
+    private const KEYS_DECOR = ['id', 'type', 'kind', 'pos', 'yaw'];
+    private const INSCRIPTION_STYLES = ['plaque', 'carving', 'scrawl', 'stele', 'book', 'look'];
+    private const DECOR_KINDS = ['bones', 'burnt', 'scorch', 'candles', 'stair'];
+    private const ZONE_WALLS = ['brick', 'shelves'];
+    private const MAX_INSCRIPTIONS = 24;
+    private const BAD_TEXT = '/[\x{0}-\x{1F}\x{7F}-\x{9F}]/u';
+    private const BAD_PAGE = '/[\x{0}-\x{9}\x{B}-\x{1F}\x{7F}-\x{9F}]/u';
     private const KEYS_CP = ['cell', 'yaw'];
     private const KEYS_CP_REACH = ['cell', 'yaw', 'reach'];
     private const DOOR_STYLES = ['stone', 'grate', 'mask'];
@@ -397,6 +406,43 @@ final class World
         return true;
     }
 
+    /** R-DRESS-*: text of 1..$max code points without control characters (pages may break lines). */
+    private static function dressText(mixed $v, int $max, bool $page): bool
+    {
+        if (!is_string($v)) {
+            return false;
+        }
+        $n = mb_strlen($v, 'UTF-8');
+        return $n >= 1 && $n <= $max && preg_match($page ? self::BAD_PAGE : self::BAD_TEXT, $v) === 0;
+    }
+
+    private static function dressPos(mixed $pos, int $w, int $h): void
+    {
+        if (!is_array($pos) || !array_is_list($pos) || count($pos) !== 2 || !is_int($pos[0]) || !is_int($pos[1])) {
+            throw new \RangeException('dressing pos');
+        }
+        if ($pos[0] < 0 || $pos[1] < 0 || $pos[0] > $w * self::CELL_MM || $pos[1] > $h * self::CELL_MM) {
+            throw new \RangeException('dressing pos outside grid');
+        }
+    }
+
+    /** R-DRESS-1, R-DRESS-2: a floor cell whose neighbour on $side is wall. */
+    private static function dressWall(mixed $cell, mixed $side, string $grid, int $w, int $h): void
+    {
+        $k = self::cellIndex($cell, $w, $h);
+        $d = is_string($side) ? (self::DIRS[$side] ?? null) : null;
+        if ($d === null) {
+            throw new \RangeException('dressing wall side');
+        }
+        $c = ord($grid[$k]);
+        if ($c !== self::ROOM && $c !== self::CORR) {
+            throw new \RangeException('dressing wall cell');
+        }
+        if (ord($grid[$k + $d[1] * $w + $d[0]]) !== self::WALL) {
+            throw new \RangeException('dressing not on a wall');
+        }
+    }
+
     /** R-ENT-2: [i, j] inside the grid -> cell index. */
     private static function cellIndex(mixed $v, int $w, int $h): int
     {
@@ -434,8 +480,24 @@ final class World
                 throw new \RangeException('duplicate zone id');
             }
             $ids[$z['id']] = true;
-            if (!self::hasExactKeys($z, array_key_exists('checkpoint', $z) ? self::KEYS_ZONE_CP : self::KEYS_ZONE)) {
+            $zk = self::KEYS_ZONE;
+            foreach (['checkpoint', 'tint', 'walls'] as $opt) {
+                if (array_key_exists($opt, $z)) {
+                    $zk[] = $opt;
+                }
+            }
+            if (!self::hasExactKeys($z, $zk)) {
                 throw new \RangeException('zone keys');
+            }
+            // R-ZONE-1, R-DRESS-*: tint and walls are renderer only.
+            if (array_key_exists('tint', $z)) {
+                $t = $z['tint'];
+                if (!is_array($t) || !array_is_list($t) || count($t) !== 3 || count(array_filter($t, static fn (mixed $c): bool => is_int($c) && $c >= 0 && $c <= 255)) !== 3) {
+                    throw new \RangeException('zone tint');
+                }
+            }
+            if (array_key_exists('walls', $z) && !in_array($z['walls'], self::ZONE_WALLS, true)) {
+                throw new \RangeException('zone walls');
             }
             if (!is_string($z['name'])) {
                 throw new \RangeException('zone name');
@@ -533,6 +595,7 @@ final class World
         $groupIds = [];
         $braziers = [];
         $bosses = [];
+        $inscriptions = 0;
         foreach ($list as $e) {
             if (!is_array($e) || array_is_list($e) || !is_string($e['id'] ?? null) || preg_match(self::ID_RE, $e['id']) !== 1) {
                 throw new \RangeException('entity id');
@@ -895,10 +958,106 @@ final class World
                 }
                 $refs[] = ['type' => 'bellSet', 'set' => count($bellSets)];
                 $bellSets[] = ['id' => $e['id'], 'names' => $bl, 'order' => $order];
+            } elseif ($type === 'torch') {
+                if (!self::hasExactKeys($e, self::KEYS_TORCH)) {
+                    throw new \RangeException('torch keys');
+                }
+                self::dressWall($e['cell'], $e['wall'], $grid, $w, $h); // R-DRESS-1
+                $refs[] = ['type' => 'torch'];
+            } elseif ($type === 'inscription') {
+                // R-DRESS-2
+                $place = array_values(array_filter(['wall', 'pos', 'on'], static fn (string $k): bool => array_key_exists($k, $e)));
+                if (count($place) !== 1) {
+                    throw new \RangeException('inscription placement');
+                }
+                $ik = ['id', 'type', 'style', 'title', 'pages', $place[0]];
+                foreach (['caption', 'sig'] as $opt) {
+                    if (array_key_exists($opt, $e)) {
+                        $ik[] = $opt;
+                    }
+                }
+                if (!self::hasExactKeys($e, $ik)) {
+                    throw new \RangeException('inscription keys');
+                }
+                if (!in_array($e['style'], self::INSCRIPTION_STYLES, true)) {
+                    throw new \RangeException('inscription style');
+                }
+                if (!self::dressText($e['title'], 80, false)) {
+                    throw new \RangeException('inscription title');
+                }
+                foreach (['caption', 'sig'] as $opt) {
+                    if (array_key_exists($opt, $e) && !self::dressText($e[$opt], 80, false)) {
+                        throw new \RangeException('inscription ' . $opt);
+                    }
+                }
+                $pages = $e['pages'];
+                if (!is_array($pages) || !array_is_list($pages) || count($pages) < 1 || count($pages) > 8) {
+                    throw new \RangeException('inscription pages');
+                }
+                $total = 0;
+                foreach ($pages as $pg) {
+                    if (!self::dressText($pg, 1500, true)) {
+                        throw new \RangeException('inscription page');
+                    }
+                    $total += mb_strlen($pg, 'UTF-8');
+                }
+                if ($total > 1500) {
+                    throw new \RangeException('inscription too long');
+                }
+                if ($place[0] === 'wall') {
+                    $wl = $e['wall'];
+                    if (!is_array($wl) || !array_is_list($wl) || count($wl) !== 2) {
+                        throw new \RangeException('inscription wall');
+                    }
+                    self::dressWall($wl[0], $wl[1], $grid, $w, $h);
+                } elseif ($place[0] === 'pos') {
+                    self::dressPos($e['pos'], $w, $h);
+                } elseif (!is_string($e['on'])) {
+                    throw new \RangeException('inscription on');
+                }
+                if (++$inscriptions > self::MAX_INSCRIPTIONS) {
+                    throw new \RangeException('too many inscriptions');
+                }
+                $refs[] = ['type' => 'inscription', 'on' => $place[0] === 'on' ? $e['on'] : null];
+            } elseif ($type === 'marks') {
+                if (!self::hasExactKeys($e, self::KEYS_MARKS)) {
+                    throw new \RangeException('marks keys');
+                }
+                $mc = $e['cells'];
+                if (!is_array($mc) || !array_is_list($mc) || count($mc) < 1 || count($mc) > 256) {
+                    throw new \RangeException('marks cells');
+                }
+                $seen = [];
+                foreach ($mc as $c) {
+                    $k = self::cellIndex($c, $w, $h); // R-DRESS-3
+                    if (ord($grid[$k]) === self::WALL || isset($seen[$k])) {
+                        throw new \RangeException('marks cell');
+                    }
+                    $seen[$k] = true;
+                }
+                $refs[] = ['type' => 'marks'];
+            } elseif ($type === 'decor') {
+                if (!self::hasExactKeys($e, self::KEYS_DECOR)) {
+                    throw new \RangeException('decor keys');
+                }
+                if (!in_array($e['kind'], self::DECOR_KINDS, true)) {
+                    throw new \RangeException('decor kind'); // R-DRESS-4
+                }
+                self::dressPos($e['pos'], $w, $h);
+                if (!is_int($e['yaw']) || $e['yaw'] < 0 || $e['yaw'] > 4095) {
+                    throw new \RangeException('decor yaw');
+                }
+                $refs[] = ['type' => 'decor'];
             } else {
                 throw new \RangeException('unknown entity type');
             }
             $byId[$e['id']] = $refs[count($refs) - 1] + ['n' => count($refs), 'kind' => $type === 'item' ? $e['kind'] : null, 'hidden' => $type === 'item' && array_key_exists('hidden', $e)];
+        }
+        // R-DRESS-2: an inscription `on` names a chest.
+        foreach ($refs as $r) {
+            if ($r['type'] === 'inscription' && $r['on'] !== null && (($byId[$r['on']] ?? null)['type'] ?? null) !== 'chest') {
+                throw new \RangeException('inscription on');
+            }
         }
         // R-HOOK-1, R-MIRROR-1: hooks and mirrors on free cells.
         foreach (array_merge($hooks, $mirrors) as $x) {

@@ -1,6 +1,6 @@
 {
  "name": "0010-tools",
- "core": "m0.10",
+ "core": "m0.11",
  "seed": 10,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAFAQEABgECAAMBAQMBAQEAAQEBBgEFAQECAwIABQEBAAYBAgAFAQECBgECAAUBAQAGAQIAAwEBBAEBAQABAQEEAQEBBwEBAQgCAAUBAQAGAQ8A\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,5,7]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[7,1,6,7]],\"ceil\":3600,\"checkpoint\":{\"cell\":[7,4],\"yaw\":3072}}],\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[6,4],\"style\":\"stone\",\"opens\":\"interact\"},{\"id\":\"f1\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[3,3]},{\"id\":\"r1\",\"type\":\"item\",\"kind\":\"rubble\",\"cell\":[2,6]},{\"id\":\"t1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[1,1],\"value\":100},{\"id\":\"t2\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[12,4],\"value\":250},{\"id\":\"b1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[8,2],\"value\":7},{\"id\":\"e1\",\"type\":\"eyes\",\"zone\":\"g\",\"wake\":18},{\"id\":\"v1\",\"type\":\"vent\",\"cells\":[[10,6]],\"period\":90,\"phase\":0,\"warn\":20,\"fire\":30},{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[12,2]}]}",
@@ -399,13 +399,13 @@
  "ticks": 529,
  "hashEvery": 300,
  "hashes": {
-  "0": "2ac57182dd948be782b040f249e6aadb",
-  "300": "1b272c8ca56c7da6efdcbd688c22856a"
+  "0": "047b08779b26aba585273edabfd3c6ec",
+  "300": "e9fe6b1209783e75d075ee844c435f83"
  },
- "final": "8b3cbe303075a32746109da695abe9a4",
+ "final": "1145685cc797c2f0aafdbdd1d6f0ce9f",
  "finalState": {
   "v": 1,
-  "core": "m0.10",
+  "core": "m0.11",
   "world": "ed07117ae227eea674dbae0f20b67882",
   "mode": "delve",
   "tick": 529,

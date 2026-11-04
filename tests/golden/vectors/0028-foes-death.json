@@ -1,6 +1,6 @@
 {
  "name": "0028-foes-death",
- "core": "m0.10",
+ "core": "m0.11",
  "seed": 28,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAHAQEABgECAAcBAQAGAQIABwEBAAIBAQMDAQIABwEBAAYBAgAEAQIEAQEBAAYBAgAHAQEABgECAA4BAgAOAREA\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"w\",\"name\":\"W\",\"rects\":[[1,1,7,8]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[8,7,1,2]],\"ceil\":3000},{\"id\":\"e\",\"name\":\"E\",\"rects\":[[9,1,6,8]],\"ceil\":4200,\"checkpoint\":{\"cell\":[10,6],\"yaw\":1024}}],\"entities\":[{\"id\":\"f1\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[12,2],\"start\":\"hunting\",\"group\":\"east\"},{\"id\":\"f2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[13,7],\"start\":\"idle\",\"group\":\"east\"},{\"id\":\"f3\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[3,7],\"start\":\"asleep\",\"group\":\"sleepy\"},{\"id\":\"f4\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[2,2],\"start\":\"dormant\",\"group\":\"late\"}],\"links\":[{\"id\":1,\"when\":{\"enterZone\":\"e\"},\"do\":[{\"spawnFoes\":\"late\"},{\"message\":\"late\"}]},{\"id\":2,\"when\":{\"foesDefeated\":\"east\"},\"do\":[{\"message\":\"east clear\"}]},{\"id\":3,\"when\":{\"not\":{\"foesAlive\":\"sleepy\"}},\"repeat\":true,\"do\":[{\"message\":\"sleepy gone\"}]}]}",
@@ -48,18 +48,18 @@
  "ticks": 1801,
  "hashEvery": 300,
  "hashes": {
-  "0": "4a8eec4525ec5e63dc22a37faf25e629",
-  "300": "28f09d8d5ebf2076a59bef8d3b2e11e7",
-  "600": "3381a85d1b7f27cedc19d8abc0a33119",
-  "900": "c9eef636b049d53e1b8f5fd4f5710d20",
-  "1200": "1047e58c4e1aaaca69873aec9b8979a1",
-  "1500": "a72e45d03b3e22682dd02785b47d7a4f",
-  "1800": "78e9f867f0e7c4c4e0bda733688ef58c"
+  "0": "68bce360195755c15a2806dc3253f69b",
+  "300": "4a2333c4678461988da739277814c062",
+  "600": "a999db075fdb1625fa542fa272f7ab19",
+  "900": "3700c1a4074597076d13238d354e9246",
+  "1200": "439c3661ad30bf7aff63da7e600d00c6",
+  "1500": "73075d8083f3d9562f5306c9a2ca2c06",
+  "1800": "e6ffd3ec1aff9805cc08b0b6fdce1d48"
  },
- "final": "bb21bb39e26810354dbf0043a276b92f",
+ "final": "2e919397b79f4814e841b7bbc658dbde",
  "finalState": {
   "v": 1,
-  "core": "m0.10",
+  "core": "m0.11",
   "world": "048035ae47f4729f40c65d9e91cfaca9",
   "mode": "delve",
   "tick": 1801,

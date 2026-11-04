@@ -601,6 +601,12 @@ const VECTORS = {
   '0032-garden-keepers': { gdf: garden(), seed: 32, mode: 'delve', inputs: gardenRun() },
   '0033-sanctum-won': (() => { const r = sanctumBot(); return { gdf: r.gdf, seed: 40, mode: 'delve', inputs: r.inputs }; })(),
   '0034-sanctum-death': { gdf: sanctum(), seed: 41, mode: 'delve', inputs: [[90, I([127, 0], 2048)], [1500, I()], [1, I([0, 0], 0, B.rise)], [300, I([127, 0], 2048)]] },
+  // R-DRESS-*: pressing interact on dressing (the plaque, a torch, the marks, decor) does nothing (R-ACT-1).
+  '0035-dressing': { gdf: GLOAMHOLLOW, seed: 35, mode: 'delve', inputs: (() => {
+    const n = (id) => JSON.parse(GLOAMHOLLOW).entities.findIndex((e) => e.id === id) + 1;
+    return [[40, I([127, 0], 0)], ...['verseText', 'torch1', 'masons', 'decor1', 'stairText'].flatMap((id) => [[1, I([0, 0], 0, B.interact, 0, n(id))], [2, I()]]),
+      [30, I([127, 0], 1024)], [1, I([0, 0], 0, B.interact, 0, n('verseText'))], [60, I([127, 0], 0, B.run)]];
+  })() },
   '0022-mirrors-practice-fuzz': { gdf: mirrorRoom([1, 3]), seed: 22, mode: 'practice', inputs: fuzz(0x3171, 9000, 4, 30) }, // slow, near the hook
 };
 
@@ -653,7 +659,7 @@ function gdfCases() {
     raw('not an object', utf8('[1,2]')), raw('null', utf8('null')), raw('trailing garbage', utf8(text(r) + 'x')),
     raw('too large', utf8(text(r).replace('"gdf":1', '"gdf":1,"pad":"' + 'a'.repeat(262144) + '"'))),
   ];
-  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw), ...mirrorCases(raw), ...chestCases(raw), ...foeCases(raw), ...bossCases(raw));
+  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw), ...mirrorCases(raw), ...chestCases(raw), ...foeCases(raw), ...bossCases(raw), ...dressCases(raw));
   return cases.map((c) => { try { return { ...c, ok: true, id: Sim.load(b64decodeBytes(c.bytes)).id }; } catch { return { ...c, ok: false }; } });
 }
 
@@ -947,6 +953,59 @@ function bossCases(raw) {
     one('links: setCheckpoint no checkpoint', link({ when: { inZone: 'vest' }, do: [{ setCheckpoint: 'gallery' }] })), one('links: setCheckpoint ok', link({ when: { inZone: 'vest' }, do: [{ setCheckpoint: 'hall' }] })),
     one('links: bossDefeated false', link({ when: { bossDefeated: false } })), one('links: bossAwake ok', link({ when: { bossAwake: true } })),
     one('links: lightLit ok', link({ when: { lightLit: 'brazier2' } })), one('links: lightLit a bell', link({ when: { lightLit: 'great' } })),
+  ];
+}
+
+// Dressing (R-DRESS-*, R-ZONE-1 tint and walls): edits of Gloamhollow, which carries one of each.
+function dressCases(raw) {
+  const base = JSON.parse(GLOAMHOLLOW);
+  const one = (name, f) => { const g = structuredClone(base); f(g); return raw(name, utf8(JSON.stringify(g))); };
+  const ent = (id) => (g) => g.entities.find((e) => e.id === id);
+  const set = (id, o) => (g) => Object.assign(ent(id)(g), o);
+  const drop = (id, k) => (g) => { delete ent(id)(g)[k]; };
+  const zone = (id, o) => (g) => Object.assign(g.zones.find((z) => z.id === id), o);
+  const add = (e) => (g) => { g.entities.push(e); };
+  const ins = (o) => add({ id: 'tx', type: 'inscription', style: 'plaque', title: 'T', pages: ['p'], wall: [[33, 56], 'n'], ...o });
+  return [
+    one('dress: gloamhollow', () => {}),
+    one('zones: tint ok', zone('vest', { tint: [0, 128, 255] })), one('zones: tint 256', zone('vest', { tint: [0, 0, 256] })), one('zones: tint -1', zone('vest', { tint: [-1, 0, 0] })),
+    one('zones: tint 2', zone('vest', { tint: [1, 2] })), one('zones: tint number', zone('vest', { tint: 1 })), one('zones: tint string', zone('vest', { tint: ['1', 2, 3] })),
+    one('zones: walls shelves ok', zone('vest', { walls: 'shelves' })), one('zones: walls brick ok', zone('hall', { walls: 'brick' })), one('zones: walls wood', zone('vest', { walls: 'wood' })),
+    one('zones: tint and walls ok', zone('mouth', { tint: [1, 2, 3], walls: 'brick' })),
+    one('torch: on floor side', set('torch1', { wall: 'e' })), one('torch: bad side', set('torch1', { wall: 'x' })), one('torch: on wall cell', set('torch1', { cell: [30, 58] })),
+    one('torch: on plate', set('torch1', { cell: [32, 50] })), one('torch: extra key', set('torch1', { y: 2 })), one('torch: no wall', drop('torch1', 'wall')),
+    one('torch: ok elsewhere', set('torch1', { cell: [31, 57], wall: 'w' })),
+    one('ins: minimal ok', ins({})), one('ins: two placements', ins({ pos: [100, 100] })), one('ins: no placement', ins({ wall: undefined })),
+    one('ins: pos ok', ins({ wall: undefined, pos: [0, 0] })), one('ins: pos edge ok', ins({ wall: undefined, pos: [44 * 2400, 63 * 2400] })),
+    one('ins: pos outside', ins({ wall: undefined, pos: [44 * 2400 + 1, 0] })), one('ins: pos 3', ins({ wall: undefined, pos: [1, 2, 3] })),
+    one('ins: on chest ok', ins({ wall: undefined, on: 'plain' })), one('ins: on a door', ins({ wall: undefined, on: 'vest' })), one('ins: on unknown', ins({ wall: undefined, on: 'nope' })),
+    one('ins: on number', ins({ wall: undefined, on: 3 })), one('ins: on before chest ok', (g) => { g.entities.unshift({ id: 'tx', type: 'inscription', style: 'look', title: 'T', pages: ['p'], on: 'gilded' }); }),
+    one('ins: wall not on wall', ins({ wall: [[33, 57], 'n'] })), one('ins: wall flat', ins({ wall: [33, 56, 'n'] })), one('ins: wall bad side', ins({ wall: [[33, 56], 'up'] })),
+    one('ins: bad style', ins({ style: 'poster' })), one('ins: empty title', ins({ title: '' })), one('ins: title 80 ok', ins({ title: 'a'.repeat(80) })), one('ins: title 81', ins({ title: 'a'.repeat(81) })),
+    one('ins: title 80 astral ok', ins({ title: '\u{1F702}'.repeat(80) })), one('ins: title 81 astral', ins({ title: '\u{1F702}'.repeat(81) })),
+    one('ins: title newline', ins({ title: 'a\nb' })), one('ins: title tab', ins({ title: 'a\tb' })), one('ins: title del', ins({ title: 'a\u007f' })), one('ins: title c1', ins({ title: 'a\u0085' })),
+    one('ins: title nbsp ok', ins({ title: 'a\u00a0b' })), one('ins: caption ok', ins({ caption: 'c', sig: 's' })), one('ins: caption empty', ins({ caption: '' })), one('ins: sig 81', ins({ sig: 'a'.repeat(81) })),
+    one('ins: page newline ok', ins({ pages: ['a\nb'] })), one('ins: page cr', ins({ pages: ['a\rb'] })), one('ins: page tab', ins({ pages: ['a\tb'] })), one('ins: page nul', ins({ pages: ['a\u0000'] })),
+    one('ins: no pages', ins({ pages: [] })), one('ins: 8 pages ok', ins({ pages: Array(8).fill('p') })), one('ins: 9 pages', ins({ pages: Array(9).fill('p') })), one('ins: empty page', ins({ pages: ['p', ''] })),
+    one('ins: 1500 ok', ins({ pages: ['a'.repeat(700), '\u00e4'.repeat(800)] })), one('ins: 1501', ins({ pages: ['a'.repeat(700), '\u00e4'.repeat(801)] })),
+    one('ins: pages string', ins({ pages: 'p' })), one('ins: page number', ins({ pages: [1] })), one('ins: extra key', ins({ font: 'x' })), one('ins: no title', ins({ title: undefined })),
+    one('ins: 24 ok', (g) => { const k = g.entities.filter((e) => e.type === 'inscription').length; for (let x = k; x < 24; x++) g.entities.push({ id: 'tx' + x, type: 'inscription', style: 'book', title: 'T', pages: ['p'], pos: [0, 0] }); }),
+    one('ins: 25', (g) => { const k = g.entities.filter((e) => e.type === 'inscription').length; for (let x = k; x < 25; x++) g.entities.push({ id: 'tx' + x, type: 'inscription', style: 'book', title: 'T', pages: ['p'], pos: [0, 0] }); }),
+    one('marks: on wall', (g) => { ent('masons')(g).cells.push([0, 0]); }), one('marks: twice', (g) => { const c = ent('masons')(g).cells; c.push(c[0].slice()); }),
+    one('marks: on plate ok', (g) => { ent('masons')(g).cells.push([32, 51]); }), one('marks: empty', set('masons', { cells: [] })),
+    one('marks: 256 ok', (g) => {
+      const c = [];
+      for (let j = 1; j < 10; j++) for (let i = 14; i < 28; i++) c.push([i, j]);   // the chasm, 126
+      for (let j = 22; j < 33; j++) for (let i = 2; i < 13; i++) c.push([i, j]);   // the sanctum, 121
+      for (let i = 0; i < 9; i++) c.push([32 + (i % 5), 39 + ((i / 5) | 0)]);   // the hall, 9
+      ent('masons')(g).cells = c;
+    }),
+    one('marks: 257', set('masons', { cells: Array.from({ length: 257 }, () => [34, 52]) })), one('marks: extra key', set('masons', { glow: 1 })),
+    one('decor: bad kind', set('decor1', { kind: 'chair' })), one('decor: yaw 4096', set('decor1', { yaw: 4096 })), one('decor: pos outside', set('decor1', { pos: [-1, 0] })),
+    one('decor: no yaw', drop('decor1', 'yaw')), one('decor: on wall ok', set('decor1', { pos: [0, 0] })), one('decor: cell key', set('decor1', { cell: [1, 1] })),
+    one('links: interact a torch', (g) => { g.links.push({ id: 99, when: { interact: 'torch1' }, do: [{ message: 'x' }] }); }),
+    one('links: interact an inscription', (g) => { g.links.push({ id: 99, when: { interact: 'verseText' }, do: [{ message: 'x' }] }); }),
+    one('links: reveal decor', (g) => { g.links.push({ id: 99, when: { inZone: 'vest' }, do: [{ reveal: 'decor1' }] }); }),
   ];
 }
 

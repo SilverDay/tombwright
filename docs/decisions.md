@@ -56,6 +56,11 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 49 | 2026-11-04 | **Braziers:** `brazier` entities (lit at the start or not), lit by interact over a 30-tick busy spell (no movement, no tools) with an unhung lantern that has oil; `lightOn` / `lightOff` effects and a `lightLit` condition; their state is in the life. | Owner |
 | 50 | 2026-11-04 | **Exit:** `exit.requires` is an item id that must be held (Gloamhollow: the Heart of Embers, hidden until the boss dies), or `bossDefeated`, or absent; the run is won within 1 m of the exit cell's centre, and `step` refuses the state afterwards. | Owner |
 | 51 | 2026-11-04 | **Boss on death (Gloamhollow's way):** her status is in the life; a rise puts a boss that isn't dead back asleep at full strikes. Her death fires `bossDefeated`; Gloamhollow's link sets the Sanctum checkpoint, lights every brazier and reveals the Heart. | Owner |
+| 52 | 2026-11-04 | **Client three.js:** `three@0.187.0` (r187), the ES-module build vendored under `public/js/vendor/three/` with its MIT licence. The r128 devDependency stays for the reference walkthrough only (supersedes the open part of #9). | Owner |
+| 53 | 2026-11-04 | **Fonts:** Spectral (400, 600, 400 italic) and VT323, both SIL OFL 1.1, vendored as Latin woff2 under `public/assets/fonts/` with `OFL.txt`; no third-party requests. | Owner |
+| 54 | 2026-11-04 | **Walkthrough for the port:** a new Playwright spec plays the Tombwright client against the sim state directly; the reference walkthrough keeps running against `Gloamhollow.html`. | Owner |
+| 55 | 2026-11-04 | **Step 6 split:** 6a the page at `/` (served by `index.php` with the CSP), the 30 Hz sim loop, the three.js world and entities, keyboard and mouse, a playable HUD; 6b every panel, prompt, toast, death and win card, the touch stick and audio; 6c the new walkthrough passing on the port. One commit each. | Owner |
+| 56 | 2026-11-04 | **Dressing in the GDF:** torches, inscriptions, masons' marks, decor and zone `tint` / `walls` are GDF data the sim validates and otherwise ignores (R-DRESS-*, core m0.11), so the client and later the editor read them from the tomb itself. Item and bell display names stay client text (#23). Resolves the open note that `tint` was rejected. | Owner |
 
 ## Still open (spec §17)
 

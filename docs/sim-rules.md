@@ -43,7 +43,7 @@ The contract is `world = Sim.load(gdf)`, `state = Sim.init(world, seed, mode)`, 
 
 ## Zones and checkpoints
 
-- **R-ZONE-1** `zones` is optional; when present it is a list of at most 16 objects with keys `id` (as R-ENT-1, unique among zones), `name` (a string), `rects`, `ceil` and optionally `checkpoint`; nothing else. `rects` holds 1–8 rectangles `[x, y, w, h]` with w, h ≥ 1, inside the grid. No cell lies in two zones (spec §7.3). `ceil` is an integer in [3000, 6500] mm (spec §4.2). A cell's zone is the zone whose rect holds it, or none.
+- **R-ZONE-1** `zones` is optional; when present it is a list of at most 16 objects with keys `id` (as R-ENT-1, unique among zones), `name` (a string), `rects`, `ceil` and optionally `checkpoint`, `tint` and `walls`; nothing else. `tint` is `[r, g, b]`, three integers 0–255, and `walls` is `brick` or `shelves`; both are renderer only (R-DRESS-*). `rects` holds 1–8 rectangles `[x, y, w, h]` with w, h ≥ 1, inside the grid. No cell lies in two zones (spec §7.3). `ceil` is an integer in [3000, 6500] mm (spec §4.2). A cell's zone is the zone whose rect holds it, or none.
 - **R-ZONE-2** `checkpoint` has keys `cell`, `yaw` (0–4095) and optionally `reach` (`"enter"`, the default, or `"effect"`). At most 12 zones have one. The cell lies in its own zone, is room or corridor, holds no door or slab, and no prop footprint covers it (R-PROP-2).
 - **R-CP-1** `state.checkpoints` lists the checkpoints reached this run, `{ zone, x, z, yaw, life }`, in the order they were first reached; `state.cp` is the index of the current one. `init` puts in one entry: zone = the zone of `start.cell` (−1 if none), the start cell's centre, yaw 0, and the initial life (R-CP-3). `state.cp` = 0.
 - **R-ZONE-3** After R-CP-2, if the player's cell is in a different zone from `state.zone` (−1 for none), the link events `leaveZone(old)` (if old ≥ 0) and then `enterZone(new)` (if new ≥ 0) happen, and `state.zone` = new. `init` sets `state.zone` to the start cell's zone.
@@ -71,7 +71,7 @@ The contract is `world = Sim.load(gdf)`, `state = Sim.init(world, seed, mode)`, 
 
 ## Entities (the placed things)
 
-- **R-ENT-1** `entities` is optional; when present it is a list of at most 400 objects. Each has `id` (a string matching `^[A-Za-z_][A-Za-z0-9_]{0,31}$`, unique in the file) and `type`. The core knows the types `door`, `slab`, `prop`, `vent`, `item`, `eyes`, `bell`, `bellSet`, `lampHook`, `mirror`, `crystal`, `chest`, `alcove`, `foe`, `brazier` and `boss`; any other type is rejected (types are added as the core learns them). Each type allows exactly the keys listed below: a missing key or any other key is rejected.
+- **R-ENT-1** `entities` is optional; when present it is a list of at most 400 objects. Each has `id` (a string matching `^[A-Za-z_][A-Za-z0-9_]{0,31}$`, unique in the file) and `type`. The core knows the types `door`, `slab`, `prop`, `vent`, `item`, `eyes`, `bell`, `bellSet`, `lampHook`, `mirror`, `crystal`, `chest`, `alcove`, `foe`, `brazier`, `boss`, and the dressing types `torch`, `inscription`, `marks` and `decor` (R-DRESS-*); any other type is rejected (types are added as the core learns them). Each type allows exactly the keys listed below: a missing key or any other key is rejected.
 - **R-ENT-2** `cell` is `[i, j]`, two integers inside the grid. At most one door or slab per cell.
 - **R-ENT-3** An entity's *number* is 1 + its index in `entities`. The input's `target` names an entity by number; 0 names none (decision #15).
 - **R-DOOR-1** Door keys: `id`, `type`, `cell`, `style` (`stone`, `grate` or `mask`), `opens` (`interact`, `trigger` or `key`), only when `opens` is `key` a `key` (the id of a key item), and only when the style is `mask`, `face` (`weep`, `laugh`, `sleep` or `blank`). The cell must be room or corridor and must not be `start.cell`.
@@ -95,6 +95,15 @@ The contract is `world = Sim.load(gdf)`, `state = Sim.init(world, seed, mode)`, 
 
   A box prop's yaw must be a multiple of 1024. A circle's yaw is only for the renderer.
 - **R-PROP-2** The footprint's bounding square or box [x0, x1] × [z0, z1] (x0 = x − r, x1 = x + r, or x ∓ the half-extent) covers the cells fdiv(x0, 2400) … fdiv(x1 − 1, 2400), and the same for z. Every one of those cells must be inside the grid, must not be wall, a door cell, a slab cell, `start.cell` or a checkpoint cell.
+
+## Dressing (renderer only)
+
+Dressing is validated on load, counts as an entity (R-ENT-3) and is part of the world id, but no rule reads it: it never blocks, never takes a target (R-ACT-1 does nothing) and can't be named by a link (decision #56). *Text* below means a string of Unicode code points (counted as code points) with no character in U+0000–U+001F or U+007F–U+009F; *page text* also allows U+000A (a line break).
+
+- **R-DRESS-1** Torch keys: `id`, `type` (`torch`), `cell` (room or corridor) and `wall` (`n`, `e`, `s` or `w`); the neighbouring cell on that side is wall. A captive flame on that wall.
+- **R-DRESS-2** Inscription keys: `id`, `type` (`inscription`), `style` (`plaque`, `carving`, `scrawl`, `stele`, `book` or `look`), `title` (text, 1–80), `pages` (1–8 page texts, each at least 1 long, at most 1,500 together; spec §7.2), exactly one placement and optionally `caption` (text, 1–80: the line above the title) and `sig` (text, 1–80). Placements: `wall` = `[[i, j], side]` (cell room or corridor, the neighbour on `side` wall), `pos` = `[x, z]` (mm, 0 ≤ x ≤ 2400·w, 0 ≤ z ≤ 2400·h) or `on` = the id of a chest (shown when that chest is looked at, R-CHEST-*). At most 24 inscriptions.
+- **R-DRESS-3** Marks keys: `id`, `type` (`marks`) and `cells` (1–256 cells, none wall, none twice in one entity): masons' marks, seen only with the lantern hooded (spec §4.2).
+- **R-DRESS-4** Decor keys: `id`, `type` (`decor`), `kind` (`bones`, `burnt`, `scorch`, `candles` or `stair`), `pos` (as R-DRESS-2) and `yaw` (0–4095). Decor has no footprint.
 
 ## State, hash, input
 

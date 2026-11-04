@@ -153,6 +153,57 @@ const PROPS = [
   ['sarcophagus', cx(7), cx(31), 0],
 ];
 
+// Dressing (R-DRESS-*, decision #56): renderer only. Gloamhollow TORCHES, TEXTS (verbatim), the masons' marks
+// (HALL_PAT '.'), the bones, scorch, candles and the sealed stair, and ZONE_TINT / the Scriptorium's shelves.
+const TORCHES = [[31, 58, -1, 0], [37, 58, 1, 0], [14, 23, -1, 0], [22, 23, 1, 0], [14, 27, -1, 0], [22, 27, 1, 0],
+  [30, 24, 0, -1], [36, 26, 0, 1], [32, 3, -1, 0], [39, 5, 1, 0], [6, 15, -1, 0], [12, 16, 1, 0]];
+const SIDE_OF = (dx, dy) => (dx < 0 ? 'w' : dx > 0 ? 'e' : dy < 0 ? 'n' : 's');
+const TEXTS = {
+  verse: { kind: 'A bronze plaque beside the door', title: 'To whoever comes with a light', sig: 'Ilvaris, who eats candles', pages: [
+    'Thief, you have brought me a light. Good. I have been so hungry.\n\nWhere my bearers kneel, the masons’ road shows only to those who dim their own.\n\nWhere my eyes sleep, keep them sleeping. Go as the blind go: by pole, and by patience.\n\nMy bells remember the order of their making. Ring them as they were cast.\n\nMy hall breathes fire. Cross it while it draws breath.',
+    'Give your flame to the hook, and let the mirrors carry it to the sun.\n\nWhat I loved, I kept in humble wood.\n\nThere is a road across my gulf. Your lantern lies about it.\n\nThree faces guard my sleep. Weep not, laugh not. Dream.\n\nAnd when at last you find me, bring fire. In the dark I am only smoke.'] },
+  stair: { kind: 'The stair you came down', title: 'Sealed', pages: ['The stair-slab ground shut the moment your feet left the last step. There is no seam you can find, no ring to pull. The only way left is in.'] },
+  stele: { kind: 'A stele at the foot of the hall', title: 'The Kneeling Bearers', pages: ['Here kneel the lamp-bearers of Gloamhollow, who gave their lights to the Lady and keep their bowls empty in her honour.\n\nThe masons who laid this floor walked home each evening by their own marks. The marks are faint.\n\nYour light is loud.'] },
+  scrawl: { kind: 'Scratched into the wall above the bones', title: 'Scrawled in haste', sig: 'B.', plain: true, pages: ['THEY ONLY WAKE TO FLAME\nSHUTTER IT\nTEST THE FLOOR'] },
+  burnt: { kind: 'Bones on the floor', title: 'A scorched skeleton', plain: true, pages: ['A skeleton lies curled on its side, black with soot, still clutching a lantern with its shutters wide open. The flagstones around it have run like glass.'] },
+  plinth: { kind: 'A plinth among the stone trees', title: 'The Garden of Bells', pages: ['Three bells hang in my garden, poured in three different centuries.\n\nBronze is bright when it is young, and greens as the long years pass.\n\nWake them in the order they were poured, eldest first, or wake my gardeners instead.'] },
+  hook: { kind: 'On the west wall', title: 'An iron hook', plain: true, pages: ['An iron hook juts from the wall at shoulder height. The stone above it is black with old soot, as if a lamp hung here for a very long time.'] },
+  crystal: { kind: 'Beside the north door', title: 'A sun-crystal', plain: true, pages: ['A disc of clear crystal is set into the wall next to the door, cold and dark. The door has no handle, no keyhole, no hinge you can see.'] },
+  journal: { kind: 'An open book on the lectern', title: 'The journal of Ilvaris', sig: 'in a small, careful hand', pages: [
+    'Year of the Last Lamp.\n\nThe city burns its oil all night, as though the night were an enemy. Fools. The night is a larder.',
+    'I have learned to drink a flame. It goes down like warm honey, and I do not grow older.\n\nEvery lamp in the lower quarter is mine now. They light them again each evening. They think it is the wind.',
+    'They came for me with torches, which was very thoughtful of them.',
+    'A weakness I must remember. My body forgets itself in the dark. In shadow I am smoke and soot; only in firelight do I recall that I have hands, and can be cut.\n\nI shall keep my sanctum black.',
+    'They have sealed me under the hill with all my stolen lights. Let them. Someone always comes with a lantern.\n\nWhat I treasure I keep in plain wood. Thieves always reach for the gilt.'] },
+  gilded: { kind: 'A chest', title: 'A gilded chest', plain: true, pages: ['A chest of gilded wood, beautiful and spotless, as if it was polished this morning. Around its lock runs a ring of tiny, perfectly round holes.'] },
+  ledge: { kind: 'Cut into the rock at the cliff edge', title: 'At the edge of the gulf', pages: ['THE ROAD IS THERE.\nIT IS ONLY SHY.'] },
+  masks: { kind: 'A plaque above the three doors', title: 'The Lady’s door', pages: ['Three faces keep the Lady’s door.\n\nTwo of them are lying.'] },
+};
+// Where each text is read (Gloamhollow setupInteractions readAt), and its style. `hook` was never readable.
+const INSCRIPTIONS = [
+  ['verse', 'plaque', { wall: [[33, 56], 'n'] }], ['stair', 'look', { wall: [[34, 60], 's'] }],
+  ['stele', 'stele', { pos: [cx(36) + 300, cx(52) + 200] }], ['scrawl', 'scrawl', { wall: [[35, 33], 'n'] }],
+  ['burnt', 'look', { pos: [cx(35) + 200, cx(33) - 300] }], ['plinth', 'stele', { pos: [cx(16), cx(28)] }],
+  ['crystal', 'look', { wall: [[38, 12], 'n'] }], ['journal', 'book', { pos: [cx(35), cx(4)] }],
+  ['gilded', 'look', { on: 'gilded' }], ['ledge', 'carving', { wall: [[27, 6], 'e'] }], ['masks', 'carving', { wall: [[9, 13], 'n'] }],
+];
+const MARKS = HALL_PAT.flatMap((row, r) => [...row].flatMap((ch, c) => (ch === '.' ? [[32 + c, 52 - r]] : [])));
+const DECOR = [
+  ['stair', cx(34), cx(61), 0], ['scorch', cx(35), cx(33), 0], ['burnt', cx(35) + 200, cx(33) - 300, 0], ['bones', cx(22) - 300, cx(8) + 400, 0],
+  ...[[cx(5), cx(31)], [cx(9) + 400, cx(31) + 500], [cx(6), cx(28)], [cx(3), cx(26)], [cx(11), cx(27)], [cx(8), cx(23) + 600], [cx(5), cx(24) - 300]]
+    .map(([x, z]) => ['candles', x, z, 0]),
+];
+const ZONE_DRESS = { sanctum: { tint: [158, 158, 158] }, gallery: { tint: [217, 217, 217] }, chasm: { tint: [204, 204, 204] }, script: { walls: 'shelves' } };
+const DRESSING = [
+  ...TORCHES.map(([i, j, dx, dy], n) => ({ id: `torch${n + 1}`, type: 'torch', cell: [i, j], wall: SIDE_OF(dx, dy) })),
+  ...INSCRIPTIONS.map(([key, style, place]) => {
+    const t = TEXTS[key];
+    return { id: key + 'Text', type: 'inscription', style, ...place, caption: t.kind, title: t.title, ...(t.sig ? { sig: t.sig } : {}), pages: t.pages };
+  }),
+  { id: 'masons', type: 'marks', cells: MARKS },
+  ...DECOR.map(([kind, x, z, yaw], n) => ({ id: `decor${n + 1}`, type: 'decor', kind, pos: [x, z], yaw })),
+];
+
 const cells = new Uint8Array(W * H).fill(CELL.WALL);
 const set = (i, j, c) => { cells[j * W + i] = c; };
 for (const z of ZONES) { const [x, y, w, h] = z.r; for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) set(i, j, z.corr ? CELL.CORR : CELL.ROOM); }
@@ -173,6 +224,7 @@ const gdf = {
   zones: ZONES.map((z) => ({
     id: z.id, name: z.name, rects: [z.r], ceil: Math.round(z.ceil * 1000),
     ...(z.cp ? { checkpoint: { cell: [z.cp[0], z.cp[1]], yaw: z.cp[2], ...(z.reach ? { reach: z.reach } : {}) } } : {}),
+    ...(ZONE_DRESS[z.id] ?? {}),
   })),
   start: { cell: [34, 60] },
   exit: { cell: [7, 27], requires: 'heart' },  // the daylight shaft: carry the Heart into it (decision #50)
@@ -194,6 +246,8 @@ const gdf = {
     }),
     { type: 'lampHook', ...HOOK }, { type: 'crystal', ...CRYSTAL }, ...IN_CHESTS, ...ALCOVES_E, ...FOES, BOSS, HEART,
     { id: 'bells', type: 'bellSet', bells: BELLS.map((b) => b.id), order: BELL_ORDER.map((id) => BELLS.findIndex((b) => b.id === id)) },
+
+    ...DRESSING, // appended, so the entity numbers above don't move (R-ENT-3)
   ],
   links: LINKS,
 };

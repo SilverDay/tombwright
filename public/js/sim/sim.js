@@ -13,7 +13,7 @@ import {
 } from './world.js';
 import { runLinks, initLinkState, copyLinkState } from './links.js';
 
-export const CORE_VERSION = 'm0.10';
+export const CORE_VERSION = 'm0.11';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 

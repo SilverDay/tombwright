@@ -38,9 +38,31 @@ const KEYS = {
   lampHook: ['id', 'type', 'cell', 'dir'], mirror: ['id', 'type', 'cell', 'start'], crystal: ['id', 'type', 'cell', 'wall'],
   eyes: ['id', 'type', 'zone', 'wake'],
   bell: ['id', 'type', 'cell', 'size', 'patina', 'note'], bellSet: ['id', 'type', 'bells', 'order'],
-  zone: ['id', 'name', 'rects', 'ceil'], zoneCp: ['id', 'name', 'rects', 'ceil', 'checkpoint'],
+  zone: ['id', 'name', 'rects', 'ceil'],
   cp: ['cell', 'yaw'], cpReach: ['cell', 'yaw', 'reach'],
+  torch: ['id', 'type', 'cell', 'wall'], marks: ['id', 'type', 'cells'], decor: ['id', 'type', 'kind', 'pos', 'yaw'],
 };
+// R-DRESS-*: renderer-only entities and zone keys; validated, never read by a rule.
+const INSCRIPTION_STYLES = ['plaque', 'carving', 'scrawl', 'stele', 'book', 'look'], DECOR_KINDS = ['bones', 'burnt', 'scorch', 'candles', 'stair'];
+const ZONE_WALLS = ['brick', 'shelves'], MAX_INSCRIPTIONS = 24;
+const BAD_TEXT = /[\u0000-\u001F\u007F-\u009F]/u, BAD_PAGE = /[\u0000-\u0009\u000B-\u001F\u007F-\u009F]/u;
+const codePoints = (s) => { let n = 0; for (const _ of s) n++; return n; };
+function dressText(v, max, page) {
+  if (typeof v !== 'string') return false;
+  const n = codePoints(v);
+  return n >= 1 && n <= max && !(page ? BAD_PAGE : BAD_TEXT).test(v);
+}
+function dressPos(pos, w, h) {
+  if (!Array.isArray(pos) || pos.length !== 2 || !isInt(pos[0]) || !isInt(pos[1])) throw new RangeError('dressing pos');
+  if (pos[0] < 0 || pos[1] < 0 || pos[0] > w * CELL_MM || pos[1] > h * CELL_MM) throw new RangeError('dressing pos outside grid');
+}
+/** R-DRESS-1, R-DRESS-2: a floor cell whose neighbour on `side` is wall. */
+function dressWall(cell, side, grid, w, h) {
+  const k = cellIndex(cell, w, h), d = dirOf(side);
+  if (d === undefined) throw new RangeError('dressing wall side');
+  if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR) throw new RangeError('dressing wall cell');
+  if (grid[k + d[1] * w + d[0]] !== CELL.WALL) throw new RangeError('dressing not on a wall');
+}
 const ITEM_KINDS = ['flask', 'rubble', 'treasure', 'key'];
 const FOE_STARTS = ['asleep', 'idle', 'hunting', 'dormant'];
 export const MAX_FOES = 24, MAX_AWAKE = 8, THREAT_BUDGET = 100; // spec §7.2, §4.9.2
@@ -235,7 +257,10 @@ function loadZones(list, grid, w, h) {
     if (!isObj(z) || typeof z.id !== 'string' || !ID_RE.test(z.id)) throw new RangeError('zone id');
     if (ids.has(z.id)) throw new RangeError('duplicate zone id');
     ids.add(z.id);
-    if (!hasExactKeys(z, Object.hasOwn(z, 'checkpoint') ? KEYS.zoneCp : KEYS.zone)) throw new RangeError('zone keys');
+    if (!hasExactKeys(z, KEYS.zone.concat(['checkpoint', 'tint', 'walls'].filter((k) => Object.hasOwn(z, k))))) throw new RangeError('zone keys');
+    // R-ZONE-1, R-DRESS-*: tint and walls are renderer only.
+    if (Object.hasOwn(z, 'tint') && !(Array.isArray(z.tint) && z.tint.length === 3 && z.tint.every((c) => isInt(c) && c >= 0 && c <= 255))) throw new RangeError('zone tint');
+    if (Object.hasOwn(z, 'walls') && !ZONE_WALLS.includes(z.walls)) throw new RangeError('zone walls');
     if (typeof z.name !== 'string') throw new RangeError('zone name');
     if (!isInt(z.ceil) || z.ceil < 3000 || z.ceil > 6500) throw new RangeError('zone ceil');
     if (!Array.isArray(z.rects) || z.rects.length < 1 || z.rects.length > 8) throw new RangeError('zone rects');
@@ -273,6 +298,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
   const ids = new Set(), doorAt = new Int16Array(w * h).fill(-1), slab = new Uint8Array(w * h);
   const doors = [], props = [], refs = [], vents = [], ventAt = new Int16Array(w * h).fill(-1), items = [], eyes = [];
   const bells = [], bellSets = [], byId = new Map(), hooks = [], mirrors = [], crystals = [];
+  let inscriptions = 0;
   const chests = [], alcoves = [], alcoveAt = new Int16Array(w * h).fill(-1), foes = [], groups = [], groupIds = new Map(), braziers = [], bosses = [];
   for (const e of list) {
     if (!isObj(e) || typeof e.id !== 'string' || !ID_RE.test(e.id)) throw new RangeError('entity id');
@@ -450,9 +476,53 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       for (let x = 0; x < e.order.length; x++) if (!e.order.includes(x)) throw new RangeError('bellSet order');
       refs.push({ type: 'bellSet', set: bellSets.length });
       bellSets.push({ id: e.id, names: e.bells.slice(), order: Object.freeze(e.order.slice()) });
+    } else if (e.type === 'torch') {
+      if (!hasExactKeys(e, KEYS.torch)) throw new RangeError('torch keys');
+      dressWall(e.cell, e.wall, grid, w, h); // R-DRESS-1
+      refs.push({ type: 'torch' });
+    } else if (e.type === 'inscription') {
+      // R-DRESS-2
+      const place = ['wall', 'pos', 'on'].filter((k) => Object.hasOwn(e, k));
+      if (place.length !== 1) throw new RangeError('inscription placement');
+      if (!hasExactKeys(e, ['id', 'type', 'style', 'title', 'pages', place[0]].concat(['caption', 'sig'].filter((k) => Object.hasOwn(e, k))))) throw new RangeError('inscription keys');
+      if (!INSCRIPTION_STYLES.includes(e.style)) throw new RangeError('inscription style');
+      if (!dressText(e.title, 80, false)) throw new RangeError('inscription title');
+      for (const k of ['caption', 'sig']) if (Object.hasOwn(e, k) && !dressText(e[k], 80, false)) throw new RangeError('inscription ' + k);
+      if (!Array.isArray(e.pages) || e.pages.length < 1 || e.pages.length > 8) throw new RangeError('inscription pages');
+      let total = 0;
+      for (const pg of e.pages) {
+        if (!dressText(pg, 1500, true)) throw new RangeError('inscription page');
+        total += codePoints(pg);
+      }
+      if (total > 1500) throw new RangeError('inscription too long');
+      if (place[0] === 'wall') {
+        if (!Array.isArray(e.wall) || e.wall.length !== 2) throw new RangeError('inscription wall');
+        dressWall(e.wall[0], e.wall[1], grid, w, h);
+      } else if (place[0] === 'pos') dressPos(e.pos, w, h);
+      else if (typeof e.on !== 'string') throw new RangeError('inscription on');
+      if (++inscriptions > MAX_INSCRIPTIONS) throw new RangeError('too many inscriptions');
+      refs.push({ type: 'inscription', on: place[0] === 'on' ? e.on : null });
+    } else if (e.type === 'marks') {
+      if (!hasExactKeys(e, KEYS.marks)) throw new RangeError('marks keys');
+      if (!Array.isArray(e.cells) || e.cells.length < 1 || e.cells.length > 256) throw new RangeError('marks cells');
+      const seen = new Set();
+      for (const c of e.cells) {
+        const k = cellIndex(c, w, h); // R-DRESS-3
+        if (grid[k] === CELL.WALL || seen.has(k)) throw new RangeError('marks cell');
+        seen.add(k);
+      }
+      refs.push({ type: 'marks' });
+    } else if (e.type === 'decor') {
+      if (!hasExactKeys(e, KEYS.decor)) throw new RangeError('decor keys');
+      if (!DECOR_KINDS.includes(e.kind)) throw new RangeError('decor kind'); // R-DRESS-4
+      dressPos(e.pos, w, h);
+      if (!isInt(e.yaw) || e.yaw < 0 || e.yaw > 4095) throw new RangeError('decor yaw');
+      refs.push({ type: 'decor' });
     } else throw new RangeError('unknown entity type');
     byId.set(e.id, { ...refs[refs.length - 1], n: refs.length, kind: e.type === 'item' ? e.kind : undefined, hidden: e.type === 'item' && Object.hasOwn(e, 'hidden') });
   }
+  // R-DRESS-2: an inscription `on` names a chest.
+  for (const r of refs) if (r.type === 'inscription' && r.on !== null && byId.get(r.on)?.type !== 'chest') throw new RangeError('inscription on');
   // R-BELL-1, R-BELL-2: bells on free cells; every bell in exactly one set, named by bell id.
   for (const b of bells) if (doorAt[b.k] >= 0 || slab[b.k]) throw new RangeError('bell cell taken');
   // R-HOOK-1, R-MIRROR-1: hooks and mirrors on free cells.
