@@ -42,6 +42,11 @@ final class World
     private const KEYS_SLAB = ['id', 'type', 'cell'];
     private const KEYS_CHEST = ['id', 'type', 'cell', 'wall', 'style', 'trap'];
     private const KEYS_ALCOVE = ['id', 'type', 'cell', 'kind', 'door'];
+    private const KEYS_FOE = ['id', 'type', 'kind', 'cell', 'start'];
+    private const FOE_STARTS = ['asleep', 'idle', 'hunting', 'dormant'];
+    public const MAX_FOES = 24;
+    public const MAX_AWAKE = 8;
+    public const THREAT_BUDGET = 100;
     private const KEYS_PROP = ['id', 'type', 'kind', 'pos', 'yaw'];
     private const KEYS_VENT = ['id', 'type', 'cells', 'period', 'phase', 'warn', 'fire'];
     private const KEYS_ITEM = ['id', 'type', 'kind', 'cell'];
@@ -115,6 +120,8 @@ final class World
         public readonly array $chests,
         public readonly array $alcoves,
         private readonly array $alcoveAt,
+        public readonly array $foes,
+        public readonly array $groups,
     ) {
     }
 
@@ -301,9 +308,13 @@ final class World
                 throw new \RangeException('checkpoint cell taken');
             }
         }
+        // R-FOE-2: a GDF with foes names its bestiary version.
+        if (($ents['foes'] !== [] || array_key_exists('bestiary', $gdf)) && ($gdf['bestiary'] ?? null) !== Bestiary::VERSION) {
+            throw new \RangeException('bestiary version');
+        }
         // R-LINK-*: compile the links against the entity and zone ids.
         $links = Links::compile(array_key_exists('links', $gdf) ? $gdf['links'] : [], [
-            'ents' => $ents['byId'], 'zones' => array_flip(array_column($zs['zones'], 'id')),
+            'ents' => $ents['byId'], 'zones' => array_flip(array_column($zs['zones'], 'id')), 'groups' => $ents['groupIds'],
         ]);
         // R-WORLD-3: world id = first 16 bytes of SHA-256 over the canonical GDF, as hex.
         $id = substr(hash('sha256', Canonical::encode($gdf)), 0, 32);
@@ -312,6 +323,7 @@ final class World
             $ents['ventAt'], $ents['vents'], $zs['zoneOf'], $zs['zones'], $zs['zoneOf'][$startK] ?? -1,
             $ents['items'], $ents['eyes'], $ents['bells'], $ents['bellSets'], $links,
             $ents['hooks'], $ents['mirrors'], $ents['crystals'], $ents['chests'], $ents['alcoves'], $ents['alcoveAt'],
+            $ents['foes'], $ents['groups'],
         );
     }
 
@@ -460,6 +472,9 @@ final class World
         $chests = [];
         $alcoves = [];
         $alcoveAt = [];
+        $foes = [];
+        $groups = [];
+        $groupIds = [];
         foreach ($list as $e) {
             if (!is_array($e) || array_is_list($e) || !is_string($e['id'] ?? null) || preg_match(self::ID_RE, $e['id']) !== 1) {
                 throw new \RangeException('entity id');
@@ -675,6 +690,42 @@ final class World
                 $props[] = ['circle' => false, 'x' => $x, 'z' => $z, 'r' => 0, 'x0' => $x0, 'x1' => $x1, 'z0' => $z0, 'z1' => $z1];
                 $refs[] = ['type' => 'chest', 'chest' => count($chests)];
                 $chests[] = ['id' => $e['id'], 'k' => $k, 'x' => $x + 250 * $di, 'z' => $z + 250 * $dj, 'reach' => 2200, 'needles' => $e['trap'] === 'needles', 'contents' => []];
+            } elseif ($type === 'foe') {
+                $grouped = array_key_exists('group', $e);
+                if (!self::hasExactKeys($e, $grouped ? array_merge(self::KEYS_FOE, ['group']) : self::KEYS_FOE)) {
+                    throw new \RangeException('foe keys');
+                }
+                $kind = Bestiary::kind($e['kind']);
+                if ($kind === null) {
+                    throw new \RangeException('foe kind');
+                }
+                if (!in_array($e['start'], self::FOE_STARTS, true)) {
+                    throw new \RangeException('foe start');
+                }
+                if ($grouped && (!is_string($e['group']) || preg_match(self::ID_RE, $e['group']) !== 1)) {
+                    throw new \RangeException('foe group');
+                }
+                $k = self::cellIndex($e['cell'], $w, $h);
+                $code = ord($grid[$k]);
+                if ($code !== self::ROOM && $code !== self::CORR && $code !== self::BRIDGE) {
+                    throw new \RangeException('foe cell');
+                }
+                $gname = $grouped ? $e['group'] : $e['id'];
+                if (!isset($groupIds[$gname])) {
+                    $groupIds[$gname] = count($groups);
+                    $groups[] = ['id' => $gname, 'foes' => [], 'dormant' => true];
+                }
+                $g = $groupIds[$gname];
+                $groups[$g]['foes'][] = count($foes);
+                if ($e['start'] !== 'dormant') {
+                    $groups[$g]['dormant'] = false;
+                }
+                [$ci, $cj] = $e['cell'];
+                $refs[] = ['type' => 'foe', 'foe' => count($foes)];
+                $foes[] = [
+                    'id' => $e['id'], 'k' => $k, 'x' => $ci * self::CELL_MM + intdiv(self::CELL_MM, 2), 'z' => $cj * self::CELL_MM + intdiv(self::CELL_MM, 2),
+                    'kind' => $kind, 'start' => $e['start'], 'group' => $g,
+                ];
             } elseif ($type === 'alcove') {
                 if (!self::hasExactKeys($e, self::KEYS_ALCOVE)) {
                     throw new \RangeException('alcove keys');
@@ -826,6 +877,26 @@ final class World
                 throw new \RangeException('chest cell taken');
             }
         }
+        // R-FOE-2: foes on free cells (walkers not on lethal ones), the caps and the threat budget.
+        $threat = 0;
+        $awake = 0;
+        foreach ($foes as $f) {
+            if (isset($doorAt[$f['k']]) || isset($slab[$f['k']])) {
+                throw new \RangeException('foe cell taken');
+            }
+            $code = ord($grid[$f['k']]);
+            $armed = isset($alcoveAt[$f['k']]);
+            if (!$f['kind']['fly'] && ($code === self::PLATE || $code === self::HPIT || $code === self::VOID || $code === self::VENT || ($code === self::ALCOVE && $armed))) {
+                throw new \RangeException('foe on a lethal cell');
+            }
+            $threat += $f['kind']['tier'] * $f['kind']['tier'];
+            if ($f['start'] === 'idle' || $f['start'] === 'hunting') {
+                $awake++;
+            }
+        }
+        if (count($foes) > self::MAX_FOES || $awake > self::MAX_AWAKE || $threat > self::THREAT_BUDGET) {
+            throw new \RangeException('foe limits');
+        }
         // R-VENT-1: every vent cell belongs to a vent.
         for ($k = 0; $k < $w * $h; $k++) {
             if (ord($grid[$k]) === self::VENT && !isset($ventAt[$k])) {
@@ -853,7 +924,8 @@ final class World
         return ['doorAt' => $doorAt, 'slab' => $slab, 'doors' => $doors, 'props' => $props, 'refs' => $refs, 'ventAt' => $ventAt, 'vents' => $vents, 'items' => $items, 'eyes' => $eyes,
             'bells' => $bells, 'bellSets' => $bellSets, 'byId' => $byId,
             'hooks' => $hooks, 'mirrors' => $mirrors, 'crystals' => $crystals,
-            'chests' => $chests, 'alcoves' => $alcoves, 'alcoveAt' => $alcoveAt];
+            'chests' => $chests, 'alcoves' => $alcoves, 'alcoveAt' => $alcoveAt,
+            'foes' => $foes, 'groups' => $groups, 'groupIds' => $groupIds];
     }
 
     /**
@@ -873,6 +945,48 @@ final class World
         }
         $d = $this->doorAt[$k] ?? -1;
         return $d >= 0 && 20 * $state['doors'][$d]['t'] < 17 * self::DOOR_FULL;
+    }
+
+    /**
+     * R-FOE-5: Sim::enterable() for every cell at once, with sets for sprung and sealed (the same answers, faster).
+     *
+     * @param array<string,mixed> $state
+     * @return list<bool>
+     */
+    public function passable(array $state, bool $fly): array
+    {
+        $sprung = array_flip($state['sprung']);
+        $sealed = array_flip($state['sealed']);
+        $doors = $state['doors'];
+        $out = [];
+        $n = $this->w * $this->h;
+        for ($k = 0; $k < $n; $k++) {
+            $code = ord($this->grid[$k]);
+            if ($code === self::WALL || isset($this->slab[$k]) || isset($sprung[$k])) {
+                $out[] = false;
+                continue;
+            }
+            $d = $this->doorAt[$k] ?? -1;
+            if ($d >= 0 && 20 * $doors[$d]['t'] < 17 * self::DOOR_FULL) {
+                $out[] = false;
+                continue;
+            }
+            if ($fly) {
+                $out[] = true;
+                continue;
+            }
+            if ($code === self::PLATE) {
+                $out[] = false; // a plate with a slab or sprung is solid (above), so this one is armed
+            } elseif ($code === self::HPIT || $code === self::VOID || $code === self::VENT) {
+                $out[] = false;
+            } elseif ($code === self::ALCOVE) {
+                $a = $this->alcoveAt[$k] ?? null;
+                $out[] = $a === null || isset($sealed[$this->alcoves[$a]['door']]);
+            } else {
+                $out[] = true;
+            }
+        }
+        return $out;
     }
 
     /** The cell code at (i, j), which must be inside the grid. */

@@ -1,5 +1,6 @@
 {
  "gdf": 1,
+ "bestiary": 1,
  "meta": {
   "title": "Gloamhollow",
   "lang": "en",
@@ -874,6 +875,50 @@
    "door": "mLaugh"
   },
   {
+   "id": "warden1",
+   "type": "foe",
+   "kind": "warden",
+   "cell": [
+    14,
+    24
+   ],
+   "start": "dormant",
+   "group": "keepers"
+  },
+  {
+   "id": "warden2",
+   "type": "foe",
+   "kind": "warden",
+   "cell": [
+    22,
+    24
+   ],
+   "start": "dormant",
+   "group": "keepers"
+  },
+  {
+   "id": "crawler1",
+   "type": "foe",
+   "kind": "crawler",
+   "cell": [
+    41,
+    19
+   ],
+   "start": "dormant",
+   "group": "crawlers"
+  },
+  {
+   "id": "crawler2",
+   "type": "foe",
+   "kind": "crawler",
+   "cell": [
+    41,
+    13
+   ],
+   "start": "dormant",
+   "group": "crawlers"
+  },
+  {
    "id": "bells",
    "type": "bellSet",
    "bells": [
@@ -917,6 +962,73 @@
     },
     {
      "message": "The bells clash horribly. Darts spit from the stone trees around you."
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "when": {
+    "sequence": [
+     {
+      "bellsWrong": "bells"
+     },
+     {
+      "bellsWrong": "bells"
+     }
+    ]
+   },
+   "delay": 20,
+   "do": [
+    {
+     "spawnFoes": "keepers"
+    },
+    {
+     "message": "The bells clash. Darts spit from the stone trees, and the soil heaves: two of the garden’s keepers claw their way up."
+    }
+   ]
+  },
+  {
+   "id": 17,
+   "when": {
+    "lanternHung": true
+   },
+   "do": [
+    {
+     "spawnFoes": "crawlers"
+    }
+   ]
+  },
+  {
+   "id": 18,
+   "when": {
+    "lanternHung": true
+   },
+   "delay": 48,
+   "do": [
+    {
+     "message": "Something skitters in the dark at the far end of the vault. Two things."
+    }
+   ]
+  },
+  {
+   "id": 19,
+   "when": {
+    "foesDefeated": "keepers"
+   },
+   "do": [
+    {
+     "message": "The last of the keepers falls apart into dry roots and bone."
+    }
+   ]
+  },
+  {
+   "id": 20,
+   "when": {
+    "foesDefeated": "crawlers"
+   },
+   "do": [
+    {
+     "message": "The vault is quiet again."
     }
    ]
   },

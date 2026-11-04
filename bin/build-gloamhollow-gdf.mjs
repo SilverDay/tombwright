@@ -85,18 +85,32 @@ const ALCOVES_E = [
   { id: 'weep', type: 'alcove', cell: [9, 19], kind: 'drown', door: 'mWeep' },
   { id: 'laugh', type: 'alcove', cell: [11, 19], kind: 'tip', door: 'mLaugh' },
 ];
+// The tomb's keepers (Gloamhollow spawnWardens / spawnCrawlers; R-FOE-*): two bone gardeners rise in the Garden of
+// Bells after the second wrong ringing, two gloam crawlers wake in the Mirror Vault when the lantern is first hung.
+const FOES = [
+  { id: 'warden1', type: 'foe', kind: 'warden', cell: [14, 24], start: 'dormant', group: 'keepers' },
+  { id: 'warden2', type: 'foe', kind: 'warden', cell: [22, 24], start: 'dormant', group: 'keepers' },
+  { id: 'crawler1', type: 'foe', kind: 'crawler', cell: [41, 19], start: 'dormant', group: 'crawlers' },
+  { id: 'crawler2', type: 'foe', kind: 'crawler', cell: [41, 13], start: 'dormant', group: 'crawlers' },
+];
 // The Mirror Vault (Gloamhollow HOOK, MIRRORS, CRYSTAL; R-HOOK-*, R-MIRROR-*, R-BEAM-*). The beam leaves the hook
 // going east. Solution: A \, B \, C /, D \, E \.
 const HOOK = { id: 'hook', cell: [33, 14], dir: 'e' };
 const MIRRORS = [['A', 36, 14, '/'], ['B', 36, 18, '/'], ['C', 40, 18, '\\'], ['D', 40, 12, '/'], ['E', 38, 12, '/']];
 const CRYSTAL = { id: 'crystal', cell: [38, 12], wall: 'n' };
 // Links (R-LINK-*), with Gloamhollow's texts. Delays: 0.65 s and 0.9 s in ticks. The second failure's
-// wardens come with foes (link 3, step 5d).
+// wardens (link 3) rise with the darts of the second failure.
 const LINKS = [
   { id: 1, when: { bellsSolved: 'bells' }, delay: 27,
     do: [{ openDoor: 'bell' }, { message: 'The three notes hang in the air together. With a long rattle, the bronze grate in the east wall rises.' }] },
   { id: 2, when: { bellsWrong: 'bells' }, repeat: true, delay: 20,
     do: [{ damage: 28 }, { message: 'The bells clash horribly. Darts spit from the stone trees around you.' }] },
+  { id: 3, when: { sequence: [{ bellsWrong: 'bells' }, { bellsWrong: 'bells' }] }, delay: 20,
+    do: [{ spawnFoes: 'keepers' }, { message: 'The bells clash. Darts spit from the stone trees, and the soil heaves: two of the garden’s keepers claw their way up.' }] },
+  { id: 17, when: { lanternHung: true }, do: [{ spawnFoes: 'crawlers' }] },
+  { id: 18, when: { lanternHung: true }, delay: 48, do: [{ message: 'Something skitters in the dark at the far end of the vault. Two things.' }] },
+  { id: 19, when: { foesDefeated: 'keepers' }, do: [{ message: 'The last of the keepers falls apart into dry roots and bone.' }] },
+  { id: 20, when: { foesDefeated: 'crawlers' }, do: [{ message: 'The vault is quiet again.' }] },
   { id: 4, when: { interact: 'vest' }, do: [{ message: 'The door is not locked. It swings down into the floor with a breath of very old air.' }] },
   { id: 5, when: { interact: 'script' }, do: [{ message: 'The door sinks into the floor. Cold air rises from somewhere far below.' }] },
   { id: 6, when: { interact: 'bell' }, repeat: true, do: [{ message: 'The bronze grate will not move. Something in this garden must raise it.' }] },
@@ -143,6 +157,7 @@ set(...STAIR, CELL.WALL);
 
 const gdf = {
   gdf: 1,
+  bestiary: 1,
   meta: { title: 'Gloamhollow', lang: 'en', authorId: 0 },
   grid: { w: W, h: H, cells: b64encode(rleEncode(cells)) },
   zones: ZONES.map((z) => ({
@@ -167,7 +182,7 @@ const gdf = {
       if (kind === 'sarcophagus') return [...CHESTS.map((c) => ({ type: 'chest', ...c })), prop];
       return [prop];
     }),
-    { type: 'lampHook', ...HOOK }, { type: 'crystal', ...CRYSTAL }, ...IN_CHESTS, ...ALCOVES_E,
+    { type: 'lampHook', ...HOOK }, { type: 'crystal', ...CRYSTAL }, ...IN_CHESTS, ...ALCOVES_E, ...FOES,
     { id: 'bells', type: 'bellSet', bells: BELLS.map((b) => b.id), order: BELL_ORDER.map((id) => BELLS.findIndex((b) => b.id === id)) },
   ],
   links: LINKS,

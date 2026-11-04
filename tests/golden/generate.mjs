@@ -463,6 +463,57 @@ const masks = [
   [5, I([0,0], 0, 0, 0, 0)],
 ];
 
+// Foes (R-FOE-*, R-STRIKE-*). A 16x10 room: zone w (cols 1-7) and zone e (cols 9-14), split by a wall at col 8 with a
+// gap at rows 7-8 (zone g); hidden pits (5, 5) and (6, 5), a plate (11, 3). Foes: a hunting warden (12, 2) and an
+// idle crawler (13, 7) in group east, an asleep warden (3, 7), a dormant crawler (2, 2) that entering e raises.
+export function foeRoom(start = [2, 4]) {
+  const w = 16, h = 10, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  for (let j = 1; j <= 6; j++) set(8, j, 0);
+  set(5, 5, 4); set(6, 5, 4); set(11, 3, 3);
+  return JSON.stringify({
+    gdf: 1, bestiary: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: start },
+    zones: [{ id: 'w', name: 'W', rects: [[1, 1, 7, 8]], ceil: 4200 }, { id: 'g', name: 'G', rects: [[8, 7, 1, 2]], ceil: 3000 },
+      { id: 'e', name: 'E', rects: [[9, 1, 6, 8]], ceil: 4200, checkpoint: { cell: [10, 6], yaw: 1024 } }],
+    entities: [
+      { id: 'f1', type: 'foe', kind: 'warden', cell: [12, 2], start: 'hunting', group: 'east' },
+      { id: 'f2', type: 'foe', kind: 'crawler', cell: [13, 7], start: 'idle', group: 'east' },
+      { id: 'f3', type: 'foe', kind: 'warden', cell: [3, 7], start: 'asleep', group: 'sleepy' },
+      { id: 'f4', type: 'foe', kind: 'crawler', cell: [2, 2], start: 'dormant', group: 'late' },
+    ],
+    links: [
+      { id: 1, when: { enterZone: 'e' }, do: [{ spawnFoes: 'late' }, { message: 'late' }] },
+      { id: 2, when: { foesDefeated: 'east' }, do: [{ message: 'east clear' }] },
+      { id: 3, when: { not: { foesAlive: 'sleepy' } }, repeat: true, do: [{ message: 'sleepy gone' }] },
+    ],
+  });
+}
+
+// The awake cap, the wake queue and a mixed group (R-FOE-4, R-FOE-8): the foe room with ten dormant crawlers in group
+// all, spawned on tick 0 (two must wait), and group mix (an asleep warden and a dormant crawler, never spawned).
+function crowdRoom() {
+  const g = JSON.parse(foeRoom());
+  g.entities = [
+    ...Array.from({ length: 10 }, (_, k) => ({ id: 'q' + k, type: 'foe', kind: 'crawler', cell: [9 + (k % 5), 1 + ((k / 5) | 0)], start: 'dormant', group: 'all' })),
+    { id: 'm1', type: 'foe', kind: 'warden', cell: [3, 7], start: 'asleep', group: 'mix' },
+    { id: 'm2', type: 'foe', kind: 'crawler', cell: [2, 2], start: 'dormant', group: 'mix' },
+  ];
+  g.links = [{ id: 1, when: { inZone: 'w' }, do: [{ spawnFoes: 'all' }] }, { id: 2, when: { foesDefeated: 'all' }, do: [{ message: 'all down' }] }];
+  return JSON.stringify(g);
+}
+
+// Gloamhollow itself, starting in the Garden of Bells: ring the great bell twice (two wrongs: darts, then the keepers
+// rise 20 ticks later), then stand and fight them, striking towards the frame.
+function garden() {
+  const g = JSON.parse(GLOAMHOLLOW);
+  g.start = { cell: [17, 26] };
+  return JSON.stringify(g);
+}
+const gardenRun = () => {
+  const g = JSON.parse(GLOAMHOLLOW), great = g.entities.findIndex((e) => e.id === 'great') + 1;
+  return [[1, I([0, 0], 0, X, 0, great)], [1, I()], [1, I([0, 0], 0, X, 0, great)], [80, I()], [1500, I([0, 0], 0, B.strike)], [600, I([60, 0], 1024, B.strike)]];
+};
+
 // Vectors carry the GDF as its exact text: Sim.load takes bytes (R-GDF-0).
 export const GLOAMHOLLOW = readFileSync(ROOT + 'dungeons/gloamhollow.gdf.json', 'utf8');
 const utf8 = (s) => new TextEncoder().encode(s);
@@ -492,6 +543,12 @@ const VECTORS = {
   '0024-masks-fuzz': { gdf: maskRoom(), seed: 24, mode: 'delve', inputs: fuzz(0x3A5C, 9000, 11) },
   '0025-chests-fuzz': { gdf: maskRoom([3, 3]), seed: 25, mode: 'practice', inputs: fuzz(0xC4E5, 9000, 6, 30) }, // slow, by the chests
   '0026-alcoves-fuzz': { gdf: maskRoom([6, 5], true), seed: 26, mode: 'practice', inputs: fuzz(0xA1C0, 9000, 4, 60) }, // slow, by the doors
+  '0027-foes-fight': { gdf: foeRoom(), seed: 27, mode: 'delve', inputs: [[900, I([0, 0], 3072, B.strike)], [300, I([127, 0], 3072, B.run)], [300, I([127, 0], 2048, B.strike)]] },
+  '0028-foes-death': { gdf: foeRoom(), seed: 28, mode: 'delve', inputs: [[1200, I([0, 0], 1024)], [1, I([0, 0], 0, B.rise)], [600, I([127, 0], 3584, B.strike)]] },
+  '0029-foes-fuzz': { gdf: foeRoom(), seed: 29, mode: 'delve', inputs: fuzz(0xF0E5, 9000, 5) },
+  '0030-foes-practice-fuzz': { gdf: foeRoom([10, 6]), seed: 30, mode: 'practice', inputs: fuzz(0xF0E6, 9000, 5, 60) },
+  '0031-foes-crowd-fuzz': { gdf: crowdRoom(), seed: 31, mode: 'practice', inputs: fuzz(0xC0D5, 9000, 13) },
+  '0032-garden-keepers': { gdf: garden(), seed: 32, mode: 'delve', inputs: gardenRun() },
   '0022-mirrors-practice-fuzz': { gdf: mirrorRoom([1, 3]), seed: 22, mode: 'practice', inputs: fuzz(0x3171, 9000, 4, 30) }, // slow, near the hook
 };
 
@@ -544,7 +601,7 @@ function gdfCases() {
     raw('not an object', utf8('[1,2]')), raw('null', utf8('null')), raw('trailing garbage', utf8(text(r) + 'x')),
     raw('too large', utf8(text(r).replace('"gdf":1', '"gdf":1,"pad":"' + 'a'.repeat(262144) + '"'))),
   ];
-  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw), ...mirrorCases(raw), ...chestCases(raw));
+  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw), ...mirrorCases(raw), ...chestCases(raw), ...foeCases(raw));
   return cases.map((c) => { try { return { ...c, ok: true, id: Sim.load(b64decodeBytes(c.bytes)).id }; } catch { return { ...c, ok: false }; } });
 }
 
@@ -791,6 +848,28 @@ function chestCases(raw) {
     one('alcoves: links interact chest ok', (g) => { g.links.push({ id: 9, when: { interact: 'c1' }, do: [{ message: 'x' }] }); }),
     one('alcoves: links interact alcove', (g) => { g.links.push({ id: 9, when: { interact: 'al1' }, do: [{ message: 'x' }] }); }),
     one('alcoves: hasItem key ok', (g) => { g.links.push({ id: 9, when: { hasItem: 'k1' }, do: [{ message: 'x' }] }); }),
+  ];
+}
+
+// Foes (R-FOE-2, R-LINK-2/3): edits of the foe room.
+function foeCases(raw) {
+  const base = JSON.parse(foeRoom());
+  const one = (name, f) => { const g = structuredClone(base); f(g); return raw(name, utf8(JSON.stringify(g))); };
+  const ent = (id) => (g) => g.entities.find((e) => e.id === id);
+  const set = (id, o) => (g) => Object.assign(ent(id)(g), o);
+  const many = (n, start) => (g) => { g.entities = Array.from({ length: n }, (_, k) => ({ id: 'q' + k, type: 'foe', kind: 'crawler', cell: [1 + (k % 6), 1 + ((k / 6) | 0)], start })); g.links = []; };
+  return [
+    one('foes: room', () => {}), one('foes: kind unknown', set('f1', { kind: 'dragon' })), one('foes: kind __proto__', set('f1', { kind: '__proto__' })),
+    one('foes: kind number', set('f1', { kind: 1 })), one('foes: start bad', set('f1', { start: 'awake' })), one('foes: group bad', set('f1', { group: '1x' })),
+    one('foes: group number', set('f1', { group: 3 })), one('foes: no group ok', (g) => { delete ent('f3')(g).group; g.links = g.links.filter((l) => l.id !== 3); }),
+    one('foes: extra key', set('f1', { hp: 3 })), one('foes: on wall', set('f1', { cell: [8, 2] })), one('foes: on pit', set('f1', { cell: [5, 5] })),
+    one('foes: on plate', set('f1', { cell: [11, 3] })), one('foes: on start ok', set('f1', { cell: [2, 4] })),
+    one('foes: 24 ok', many(24, 'asleep')), one('foes: 25', many(25, 'asleep')), one('foes: 8 awake ok', many(8, 'idle')), one('foes: 9 awake', many(9, 'hunting')),
+    one('foes: 9 dormant ok', many(9, 'dormant')), one('foes: no bestiary', (g) => { delete g.bestiary; }), one('foes: bestiary 2', (g) => { g.bestiary = 2; }),
+    one('foes: bestiary without foes ok', (g) => { g.entities = []; g.links = []; }), one('foes: bestiary 0 without foes', (g) => { g.entities = []; g.links = []; g.bestiary = 0; }),
+    one('foes: spawnFoes unknown', (g) => { g.links[0].do = [{ spawnFoes: 'zz' }]; }), one('foes: spawnFoes a foe id', (g) => { g.links[0].do = [{ spawnFoes: 'f1' }]; }),
+    one('foes: group named like a foe ok', (g) => { ent('f2')(g).group = 'f1'; ent('f1')(g).group = 'f1'; g.links = g.links.filter((l) => l.id !== 2); }),
+    one('foes: foesDefeated zone', (g) => { g.links[1].when = { foesDefeated: 'w' }; }), one('foes: foesAlive number', (g) => { g.links[2].when = { not: { foesAlive: 1 } }; }),
   ];
 }
 

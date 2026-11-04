@@ -1,0 +1,7 @@
+{
+ "version": 1,
+ "foes": {
+  "warden": { "tier": 2, "strikes": 3, "damage": 14, "speed": 2200, "radius": 400, "reach": 1600, "wind": 17, "cooldown": 39, "rise": 39, "firstAttack": 18, "mover": "walk" },
+  "crawler": { "tier": 1, "strikes": 2, "damage": 9, "speed": 2900, "radius": 380, "reach": 1400, "wind": 13, "cooldown": 33, "rise": 0, "firstAttack": 18, "mover": "walk" }
+ }
+}

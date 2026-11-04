@@ -5,6 +5,7 @@ import { assertInt, fdiv } from './int.js';
 import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
 import { compileLinks } from './links.js';
+import { foeKind, BESTIARY_VERSION } from './bestiary.js';
 
 // GDF cell codes (spec §7.1).
 export const CELL = Object.freeze({ WALL: 0, ROOM: 1, CORR: 2, PLATE: 3, HPIT: 4, VOID: 5, BRIDGE: 6, VENT: 7, ALCOVE: 8 });
@@ -30,6 +31,7 @@ const PROP_KINDS = new Map([
 const KEYS = {
   door: ['id', 'type', 'cell', 'style', 'opens'], doorMask: ['id', 'type', 'cell', 'style', 'opens', 'face'],
   chest: ['id', 'type', 'cell', 'wall', 'style', 'trap'], alcove: ['id', 'type', 'cell', 'kind', 'door'],
+  foe: ['id', 'type', 'kind', 'cell', 'start'],
   slab: ['id', 'type', 'cell'], prop: ['id', 'type', 'kind', 'pos', 'yaw'],
   vent: ['id', 'type', 'cells', 'period', 'phase', 'warn', 'fire'],
   item: ['id', 'type', 'kind', 'cell'], treasure: ['id', 'type', 'kind', 'cell', 'value'],
@@ -40,6 +42,8 @@ const KEYS = {
   cp: ['cell', 'yaw'], cpReach: ['cell', 'yaw', 'reach'],
 };
 const ITEM_KINDS = ['flask', 'rubble', 'treasure', 'key'];
+const FOE_STARTS = ['asleep', 'idle', 'hunting', 'dormant'];
+export const MAX_FOES = 24, MAX_AWAKE = 8, THREAT_BUDGET = 100; // spec §7.2, §4.9.2
 // R-BELL-1, R-BELL-3: by size 1..3, the footprint radius and the extra reach (Gloamhollow r + 0.05 m and 2 m + r).
 const BELL_R = [470, 650, 830], BELL_REACH = [2420, 2600, 2780];
 // R-BEAM-1: directions n, e, s, w as (di, dj).
@@ -169,7 +173,9 @@ function worldFrom(gdf) {
   // R-ZONE-2: checkpoint cells hold no door or slab (props were checked in loadEntities).
   for (const k of zs.cpCells) if (ents.doorAt[k] >= 0 || ents.slab[k]) throw new RangeError('checkpoint cell taken');
   // R-LINK-*: compile the links against the entity and zone ids.
-  const links = compileLinks(gdf.links, { ents: ents.byId, zones: new Map(zs.zoneIds.map((id, n) => [id, n])) });
+  // R-FOE-2: a GDF with foes names its bestiary version.
+  if ((ents.foes.length > 0 || Object.hasOwn(gdf, 'bestiary')) && gdf.bestiary !== BESTIARY_VERSION) throw new RangeError('bestiary version');
+  const links = compileLinks(gdf.links, { ents: ents.byId, zones: new Map(zs.zoneIds.map((id, n) => [id, n])), groups: ents.groupIds });
   // R-WORLD-3: world id = first 16 bytes of SHA-256 over the canonical GDF, as hex.
   const id = toHex(sha256(canonicalBytes(gdf)).subarray(0, 16));
   const world = Object.freeze({ id, w, h, start: Object.freeze({ i: si, j: sj }) });
@@ -240,7 +246,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
   const ids = new Set(), doorAt = new Int16Array(w * h).fill(-1), slab = new Uint8Array(w * h);
   const doors = [], props = [], refs = [], vents = [], ventAt = new Int16Array(w * h).fill(-1), items = [], eyes = [];
   const bells = [], bellSets = [], byId = new Map(), hooks = [], mirrors = [], crystals = [];
-  const chests = [], alcoves = [], alcoveAt = new Int16Array(w * h).fill(-1);
+  const chests = [], alcoves = [], alcoveAt = new Int16Array(w * h).fill(-1), foes = [], groups = [], groupIds = new Map();
   for (const e of list) {
     if (!isObj(e) || typeof e.id !== 'string' || !ID_RE.test(e.id)) throw new RangeError('entity id');
     if (ids.has(e.id)) throw new RangeError('duplicate entity id');
@@ -344,6 +350,23 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       props.push(Object.freeze({ circle: false, x, z, r: 0, x0, x1, z0, z1 }));
       refs.push({ type: 'chest', chest: chests.length });
       chests.push({ id: e.id, k, x: x + 250 * di, z: z + 250 * dj, reach: 2200, needles: e.trap === 'needles', contents: [] });
+    } else if (e.type === 'foe') {
+      const grouped = Object.hasOwn(e, 'group');
+      if (!hasExactKeys(e, grouped ? [...KEYS.foe, 'group'] : KEYS.foe)) throw new RangeError('foe keys');
+      const kind = foeKind(e.kind);
+      if (kind === undefined) throw new RangeError('foe kind');
+      if (!FOE_STARTS.includes(e.start)) throw new RangeError('foe start');
+      if (grouped && (typeof e.group !== 'string' || !ID_RE.test(e.group))) throw new RangeError('foe group');
+      const k = cellIndex(e.cell, w, h);
+      if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR && grid[k] !== CELL.BRIDGE) throw new RangeError('foe cell');
+      const gname = grouped ? e.group : e.id;
+      if (!groupIds.has(gname)) { groupIds.set(gname, groups.length); groups.push({ id: gname, foes: [], dormant: true }); }
+      const g = groupIds.get(gname);
+      groups[g].foes.push(foes.length);
+      if (e.start !== 'dormant') groups[g].dormant = false;
+      const [ci, cj] = e.cell;
+      refs.push({ type: 'foe', foe: foes.length });
+      foes.push({ id: e.id, k, x: ci * CELL_MM + CELL_MM / 2, z: cj * CELL_MM + CELL_MM / 2, kind, start: e.start, group: g });
     } else if (e.type === 'alcove') {
       if (!hasExactKeys(e, KEYS.alcove)) throw new RangeError('alcove keys');
       if (e.kind !== 'drown' && e.kind !== 'tip') throw new RangeError('alcove kind');
@@ -417,6 +440,16 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
     a.door = r.door;
   }
   for (const c of chests) if (doorAt[c.k] >= 0 || slab[c.k]) throw new RangeError('chest cell taken');
+  // R-FOE-2: foes on free cells (walkers not on lethal ones), the caps and the threat budget.
+  let threat = 0, awake = 0;
+  for (const f of foes) {
+    if (doorAt[f.k] >= 0 || slab[f.k]) throw new RangeError('foe cell taken');
+    const code = grid[f.k], armed = alcoveAt[f.k] >= 0;
+    if (!f.kind.fly && (code === CELL.PLATE || code === CELL.HPIT || code === CELL.VOID || code === CELL.VENT || (code === CELL.ALCOVE && armed))) throw new RangeError('foe on a lethal cell');
+    threat += f.kind.tier * f.kind.tier;
+    if (f.start === 'idle' || f.start === 'hunting') awake += 1;
+  }
+  if (foes.length > MAX_FOES || awake > MAX_AWAKE || threat > THREAT_BUDGET) throw new RangeError('foe limits');
   // R-VENT-1: every vent cell belongs to a vent.
   for (let k = 0; k < w * h; k++) if (grid[k] === CELL.VENT && ventAt[k] < 0) throw new RangeError('vent cell without a vent');
   // R-PROP-2: every cell under the footprint's bounds is inside the grid and free floor.
@@ -434,6 +467,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
     hooks: Object.freeze(hooks), mirrors: Object.freeze(mirrors), crystals: Object.freeze(crystals),
     chests: Object.freeze(chests.map((c) => Object.freeze({ ...c, contents: Object.freeze(c.contents) }))),
     alcoves: Object.freeze(alcoves.map((a) => Object.freeze({ id: a.id, k: a.k, drown: a.drown, door: a.door }))), alcoveAt,
+    foes: Object.freeze(foes.map(Object.freeze)), groups: Object.freeze(groups.map((g) => Object.freeze({ id: g.id, foes: Object.freeze(g.foes), dormant: g.dormant }))), groupIds,
     bellSets: Object.freeze(bellSets.map((b) => Object.freeze({ id: b.id, bells: Object.freeze(b.bells), order: b.order }))),
     doorAt, slab, ventAt, vents: Object.freeze(vents), items: Object.freeze(items.map(Object.freeze)), eyes: Object.freeze(eyes), doors: Object.freeze(doors.map((d) => Object.freeze({ id: d.id, k: d.k, cx: d.cx, cz: d.cz, interact: d.interact, key: d.key }))), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
 }
@@ -475,6 +509,10 @@ export function ventAt(world, k) { const W = GRIDS.get(world), v = W.ventAt[k]; 
 export function zoneAt(world, k) { return GRIDS.get(world).zoneOf[k]; }
 export function worldZones(world) { return GRIDS.get(world).zones; }
 export function startZone(world) { return GRIDS.get(world).startZone; }
+
+/** R-FOE-*: the foes and groups, in entity order / order of first appearance (frozen). */
+export function worldFoes(world) { return GRIDS.get(world).foes; }
+export function worldGroups(world) { return GRIDS.get(world).groups; }
 
 /** R-CHEST-*, R-ALCOVE-*: chests and alcoves (frozen); the alcove on cell k, or undefined. */
 export function worldChests(world) { return GRIDS.get(world).chests; }

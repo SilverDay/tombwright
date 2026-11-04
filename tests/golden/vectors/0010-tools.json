@@ -1,6 +1,6 @@
 {
  "name": "0010-tools",
- "core": "m0.8",
+ "core": "m0.9",
  "seed": 10,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAFAQEABgECAAMBAQMBAQEAAQEBBgEFAQECAwIABQEBAAYBAgAFAQECBgECAAUBAQAGAQIAAwEBBAEBAQABAQEEAQEBBwEBAQgCAAUBAQAGAQ8A\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,5,7]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[7,1,6,7]],\"ceil\":3600,\"checkpoint\":{\"cell\":[7,4],\"yaw\":3072}}],\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[6,4],\"style\":\"stone\",\"opens\":\"interact\"},{\"id\":\"f1\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[3,3]},{\"id\":\"r1\",\"type\":\"item\",\"kind\":\"rubble\",\"cell\":[2,6]},{\"id\":\"t1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[1,1],\"value\":100},{\"id\":\"t2\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[12,4],\"value\":250},{\"id\":\"b1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[8,2],\"value\":7},{\"id\":\"e1\",\"type\":\"eyes\",\"zone\":\"g\",\"wake\":18},{\"id\":\"v1\",\"type\":\"vent\",\"cells\":[[10,6]],\"period\":90,\"phase\":0,\"warn\":20,\"fire\":30},{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[12,2]}]}",
@@ -399,13 +399,13 @@
  "ticks": 529,
  "hashEvery": 300,
  "hashes": {
-  "0": "2c7f1a6eeaf47f67005b9287670d9ff2",
-  "300": "ea388367e39000551738712f4eb34d15"
+  "0": "4ec6f693f836ba3151115998a3a2945d",
+  "300": "d818c1f77ce79e6c1d86d84cf432cf3b"
  },
- "final": "6f6644efdd2a7b43e590c806265864f0",
+ "final": "188a332e79a3b41ca9f832a492023ff1",
  "finalState": {
   "v": 1,
-  "core": "m0.8",
+  "core": "m0.9",
   "world": "ed07117ae227eea674dbae0f20b67882",
   "mode": "delve",
   "tick": 529,
@@ -432,7 +432,8 @@
    "flasks": 1,
    "pebbles": 10,
    "probeCd": 0,
-   "pebbleCd": 0
+   "pebbleCd": 0,
+   "strikeCd": 0
   },
   "doors": [
    {
@@ -462,6 +463,9 @@
   "mirrors": [],
   "chests": [],
   "sealing": [],
+  "foes": [],
+  "groups": [],
+  "blows": [],
   "bellSets": [],
   "links": [],
   "checkpoints": [
@@ -480,6 +484,7 @@
      "revealed": [],
      "mirrors": [],
      "chests": [],
+     "groups": [],
      "doors": [
       false
      ],
@@ -504,6 +509,7 @@
      "revealed": [],
      "mirrors": [],
      "chests": [],
+     "groups": [],
      "doors": [
       true
      ],

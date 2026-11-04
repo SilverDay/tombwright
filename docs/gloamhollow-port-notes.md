@@ -17,7 +17,7 @@ the rules themselves go in `docs/sim-rules.md`.
 | Health | regen 4/s after 5 s unhurt | Done (R-HP-*): 1/30-hp units, +4 a tick after 150 calm ticks; damage via links |
 | Pebbles | range `clamp(6.2 + pitch·5, 1.6, 8.5)` m, 0.12 m march, flight `0.35 + d·0.05` s | Done (R-PEB-*): int8 pitch = ±1.2 rad (decision #22); flight in whole ticks; pick-up 0.75 m; rubble refills to 12 |
 | Probe | reach 2.05 m (2.6 m if still in your own cell), 8-step wall check | Done (R-PROBE-*); the gilded chest's needles come with chests |
-| Foes | warden 3 hp/14 dmg/2.2 m/s; crawler 2/9/2.9; wind-up and cooldowns | `ph: Math.random()` is visual only; leave it out of state |
+| Foes | warden 3 hp/14 dmg/2.2 m/s; crawler 2/9/2.9; wind-up and cooldowns | Done (R-FOE-*, bestiary.v1.json): spec §4.9 senses and BFS pathing around Gloamhollow's numbers; `ph` stays visual |
 | Boss | 6 hp, solid within 3.6 m of a lit brazier, phase 2 at ≤ 3 hp, oil drain | |
 | `later()` / `setTimeout` in rules (`strike` 110 ms, bell 0.65 s / 0.9 s, mask doors 1.5–2.6 s) | | Bells done as link delays (20 / 27 ticks, R-LINK-7, decision #31); mask doors with 5c, strike with 5d |
 | Door animation `anim < 0.85` gates collision | open 1.1 s, close 0.7 s | Opening done (R-DOOR-*: 33 ticks, passable from tick 29). Closing comes with seal/close effects |
@@ -46,3 +46,5 @@ Bells and wiring (step 5a): `ringBell` becomes `bell` / `bellSet` entities (R-BE
 Mirror Vault (step 5b): `HOOK`, `MIRRORS`, `CRYSTAL` become `lampHook`, `mirror` and `crystal` entities (R-HOOK-*, R-MIRROR-*, R-CRYSTAL-1); `buildBeam` becomes R-BEAM-1, traced from the state whenever `beamHits` is read; `solveMirrors` is link 8 (open the vault, reveal the hidden sun-opal, Gloamhollow's text). `G.hung` is `player.hung`; leaving the vault while it hangs is undone (R-HOOK-3). The crawlers that wake on the first hanging come with foes in 5d.
 
 Chests, keys and masks (step 5c): `openGilded` / `openPlain` / `gildedInReach` become `chest` entities (R-CHEST-*) holding item entities `in` them (the rubies; the crescent key and a flask); the first press on the gilded chest only looks. The sleeping-face door is a `key` door (R-DOOR-1); the weeping and laughing doors open on touch. `weepTrap` / `laughTrap` become `alcove` entities (R-ALCOVE-*): stepping in kills (`drown`, `tip`), a pebble sets either off, the probe only `tip`; the door seals at once and closes 45 / 78 / 66 ticks later. Gloamhollow's texts are links 9–16.
+
+Foes and combat (step 5d): `FOES`, `spawnFoe`, `updateFoes`, `attack` / `strike` become the bestiary file, `foe` entities and R-FOE-* / R-STRIKE-* (decisions #39–#46). Gloamhollow's foes chase in a straight line; Tombwright's follow a breadth-first field round walls and lethal cells, which reaches the player the same way in the Garden and the Vault. The 110 ms strike delay is now 3 ticks (no real-time timers left in the rules). Links 3 and 17–20 raise the keepers and the crawlers and say when they fall.

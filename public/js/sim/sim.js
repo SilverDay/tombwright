@@ -3,17 +3,17 @@
 // Mirror: src/Sim/Sim.php. Any change here needs the same change there + golden vectors.
 import { idiv, fdiv, isqrt, clamp } from './int.js';
 import { isin, icos, TRIG_ONE } from './sine.js';
-import { rngSeed } from './rng.js';
+import { rngSeed, rngBelow } from './rng.js';
 import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
 import {
   loadWorld, solidCell, assertWorld, worldProps, worldDoors, entityRef, cellCode, slabAt, ventAt, zoneAt, worldZones, startZone,
-  worldItems, worldEyes, sightBlocked, worldBells, worldBellSets, worldLinks, worldHooks, worldMirrors, worldCrystals, worldChests, alcoveAt,
+  worldItems, worldEyes, sightBlocked, worldBells, worldBellSets, worldLinks, worldHooks, worldMirrors, worldCrystals, worldChests, alcoveAt, worldFoes, worldGroups, MAX_AWAKE,
   CELL, DOOR_FULL, DOOR_STEP, DOOR_CLOSE_STEP,
 } from './world.js';
 import { runLinks, initLinkState, copyLinkState } from './links.js';
 
-export const CORE_VERSION = 'm0.8';
+export const CORE_VERSION = 'm0.9';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -38,6 +38,9 @@ export const RISE_OIL = 50 * 30000;
 export const PROBE_CD = 21, PEBBLE_CD = 15, PEBBLE_MAX = 12, PICKUP_MM = 750;
 // R-HP-1: hp in 1/30-hp units; regeneration +4 a tick once calm > 150 (Gloamhollow 4 hp/s after 5 s).
 export const HP_UNIT = 30, HP_FULL = 100 * HP_UNIT, HP_REGEN = 4, CALM_MAX = 151;
+// R-STRIKE-*: swing cooldown and blow delay (Gloamhollow 0.45 s, 110 ms), reach, knock-back, stun. R-FOE-7: ranges.
+export const STRIKE_CD = 14, BLOW_DELAY = 3, STRIKE_REACH = 2250, KNOCKBACK = 500, STUN = 9;
+const SIGHT_LIT = 6 * 2400, SIGHT_DARK = 3 * 2400, NOISE_RUN = 4 * 2400, NOISE_SWING = 3 * 2400, NOISE_PEBBLE = 3 * 2400;
 
 export const BTN = Object.freeze({
   strike: 1 << 0, hood: 1 << 1, probe: 1 << 2, pebble: 1 << 3,
@@ -78,7 +81,7 @@ export function init(world, seed, mode) {
       vx: 0, vz: 0, rx: 0, rz: 0,   // velocity mm/s; sub-mm remainders in 1/30 mm (R-MOVE-3)
       yaw: 0, pitch: 0,
       hp: HP_FULL, calm: CALM_MAX, oil: 100 * OIL_UNIT, hooded: false, hung: -1, // R-HP-1, R-HOOK-1
-      flasks: 1, pebbles: 10, probeCd: 0, pebbleCd: 0, // R-OIL-3, R-PEB-1, R-TOOL-2
+      flasks: 1, pebbles: 10, probeCd: 0, pebbleCd: 0, strikeCd: 0, // R-OIL-3, R-PEB-1, R-TOOL-2, R-STRIKE-1
     },
     doors: worldDoors(world).map(() => ({ open: false, t: 0 })), // R-DOOR-2
     deaths: 0,
@@ -97,6 +100,9 @@ export function init(world, seed, mode) {
     mirrors: worldMirrors(world).map((m) => m.start), // R-MIRROR-1
     chests: worldChests(world).map(() => ({ look: false, sprung: false, open: false })), // R-CHEST-1
     sealing: [],             // R-ALCOVE-2: doors about to close, { door, left }
+    foes: worldFoes(world).map((f) => freshFoe(f, f.start)), // R-FOE-3
+    groups: worldGroups(world).map((g) => (g.dormant ? 'dormant' : 'awake')),
+    blows: [],               // R-STRIKE-1: { foe, at }
     bellSets: worldBellSets(world).map(() => ({ seq: [], solved: false })), // R-BELL-2
     links: initLinkState(worldLinks(world)),                               // R-LINK-4
     checkpoints: [],        // R-CP-1
@@ -113,10 +119,15 @@ function lifeOf(state) {
   return {
     hp: p.hp, oil: p.oil, hooded: p.hooded, hung: p.hung, flasks: p.flasks, pebbles: p.pebbles,
     revealed: state.revealed.slice(), mirrors: state.mirrors.slice(),
-    chests: state.chests.map((c) => ({ look: c.look, sprung: c.sprung, open: c.open })),
+    chests: state.chests.map((c) => ({ look: c.look, sprung: c.sprung, open: c.open })), groups: state.groups.slice(),
     doors: state.doors.map((d) => d.open), floor: state.floor.map((f) => ({ x: f.x, z: f.z })), taken: state.taken.slice(),
     bellSets: copyBellSets(state.bellSets), links: copyLinkState(state.links),
   };
+}
+
+/** R-FOE-3: a foe as it starts (or comes back, R-FOE-8). */
+function freshFoe(def, st) {
+  return { st, x: def.x, z: def.z, hp: def.kind.strikes, t: 0, atk: def.kind.firstAttack, stun: 0, wake: false, gx: -1, gz: -1 };
 }
 
 function copyBellSets(b) { return b.map((x) => ({ seq: x.seq.slice(), solved: x.solved })); }
@@ -139,6 +150,7 @@ export function step(world, state, input) {
   } else {
     const batch = [];                                 // R-LINK-5: batch 0
     live(world, state, input, pressed, events, batch);
+    if (state.dead === null) updateFoes(world, state, input, events, batch); // R-FOE-6
     landPebbles(world, state, events);
     if (state.dead === null) links(world, state, batch, events); // R-LINK-7
     if (state.dead === null) regenerate(state.player);             // R-HP-1
@@ -171,8 +183,10 @@ function links(world, state, batch, events) {
         case 'inZone': return zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM)) === arg;
         case 'hasItem': return state.taken.includes(arg);
         case 'lanternHooded': return p.hooded === arg;
+        case 'lanternHung': return (p.hung >= 0) === arg;
         case 'bellsSolved': return state.bellSets[arg].solved;
         case 'beamHits': return beamHits(world, state, arg);
+        case 'foesAlive': return worldGroups(world)[arg].foes.some((n) => { const st = state.foes[n].st; return st !== 'dormant' && st !== 'dead'; });
         case 'linkActive': return state.links[worldLinks(world).findIndex((l) => l.id === arg)].active;
       }
       throw new Error('cond');
@@ -181,6 +195,13 @@ function links(world, state, batch, events) {
       let changed = false;
       for (const fx of list) {
         if (fx.kind === 'message') { events.push({ e: 'message', text: fx.text }); continue; }
+        if (fx.kind === 'spawnFoes') {                     // R-FOE-4
+          let woke = false;
+          for (const n of worldGroups(world)[fx.group].foes) if (state.foes[n].st === 'dormant' && !state.foes[n].wake) { requestWake(world, state, n, events); woke = true; }
+          if (state.groups[fx.group] !== 'defeated' && state.groups[fx.group] !== 'spawned') { state.groups[fx.group] = 'spawned'; woke = true; }
+          if (woke) changed = true;
+          continue;
+        }
         if (fx.kind === 'damage') { hurt(state, fx.n, events); changed = true; if (state.dead !== null) return true; continue; }
         if (fx.kind === 'reveal') { if (!state.revealed.includes(fx.item)) { state.revealed.push(fx.item); changed = true; } continue; }
         if (fx.kind === 'hide') { const at = state.revealed.indexOf(fx.item); if (at >= 0) { state.revealed.splice(at, 1); changed = true; } continue; }
@@ -206,12 +227,12 @@ function regenerate(p) {
 }
 
 /** R-HP-2 */
-function hurt(state, n, events) {
+function hurt(state, n, events, cause = 'damage') {
   const p = state.player;
   p.hp = Math.max(0, p.hp - HP_UNIT * n);
   p.calm = 0;
   events.push({ e: 'hurt', hp: idiv(p.hp, HP_UNIT) });
-  if (p.hp === 0) die(state, 'damage', events);
+  if (p.hp === 0) die(state, cause, events);
 }
 
 /** One tick of a living player. */
@@ -243,6 +264,7 @@ function live(world, state, input, pressed, events, batch) {
   if (pressed & BTN.oil) pourOil(p, events);
   if ((pressed & BTN.interact) && input.target !== 0) interact(world, state, input.target, events, batch); // R-ACT-1
   if (state.dead !== null) { moveDoors(state); return; } // R-CHEST-2: the needles (doors still move, R-DEATH-2)
+  if ((input.buttons & BTN.strike) && p.strikeCd === 0) swing(world, state, events);   // R-STRIKE-1: held, not pressed
 
   // R-MOVE-2: normalise the move vector to length <= 127.
   let [fw, st] = input.move;
@@ -263,7 +285,7 @@ function live(world, state, input, pressed, events, batch) {
   p.rx = ax - dx * TICK_HZ; p.rz = az - dz * TICK_HZ;
   const ox = p.x, oz = p.z;
   p.x += dx; p.z += dz;
-  pushOut(world, state, p, PLAYER_R_MM, ox, oz);
+  pushOut(world, state, p, PLAYER_R_MM, ox, oz, true);
   if (p.hung >= 0) {                                    // R-HOOK-3: the lantern holds you to its zone
     const hz = zoneAt(world, worldHooks(world)[p.hung].k);
     if (zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM)) !== hz) {
@@ -292,6 +314,7 @@ function live(world, state, input, pressed, events, batch) {
   // R-TOOL-2: cooldowns.
   if (p.probeCd > 0) p.probeCd -= 1;
   if (p.pebbleCd > 0) p.pebbleCd -= 1;
+  if (p.strikeCd > 0) p.strikeCd -= 1;
 }
 
 /** R-TOOL-1: the point at distance d (mm) ahead of the player, for yaw sine/cosine sy, cy. */
@@ -376,6 +399,7 @@ function landPebbles(world, state, events) {
     else if (code === CELL.BRIDGE) { if (!state.bridge.includes(k)) state.bridge.push(k); what = 'bridge'; }
     if (rests) state.floor.push({ x: f.x, z: f.z });
     events.push({ e: 'land', k: what });
+    if (state.dead === null) noise(world, state, f.x, f.z, NOISE_PEBBLE, 'pebble', events); // R-FOE-7
   }
   state.flying = keep;
 }
@@ -418,16 +442,199 @@ function wakeEyes(world, state, events) {
   return woke;
 }
 
-/** R-LOS-1 */
-function lineOfSight(world, state, ix, iz) {
+/** R-LOS-1: from the player to a point. */
+function lineOfSight(world, state, ix, iz) { return losFrom(world, state, state.player.x, state.player.z, ix, iz); }
+
+/** R-LOS-2: from (px, pz) to (ix, iz), aimed 300 mm short. */
+function losFrom(world, state, px, pz, ix, iz) {
   // R-INT-2: every coordinate lies in the 64·2400 mm grid, so |ex|, |vx| < 2^18: squares < 2^36; |v·s| < 2^18 · n.
-  const p = state.player, ex = ix - p.x, ez = iz - p.z, e = isqrt(ex * ex + ez * ez);
+  const ex = ix - px, ez = iz - pz, e = isqrt(ex * ex + ez * ez);
   const ax = e > 0 ? ix - idiv(ex * 300, e) : ix, az = e > 0 ? iz - idiv(ez * 300, e) : iz;
-  const vx = ax - p.x, vz = az - p.z, n = idiv(isqrt(vx * vx + vz * vz) + 599, 600);
+  const vx = ax - px, vz = az - pz, n = idiv(isqrt(vx * vx + vz * vz) + 599, 600);
   for (let s = 1; s < n; s++) {
-    if (sightBlocked(world, state, fdiv(p.x + idiv(vx * s, n), CELL_MM), fdiv(p.z + idiv(vz * s, n), CELL_MM))) return false;
+    if (sightBlocked(world, state, fdiv(px + idiv(vx * s, n), CELL_MM), fdiv(pz + idiv(vz * s, n), CELL_MM))) return false;
   }
   return true;
+}
+
+// ---------------------------------------------------------------- foes (R-FOE-*, R-STRIKE-*)
+
+const isAwake = (st) => st === 'idle' || st === 'hunting' || st === 'rising';
+const awakeCount = (state) => state.foes.reduce((a, f) => a + (isAwake(f.st) ? 1 : 0), 0);
+
+function foeEvent(world, n, st, events) { events.push({ e: 'foe', id: worldFoes(world)[n].id, st }); }
+
+/** R-FOE-4: wake an asleep or dormant foe, or queue the wake while 8 are awake. */
+function requestWake(world, state, n, events) {
+  const f = state.foes[n], kind = worldFoes(world)[n].kind;
+  if (f.st !== 'asleep' && f.st !== 'dormant') return;
+  if (awakeCount(state) >= MAX_AWAKE) { f.wake = true; return; }
+  f.wake = false;
+  if (f.st === 'dormant' && kind.rise > 0) { f.st = 'rising'; f.t = kind.rise; } else { f.st = 'hunting'; f.t = 0; }
+  foeEvent(world, n, f.st, events);
+}
+
+/** R-FOE-7: noise of `kind` ('run', 'swing', 'pebble') from (x, z), reaching `range` mm. */
+function noise(world, state, x, z, range, kind, events) {
+  state.foes.forEach((f, n) => {
+    const dx = f.x - x, dz = f.z - z; // squares < 2^36
+    if (dx * dx + dz * dz > range * range) return;
+    if (f.st === 'asleep') requestWake(world, state, n, events);
+    else if (f.st === 'idle') {
+      if (kind === 'pebble') { f.gx = x; f.gz = z; f.t = 300; } else { f.st = 'hunting'; f.t = 0; f.gx = -1; f.gz = -1; foeEvent(world, n, 'hunting', events); }
+    }
+  });
+}
+
+/** R-STRIKE-1 */
+function swing(world, state, events) {
+  const p = state.player, defs = worldFoes(world), sy = isin(p.yaw), cy = icos(p.yaw);
+  p.strikeCd = STRIKE_CD;
+  events.push({ e: 'swing' });
+  let best = -1, bd = 0;
+  state.foes.forEach((f, n) => {
+    if (f.st !== 'asleep' && f.st !== 'idle' && f.st !== 'hunting') return;
+    const dx = f.x - p.x, dz = f.z - p.z, d = isqrt(dx * dx + dz * dz); // squares < 2^36
+    // |dx·sy| < 2^18 · 2^14 = 2^32. d = 0 isn't in front (Gloamhollow `d || 1`).
+    if (d === 0 || d > STRIKE_REACH + idiv(6 * defs[n].kind.radius, 10) || 2 * (dx * -sy + dz * -cy) < d * TRIG_ONE) return;
+    if (best < 0 || d < bd) { best = n; bd = d; }
+  });
+  noise(world, state, p.x, p.z, NOISE_SWING, 'swing', events);
+  if (best >= 0) state.blows.push({ foe: best, at: state.tick + BLOW_DELAY });
+}
+
+/** R-STRIKE-2 */
+function landBlow(world, state, n, events, batch) {
+  const f = state.foes[n], def = worldFoes(world)[n], p = state.player;
+  if (f.st === 'dead') return;
+  f.hp -= 1; f.stun = STUN;
+  if (f.st === 'asleep') requestWake(world, state, n, events);
+  const dx = f.x - p.x, dz = f.z - p.z, d = Math.max(1, isqrt(dx * dx + dz * dz)); // squares < 2^36
+  f.x += idiv(dx * KNOCKBACK, d); f.z += idiv(dz * KNOCKBACK, d);
+  pushOut(world, state, f, def.kind.radius, f.x, f.z, false, !def.kind.fly);
+  events.push({ e: 'hit', id: def.id, hp: f.hp });
+  if (f.hp > 0) return;
+  f.st = 'dead'; f.wake = false;
+  events.push({ e: 'foeDead', id: def.id });
+  const g = def.group;
+  if (worldGroups(world)[g].foes.every((m) => state.foes[m].st === 'dead')) { state.groups[g] = 'defeated'; batch.push(['foesDefeated', g]); }
+}
+
+/** R-FOE-5: may a walker (or a flier) enter cell (i, j)? */
+function enterable(world, state, i, j, fly) {
+  if (solidCell(world, state, i, j)) return false;
+  if (fly) return true;
+  const k = j * world.w + i, code = cellCode(world, i, j);
+  if (code === CELL.PLATE) return slabAt(world, k) || state.sprung.includes(k);
+  if (code === CELL.HPIT || code === CELL.VOID || code === CELL.VENT) return false;
+  if (code === CELL.ALCOVE) { const a = alcoveAt(world, k); return a === undefined || state.sealed.includes(a.door); }
+  return true;
+}
+
+const NEIGHBOURS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // n, e, s, w
+
+/** R-FOE-5: the breadth-first distance field from the player's cell. */
+function field(world, state, fly) {
+  const w = world.w, dist = new Int32Array(w * world.h).fill(-1), p = state.player;
+  const start = fdiv(p.z, CELL_MM) * w + fdiv(p.x, CELL_MM), queue = [start];
+  dist[start] = 0;
+  for (let q = 0; q < queue.length; q++) {
+    const k = queue[q], i = k % w, j = (k - i) / w;
+    for (const [di, dj] of NEIGHBOURS) {
+      const ni = i + di, nj = j + dj, nk = nj * w + ni;
+      if (ni < 0 || nj < 0 || ni >= w || nj >= world.h || dist[nk] >= 0 || !enterable(world, state, ni, nj, fly)) continue;
+      dist[nk] = dist[k] + 1;
+      queue.push(nk);
+    }
+  }
+  return dist;
+}
+
+/** Move foe f towards (gx, gz) at its speed for one tick. */
+function walkTo(f, speed, gx, gz) {
+  const ex = gx - f.x, ez = gz - f.z, e = Math.max(1, isqrt(ex * ex + ez * ez)); // squares < 2^36; ex·speed < 2^31
+  f.x += idiv(ex * speed, 30 * e); f.z += idiv(ez * speed, 30 * e);
+}
+
+/** R-FOE-6 */
+function updateFoes(world, state, input, events, batch) {
+  const defs = worldFoes(world);
+  if (defs.length === 0) return;
+  const p = state.player, tick = state.tick;
+  if (state.blows.length > 0) {
+    const keep = [];
+    for (const b of state.blows) if (b.at !== tick) keep.push(b); else landBlow(world, state, b.foe, events, batch);
+    state.blows = keep;
+  }
+  if ((input.buttons & BTN.run) && (input.move[0] !== 0 || input.move[1] !== 0)) noise(world, state, p.x, p.z, NOISE_RUN, 'run', events);
+  state.foes.forEach((f, n) => { if (f.wake && awakeCount(state) < MAX_AWAKE) requestWake(world, state, n, events); }); // R-FOE-4
+  const lit = p.oil > 0 && !p.hooded && p.hung < 0, sight = lit ? SIGHT_LIT : SIGHT_DARK;
+  const fields = { walk: null, fly: null };
+  const pi = fdiv(p.x, CELL_MM), pj = fdiv(p.z, CELL_MM);
+  for (let n = 0; n < defs.length; n++) {
+    const f = state.foes[n], kind = defs[n].kind;
+    if (f.st === 'dormant' || f.st === 'dead' || f.st === 'asleep') continue;
+    if (f.st === 'rising') { f.t -= 1; if (f.t === 0) { f.st = 'hunting'; foeEvent(world, n, 'hunting', events); } continue; }
+    f.stun = Math.max(0, f.stun - 1); f.atk = Math.max(0, f.atk - 1);
+    const dx = p.x - f.x, dz = p.z - f.z;                // squares < 2^36
+    if (f.st === 'hunting' && f.t > 0) {
+      f.t -= 1;
+      if (f.t === 0) {
+        const r = kind.reach + 450;
+        if (dx * dx + dz * dz < r * r) { hurt(state, kind.damage, events, 'beast'); if (state.dead !== null) return; }
+        f.atk = kind.cooldown;
+      }
+      continue;
+    }
+    if (f.stun > 0) continue;
+    if (f.st === 'hunting') {
+      const d = Math.max(1, isqrt(dx * dx + dz * dz));
+      if (d < kind.reach && f.atk === 0) { f.t = kind.wind; }
+      else if (d > idiv(3 * kind.reach, 4)) {
+        const fi = fdiv(f.x, CELL_MM), fj = fdiv(f.z, CELL_MM);
+        let gx = -1, gz = -1;
+        if ((fi === pi && fj === pj) || (Math.abs(fi - pi) <= 1 && Math.abs(fj - pj) <= 1 && losFrom(world, state, f.x, f.z, p.x, p.z))) { gx = p.x; gz = p.z; }
+        else {
+          const key = kind.fly ? 'fly' : 'walk';
+          if (fields[key] === null) fields[key] = field(world, state, kind.fly);
+          const dist = fields[key], here = dist[fj * world.w + fi];
+          if (here > 0) {
+            let bestD = here;
+            for (const [di, dj] of NEIGHBOURS) {
+              const ni = fi + di, nj = fj + dj, nd = dist[nj * world.w + ni];
+              if (nd >= 0 && nd < bestD) { bestD = nd; gx = ni * CELL_MM + CELL_MM / 2; gz = nj * CELL_MM + CELL_MM / 2; }
+            }
+          }
+        }
+        if (gx >= 0) walkTo(f, kind.speed, gx, gz);
+      }
+    } else {                                              // idle
+      const sx = f.x - p.x, sz = f.z - p.z;
+      if (sx * sx + sz * sz <= sight * sight && losFrom(world, state, f.x, f.z, p.x, p.z)) {
+        f.st = 'hunting'; f.t = 0; f.gx = -1; f.gz = -1; foeEvent(world, n, 'hunting', events);
+      } else if (f.gx < 0) {
+        if (f.t > 0) f.t -= 1;
+        if (f.t === 0) {
+          const z = zoneAt(world, defs[n].k), cells = [];
+          if (z >= 0) for (let k = 0; k < world.w * world.h; k++) if (zoneAt(world, k) === z && enterable(world, state, k % world.w, (k - (k % world.w)) / world.w, kind.fly)) cells.push(k);
+          if (cells.length === 0) f.t = 30 + rngBelow(state.rng, 61);
+          else { const k = cells[rngBelow(state.rng, cells.length)]; f.gx = (k % world.w) * CELL_MM + CELL_MM / 2; f.gz = ((k - (k % world.w)) / world.w) * CELL_MM + CELL_MM / 2; f.t = 300; }
+        }
+      } else {
+        walkTo(f, kind.speed, f.gx, f.gz);
+        f.t -= 1;
+        if ((fdiv(f.x, CELL_MM) === fdiv(f.gx, CELL_MM) && fdiv(f.z, CELL_MM) === fdiv(f.gz, CELL_MM)) || f.t <= 0) { f.gx = -1; f.gz = -1; f.t = 30 + rngBelow(state.rng, 61); }
+      }
+    }
+    // Separation from the other foes, then the walls and props.
+    for (let m = 0; m < defs.length; m++) {
+      const o = state.foes[m];
+      if (m === n || o.st === 'dormant' || o.st === 'dead') continue;
+      const ox = f.x - o.x, oz = f.z - o.z, rr = kind.radius + defs[m].kind.radius, od2 = ox * ox + oz * oz; // < 2^36
+      if (od2 > 0 && od2 < rr * rr) { const od = isqrt(od2); f.x += idiv(ox * (rr - od), 2 * od); f.z += idiv(oz * (rr - od), 2 * od); } // |ox·(rr-od)| < 2^22
+    }
+    pushOut(world, state, f, kind.radius, f.x, f.z, false, !kind.fly);
+  }
 }
 
 /** R-ITEM-2 */
@@ -520,6 +727,19 @@ function rise(world, state, target, events) {
   state.floor = life.floor.map((f) => ({ x: f.x, z: f.z }));
   state.taken = life.taken.slice();
   state.flying = [];
+  state.groups = life.groups.slice();
+  state.blows = [];
+  // R-FOE-8: defeated groups stay dead; foes starting awake or asleep come back as they started; foes of spawned
+  // groups that started dormant come back hunting, in entity order, while fewer than 8 are awake (else they wait).
+  state.foes = worldFoes(world).map((def) => {
+    const g = state.groups[def.group];
+    return freshFoe(def, g === 'defeated' ? 'dead' : def.start);
+  });
+  worldFoes(world).forEach((def, n) => {
+    const f = state.foes[n];
+    if (f.st !== 'dormant' || state.groups[def.group] !== 'spawned') return;
+    if (awakeCount(state) < MAX_AWAKE) f.st = 'hunting'; else f.wake = true;
+  });
   state.eyes = state.eyes.map(() => 0);
   p.x = c.x; p.z = c.z; p.yaw = c.yaw; p.pitch = 0;
   p.vx = 0; p.vz = 0; p.rx = 0; p.rz = 0;
@@ -653,13 +873,13 @@ function ringBell(world, state, n, b, events, batch) {
  * Bounds (R-INT-2): cells: |dx|, |dz| <= 2400 + r, so dx*r and d2 stay below 2^23. Props: |dx|, |dz|
  * <= 64*2400, so d2 < 2^36; a push needs d2 < R^2 <= 910^2, so dx*R < 2^20.
  */
-function pushOut(world, state, e, r, ox, oz) {
-  const props = worldProps(world);
+function pushOut(world, state, e, r, ox, oz, isPlayer, walker = false) {
+  const props = worldProps(world), defs = isPlayer ? worldFoes(world) : [];
   for (let pass = 0; pass < 3; pass++) {
     const ci = fdiv(e.x, CELL_MM), cj = fdiv(e.z, CELL_MM);
     for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
       const gi = ci + di, gj = cj + dj;
-      if (!solidCell(world, state, gi, gj)) continue;
+      if (walker ? enterable(world, state, gi, gj, false) : !solidCell(world, state, gi, gj)) continue; // R-FOE-5: walls for walkers
       const minx = gi * CELL_MM, minz = gj * CELL_MM;
       const qx = clamp(e.x, minx, minx + CELL_MM), qz = clamp(e.z, minz, minz + CELL_MM);
       const dx = e.x - qx, dz = e.z - qz, d2 = dx * dx + dz * dz;
@@ -675,6 +895,12 @@ function pushOut(world, state, e, r, ox, oz) {
         const dx = e.x - qx, dz = e.z - qz, d2 = dx * dx + dz * dz;
         if (d2 > 0 && d2 < r * r) { const d = isqrt(d2); e.x = qx + idiv(dx * r, d); e.z = qz + idiv(dz * r, d); }
       }
+    }
+    for (let n = 0; n < defs.length; n++) {            // R-MOVE-4: the foes push the player (Gloamhollow r + 0.85·ρ)
+      const f = state.foes[n];
+      if (f.st !== 'asleep' && f.st !== 'idle' && f.st !== 'hunting') continue;
+      const dx = e.x - f.x, dz = e.z - f.z, d2 = dx * dx + dz * dz, rr = r + idiv(85 * defs[n].kind.radius, 100);
+      if (d2 > 0 && d2 < rr * rr) { const d = isqrt(d2); e.x = f.x + idiv(dx * rr, d); e.z = f.z + idiv(dz * rr, d); }
     }
   }
 }

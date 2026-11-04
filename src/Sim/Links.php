@@ -17,11 +17,11 @@ final class Links
     private const MAX_DEPTH = 4;
     private const MAX_TRIGGERS = 16;
     private const MAX_MESSAGE_BYTES = 1000;
-    private const EVENTS = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired'];
-    private const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'bellsSolved', 'beamHits', 'linkActive'];
+    private const EVENTS = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired', 'foesDefeated'];
+    private const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'lanternHung', 'bellsSolved', 'beamHits', 'linkActive', 'foesAlive'];
     private const GATES = ['all', 'any', 'atLeast', 'sequence', 'not'];
     private const GATE_OPTS = ['all' => ['within'], 'any' => ['within'], 'atLeast' => ['k', 'within'], 'sequence' => ['within', 'strict', 'onWrong'], 'not' => []];
-    private const EFFECTS = ['openDoor', 'closeDoor', 'sealDoor', 'reveal', 'hide', 'damage', 'message'];
+    private const EFFECTS = ['spawnFoes', 'openDoor', 'closeDoor', 'sealDoor', 'reveal', 'hide', 'damage', 'message'];
     private const LINK_KEYS = ['id', 'when', 'do', 'undo', 'repeat', 'delay'];
 
     private static function bad(string $what): never
@@ -121,6 +121,8 @@ final class Links
                     self::bad('message');
                 }
                 $out[] = ['kind' => $kind, 'text' => $v];
+            } elseif ($kind === 'spawnFoes') {
+                $out[] = ['kind' => $kind, 'group' => self::group($v, $ctx)];
             } elseif ($kind === 'reveal' || $kind === 'hide') {
                 $out[] = ['kind' => $kind, 'item' => self::entity($v, $ctx, static fn (array $r): bool => $r['type'] === 'item' && $r['hidden'])['n']];
             } else {
@@ -142,6 +144,16 @@ final class Links
             self::bad('entity reference');
         }
         return $r;
+    }
+
+    /** @param array<string,mixed> $ctx */
+    private static function group(mixed $id, array $ctx): int
+    {
+        $g = is_string($id) ? ($ctx['groups'][$id] ?? null) : null;
+        if ($g === null) {
+            self::bad('group reference');
+        }
+        return $g;
     }
 
     /** @param array<string,mixed> $ctx */
@@ -185,11 +197,15 @@ final class Links
                 return self::linkRef($v, $c);
             case 'doorOpen':
                 return self::entity($v, $c['ctx'], static fn (array $r): bool => $r['type'] === 'door')['door'];
+            case 'foesDefeated':
+            case 'foesAlive':
+                return self::group($v, $c['ctx']);
             case 'beamHits':
                 return self::entity($v, $c['ctx'], static fn (array $r): bool => $r['type'] === 'crystal')['crystal'];
             case 'lanternHooded':
+            case 'lanternHung':
                 if (!is_bool($v)) {
-                    self::bad('lanternHooded');
+                    self::bad($kind);
                 }
                 return $v;
         }

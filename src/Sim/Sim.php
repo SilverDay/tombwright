@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.8';
+    public const CORE_VERSION = 'm0.9';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -37,6 +37,20 @@ final class Sim
     public const HP_FULL = 3000;
     public const HP_REGEN = 4;
     public const CALM_MAX = 151;
+    /** R-STRIKE-*, R-FOE-7 */
+    public const STRIKE_CD = 14;
+    public const BLOW_DELAY = 3;
+    public const STRIKE_REACH = 2250;
+    public const KNOCKBACK = 500;
+    public const STUN = 9;
+    private const SIGHT_LIT = 6 * 2400;
+    private const SIGHT_DARK = 3 * 2400;
+    private const NOISE_RUN = 4 * 2400;
+    private const NOISE_SWING = 3 * 2400;
+    private const NOISE_PEBBLE = 3 * 2400;
+    private const NEIGHBOURS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    /** @var array<string,list<int>> R-FOE-5 fields by their inputs (see field()). */
+    private static array $fieldCache = [];
 
     public const BTN_STRIKE = 1 << 0;
     public const BTN_HOOD = 1 << 1;
@@ -104,7 +118,7 @@ final class Sim
                 'vx' => 0, 'vz' => 0, 'rx' => 0, 'rz' => 0,
                 'yaw' => 0, 'pitch' => 0,
                 'hp' => self::HP_FULL, 'calm' => self::CALM_MAX, 'oil' => 100 * self::OIL_UNIT, 'hooded' => false, 'hung' => -1, // R-HP-1, R-HOOK-1
-                'flasks' => 1, 'pebbles' => 10, 'probeCd' => 0, 'pebbleCd' => 0, // R-OIL-3, R-PEB-1, R-TOOL-2
+                'flasks' => 1, 'pebbles' => 10, 'probeCd' => 0, 'pebbleCd' => 0, 'strikeCd' => 0, // R-OIL-3, R-PEB-1, R-TOOL-2, R-STRIKE-1
             ],
             'doors' => array_map(static fn (): array => ['open' => false, 't' => 0], $world->doors), // R-DOOR-2
             'deaths' => 0,
@@ -123,6 +137,9 @@ final class Sim
             'mirrors' => array_map(static fn (array $m): int => $m['start'], $world->mirrors), // R-MIRROR-1
             'chests' => array_map(static fn (): array => ['look' => false, 'sprung' => false, 'open' => false], $world->chests), // R-CHEST-1
             'sealing' => [],      // R-ALCOVE-2
+            'foes' => array_map(static fn (array $f): array => self::freshFoe($f, $f['start']), $world->foes), // R-FOE-3
+            'groups' => array_map(static fn (array $g): string => $g['dormant'] ? 'dormant' : 'awake', $world->groups),
+            'blows' => [],        // R-STRIKE-1
             'bellSets' => array_map(static fn (): array => ['seq' => [], 'solved' => false], $world->bellSets), // R-BELL-2
             'links' => Links::initState($world->links), // R-LINK-4
             'checkpoints' => [],  // R-CP-1
@@ -146,7 +163,7 @@ final class Sim
         $p = $state['player'];
         return [
             'hp' => $p['hp'], 'oil' => $p['oil'], 'hooded' => $p['hooded'], 'hung' => $p['hung'], 'flasks' => $p['flasks'], 'pebbles' => $p['pebbles'],
-            'revealed' => $state['revealed'], 'mirrors' => $state['mirrors'], 'chests' => $state['chests'],
+            'revealed' => $state['revealed'], 'mirrors' => $state['mirrors'], 'chests' => $state['chests'], 'groups' => $state['groups'],
             'doors' => array_map(static fn (array $d): bool => $d['open'], $state['doors']),
             'floor' => $state['floor'], 'taken' => $state['taken'],
             'bellSets' => $state['bellSets'], 'links' => $state['links'],
@@ -183,6 +200,9 @@ final class Sim
         } else {
             $batch = [];                                  // R-LINK-5: batch 0
             self::live($world, $state, $input, $pressed, $events, $batch);
+            if ($state['dead'] === null) {
+                self::updateFoes($world, $state, $input, $events, $batch); // R-FOE-6
+            }
             self::landPebbles($world, $state, $events);
             if ($state['dead'] === null) {
                 self::links($world, $state, $batch, $events); // R-LINK-7
@@ -240,13 +260,13 @@ final class Sim
      * @param array<string,mixed> $state
      * @param list<array<string,mixed>> $events
      */
-    public static function hurt(array &$state, int $n, array &$events): void
+    public static function hurt(array &$state, int $n, array &$events, string $cause = 'damage'): void
     {
         $state['player']['hp'] = max(0, $state['player']['hp'] - self::HP_UNIT * $n);
         $state['player']['calm'] = 0;
         $events[] = ['e' => 'hurt', 'hp' => intdiv($state['player']['hp'], self::HP_UNIT)];
         if ($state['player']['hp'] === 0) {
-            self::die($state, 'damage', $events);
+            self::die($state, $cause, $events);
         }
     }
 
@@ -263,6 +283,23 @@ final class Sim
         foreach ($list as $fx) {
             if ($fx['kind'] === 'message') {
                 $events[] = ['e' => 'message', 'text' => $fx['text']];
+                continue;
+            }
+            if ($fx['kind'] === 'spawnFoes') { // R-FOE-4
+                $woke = false;
+                foreach ($world->groups[$fx['group']]['foes'] as $n) {
+                    if ($state['foes'][$n]['st'] === 'dormant' && !$state['foes'][$n]['wake']) {
+                        self::requestWake($world, $state, $n, $events);
+                        $woke = true;
+                    }
+                }
+                if ($state['groups'][$fx['group']] !== 'defeated' && $state['groups'][$fx['group']] !== 'spawned') {
+                    $state['groups'][$fx['group']] = 'spawned';
+                    $woke = true;
+                }
+                if ($woke) {
+                    $changed = true;
+                }
                 continue;
             }
             if ($fx['kind'] === 'reveal') {
@@ -330,10 +367,19 @@ final class Sim
                 return in_array($arg, $state['taken'], true);
             case 'lanternHooded':
                 return $p['hooded'] === $arg;
+            case 'lanternHung':
+                return ($p['hung'] >= 0) === $arg;
             case 'bellsSolved':
                 return $state['bellSets'][$arg]['solved'];
             case 'beamHits':
                 return self::beamHits($world, $state, $arg);
+            case 'foesAlive':
+                foreach ($world->groups[$arg]['foes'] as $n) {
+                    if ($state['foes'][$n]['st'] !== 'dormant' && $state['foes'][$n]['st'] !== 'dead') {
+                        return true;
+                    }
+                }
+                return false;
             case 'linkActive':
                 foreach ($world->links as $n => $l) {
                     if ($l['id'] === $arg) {
@@ -402,6 +448,9 @@ final class Sim
             self::moveDoors($state); // R-CHEST-2: the needles (doors still move, R-DEATH-2)
             return;
         }
+        if (($input['buttons'] & self::BTN_STRIKE) && $state['player']['strikeCd'] === 0) {
+            self::swing($world, $state, $events); // R-STRIKE-1: held, not pressed
+        }
         $p = &$state['player'];
 
         [$fw, $st] = $input['move'];
@@ -429,7 +478,7 @@ final class Sim
         $oz = $p['z'];
         $p['x'] += $dx;
         $p['z'] += $dz;
-        self::pushOut($world, $state, $p, self::PLAYER_R_MM, $ox, $oz);
+        self::pushOut($world, $state, $p, self::PLAYER_R_MM, $ox, $oz, true);
         if ($p['hung'] >= 0) { // R-HOOK-3: the lantern holds you to its zone
             $hz = $world->zoneAt($world->hooks[$p['hung']]['k']);
             if ($world->zoneAt(IntMath::fdiv($p['z'], self::CELL_MM) * $world->w + IntMath::fdiv($p['x'], self::CELL_MM)) !== $hz) {
@@ -480,6 +529,9 @@ final class Sim
         }
         if ($p['pebbleCd'] > 0) {
             $p['pebbleCd'] -= 1;
+        }
+        if ($p['strikeCd'] > 0) {
+            $p['strikeCd'] -= 1;
         }
         unset($p);
     }
@@ -685,6 +737,9 @@ final class Sim
                 $state['floor'][] = ['x' => $f['x'], 'z' => $f['z']];
             }
             $events[] = ['e' => 'land', 'k' => $what];
+            if ($state['dead'] === null) {
+                self::noise($world, $state, $f['x'], $f['z'], self::NOISE_PEBBLE, 'pebble', $events); // R-FOE-7
+            }
         }
         $state['flying'] = $keep;
     }
@@ -769,9 +824,17 @@ final class Sim
      */
     private static function lineOfSight(World $world, array $state, int $ix, int $iz): bool
     {
+        return self::losFrom($world, $state, $state['player']['x'], $state['player']['z'], $ix, $iz);
+    }
+
+    /**
+     * R-LOS-2: from (px, pz) to (ix, iz), aimed 300 mm short.
+     *
+     * @param array<string,mixed> $state
+     */
+    private static function losFrom(World $world, array $state, int $px, int $pz, int $ix, int $iz): bool
+    {
         // R-INT-2: every coordinate lies in the 64·2400 mm grid, so |ex|, |vx| < 2^18: squares < 2^36; |v·s| < 2^18 · n.
-        $px = $state['player']['x'];
-        $pz = $state['player']['z'];
         $ex = $ix - $px;
         $ez = $iz - $pz;
         $e = IntMath::isqrt($ex * $ex + $ez * $ez);
@@ -1079,6 +1142,23 @@ final class Sim
         $state['floor'] = $life['floor'];
         $state['taken'] = $life['taken'];
         $state['flying'] = [];
+        $state['groups'] = $life['groups'];
+        $state['blows'] = [];
+        // R-FOE-8: defeated groups stay dead; others come back as they started; spawned dormant ones hunt, capped.
+        $state['foes'] = [];
+        foreach ($world->foes as $def) {
+            $state['foes'][] = self::freshFoe($def, $state['groups'][$def['group']] === 'defeated' ? 'dead' : $def['start']);
+        }
+        foreach ($world->foes as $n => $def) {
+            if ($state['foes'][$n]['st'] !== 'dormant' || $state['groups'][$def['group']] !== 'spawned') {
+                continue;
+            }
+            if (self::awakeCount($state) < World::MAX_AWAKE) {
+                $state['foes'][$n]['st'] = 'hunting';
+            } else {
+                $state['foes'][$n]['wake'] = true;
+            }
+        }
         $state['eyes'] = array_map(static fn (): int => 0, $state['eyes']);
         $state['zone'] = $world->zoneAt(IntMath::fdiv($c['z'], self::CELL_MM) * $world->w + IntMath::fdiv($c['x'], self::CELL_MM));
         $state['dead'] = null;
@@ -1275,7 +1355,7 @@ final class Sim
      * @param array<string,mixed> $state read only (doors, sprung)
      * @param array<string,mixed> $e
      */
-    private static function pushOut(World $world, array $state, array &$e, int $r, int $ox, int $oz): void
+    private static function pushOut(World $world, array $state, array &$e, int $r, int $ox, int $oz, bool $isPlayer, bool $walker = false): void
     {
         for ($pass = 0; $pass < 3; $pass++) {
             $ci = IntMath::fdiv($e['x'], self::CELL_MM);
@@ -1284,8 +1364,8 @@ final class Sim
                 for ($di = -1; $di <= 1; $di++) {
                     $gi = $ci + $di;
                     $gj = $cj + $dj;
-                    if (!$world->solidCell($state, $gi, $gj)) {
-                        continue;
+                    if ($walker ? self::enterable($world, $state, $gi, $gj, false) : !$world->solidCell($state, $gi, $gj)) {
+                        continue; // R-FOE-5: lethal cells are walls for walkers
                     }
                     $minx = $gi * self::CELL_MM;
                     $minz = $gj * self::CELL_MM;
@@ -1328,6 +1408,471 @@ final class Sim
                     }
                 }
             }
+            if ($isPlayer) { // R-MOVE-4: the foes push the player (Gloamhollow r + 0.85·ρ)
+                foreach ($world->foes as $n => $def) {
+                    $f = $state['foes'][$n];
+                    if ($f['st'] !== 'asleep' && $f['st'] !== 'idle' && $f['st'] !== 'hunting') {
+                        continue;
+                    }
+                    $dx = $e['x'] - $f['x'];
+                    $dz = $e['z'] - $f['z'];
+                    $d2 = $dx * $dx + $dz * $dz;
+                    $rr = $r + intdiv(85 * $def['kind']['radius'], 100);
+                    if ($d2 > 0 && $d2 < $rr * $rr) {
+                        $d = IntMath::isqrt($d2);
+                        $e['x'] = $f['x'] + IntMath::idiv($dx * $rr, $d);
+                        $e['z'] = $f['z'] + IntMath::idiv($dz * $rr, $d);
+                    }
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- foes (R-FOE-*, R-STRIKE-*)
+
+    /**
+     * R-FOE-3: a foe as it starts (or comes back, R-FOE-8).
+     *
+     * @param array<string,mixed> $def
+     * @return array<string,mixed>
+     */
+    private static function freshFoe(array $def, string $st): array
+    {
+        return ['st' => $st, 'x' => $def['x'], 'z' => $def['z'], 'hp' => $def['kind']['strikes'], 't' => 0, 'atk' => $def['kind']['firstAttack'], 'stun' => 0, 'wake' => false, 'gx' => -1, 'gz' => -1];
+    }
+
+    private static function isAwake(string $st): bool
+    {
+        return $st === 'idle' || $st === 'hunting' || $st === 'rising';
+    }
+
+    /** @param array<string,mixed> $state */
+    private static function awakeCount(array $state): int
+    {
+        $n = 0;
+        foreach ($state['foes'] as $f) {
+            if (self::isAwake($f['st'])) {
+                $n++;
+            }
+        }
+        return $n;
+    }
+
+    /**
+     * R-FOE-4: wake an asleep or dormant foe, or queue the wake while 8 are awake.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function requestWake(World $world, array &$state, int $n, array &$events): void
+    {
+        $st = $state['foes'][$n]['st'];
+        if ($st !== 'asleep' && $st !== 'dormant') {
+            return;
+        }
+        if (self::awakeCount($state) >= World::MAX_AWAKE) {
+            $state['foes'][$n]['wake'] = true;
+            return;
+        }
+        $kind = $world->foes[$n]['kind'];
+        $state['foes'][$n]['wake'] = false;
+        if ($st === 'dormant' && $kind['rise'] > 0) {
+            $state['foes'][$n]['st'] = 'rising';
+            $state['foes'][$n]['t'] = $kind['rise'];
+        } else {
+            $state['foes'][$n]['st'] = 'hunting';
+            $state['foes'][$n]['t'] = 0;
+        }
+        $events[] = ['e' => 'foe', 'id' => $world->foes[$n]['id'], 'st' => $state['foes'][$n]['st']];
+    }
+
+    /**
+     * R-FOE-7: noise of `kind` ('run', 'swing', 'pebble') from (x, z), reaching `range` mm.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function noise(World $world, array &$state, int $x, int $z, int $range, string $kind, array &$events): void
+    {
+        foreach (array_keys($state['foes']) as $n) {
+            $f = $state['foes'][$n];
+            $dx = $f['x'] - $x;
+            $dz = $f['z'] - $z;
+            if ($dx * $dx + $dz * $dz > $range * $range) {
+                continue;
+            }
+            if ($f['st'] === 'asleep') {
+                self::requestWake($world, $state, $n, $events);
+            } elseif ($f['st'] === 'idle') {
+                if ($kind === 'pebble') {
+                    $state['foes'][$n]['gx'] = $x;
+                    $state['foes'][$n]['gz'] = $z;
+                    $state['foes'][$n]['t'] = 300;
+                } else {
+                    $state['foes'][$n]['st'] = 'hunting';
+                    $state['foes'][$n]['t'] = 0;
+                    $state['foes'][$n]['gx'] = -1;
+                    $state['foes'][$n]['gz'] = -1;
+                    $events[] = ['e' => 'foe', 'id' => $world->foes[$n]['id'], 'st' => 'hunting'];
+                }
+            }
+        }
+    }
+
+    /**
+     * R-STRIKE-1
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function swing(World $world, array &$state, array &$events): void
+    {
+        $p = $state['player'];
+        $sy = SineTable::sin($p['yaw']);
+        $cy = SineTable::cos($p['yaw']);
+        $state['player']['strikeCd'] = self::STRIKE_CD;
+        $events[] = ['e' => 'swing'];
+        $best = -1;
+        $bd = 0;
+        foreach ($state['foes'] as $n => $f) {
+            if ($f['st'] !== 'asleep' && $f['st'] !== 'idle' && $f['st'] !== 'hunting') {
+                continue;
+            }
+            $dx = $f['x'] - $p['x'];
+            $dz = $f['z'] - $p['z'];
+            $d = IntMath::isqrt($dx * $dx + $dz * $dz);
+            // |dx·sy| < 2^32. d = 0 isn't in front (Gloamhollow `d || 1`).
+            if ($d === 0 || $d > self::STRIKE_REACH + intdiv(6 * $world->foes[$n]['kind']['radius'], 10) || 2 * ($dx * -$sy + $dz * -$cy) < $d * SineTable::TRIG_ONE) {
+                continue;
+            }
+            if ($best < 0 || $d < $bd) {
+                $best = $n;
+                $bd = $d;
+            }
+        }
+        self::noise($world, $state, $p['x'], $p['z'], self::NOISE_SWING, 'swing', $events);
+        if ($best >= 0) {
+            $state['blows'][] = ['foe' => $best, 'at' => $state['tick'] + self::BLOW_DELAY];
+        }
+    }
+
+    /**
+     * R-STRIKE-2
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     * @param list<array{string,int}> $batch
+     */
+    private static function landBlow(World $world, array &$state, int $n, array &$events, array &$batch): void
+    {
+        $def = $world->foes[$n];
+        if ($state['foes'][$n]['st'] === 'dead') {
+            return;
+        }
+        $state['foes'][$n]['hp'] -= 1;
+        $state['foes'][$n]['stun'] = self::STUN;
+        if ($state['foes'][$n]['st'] === 'asleep') {
+            self::requestWake($world, $state, $n, $events);
+        }
+        $f = $state['foes'][$n];
+        $dx = $f['x'] - $state['player']['x'];
+        $dz = $f['z'] - $state['player']['z'];
+        $d = max(1, IntMath::isqrt($dx * $dx + $dz * $dz));
+        $f['x'] += IntMath::idiv($dx * self::KNOCKBACK, $d);
+        $f['z'] += IntMath::idiv($dz * self::KNOCKBACK, $d);
+        self::pushOut($world, $state, $f, $def['kind']['radius'], $f['x'], $f['z'], false, !$def['kind']['fly']);
+        $state['foes'][$n] = $f;
+        $events[] = ['e' => 'hit', 'id' => $def['id'], 'hp' => $f['hp']];
+        if ($f['hp'] > 0) {
+            return;
+        }
+        $state['foes'][$n]['st'] = 'dead';
+        $state['foes'][$n]['wake'] = false;
+        $events[] = ['e' => 'foeDead', 'id' => $def['id']];
+        $g = $def['group'];
+        foreach ($world->groups[$g]['foes'] as $m) {
+            if ($state['foes'][$m]['st'] !== 'dead') {
+                return;
+            }
+        }
+        $state['groups'][$g] = 'defeated';
+        $batch[] = ['foesDefeated', $g];
+    }
+
+    /**
+     * R-FOE-5: may a walker (or a flier) enter cell (i, j)?
+     *
+     * @param array<string,mixed> $state
+     */
+    private static function enterable(World $world, array $state, int $i, int $j, bool $fly): bool
+    {
+        if ($world->solidCell($state, $i, $j)) {
+            return false;
+        }
+        if ($fly) {
+            return true;
+        }
+        $k = $j * $world->w + $i;
+        $code = $world->cellCode($i, $j);
+        if ($code === World::PLATE) {
+            return $world->slabAt($k) || in_array($k, $state['sprung'], true);
+        }
+        if ($code === World::HPIT || $code === World::VOID || $code === World::VENT) {
+            return false;
+        }
+        if ($code === World::ALCOVE) {
+            $a = $world->alcoveAt($k);
+            return $a === null || in_array($a['door'], $state['sealed'], true);
+        }
+        return true;
+    }
+
+    /**
+     * R-FOE-5: enterable() for every cell at once (the same answers, built in one pass for speed).
+     *
+     * @param array<string,mixed> $state
+     * @return list<bool>
+     */
+    private static function passable(World $world, array $state, bool $fly): array
+    {
+        return $world->passable($state, $fly);
+    }
+
+    /**
+     * R-FOE-5: the breadth-first distance field from the player's cell.
+     *
+     * @param array<string,mixed> $state
+     * @return list<int> cell index -> distance, -1 if unreachable
+     */
+    private static function field(World $world, array $state, bool $fly): array
+    {
+        // A pure function of the player's cell, the doors' solidity, the sprung plates and the sealed doors, so it is
+        // cached between ticks (the cache can't change a result, only skip recomputing it).
+        $w = $world->w;
+        $start = IntMath::fdiv($state['player']['z'], self::CELL_MM) * $w + IntMath::fdiv($state['player']['x'], self::CELL_MM);
+        $key = $world->id . '|' . ($fly ? 'f' : 'w') . '|' . $start . '|' . implode(',', $state['sprung']) . '|' . implode(',', $state['sealed']) . '|';
+        foreach ($state['doors'] as $d) {
+            $key .= 20 * $d['t'] < 17 * World::DOOR_FULL ? '1' : '0';
+        }
+        if (isset(self::$fieldCache[$key])) {
+            return self::$fieldCache[$key];
+        }
+        $pass = $world->passable($state, $fly);
+        $dist = array_fill(0, $w * $world->h, -1);
+        $dist[$start] = 0;
+        $queue = [$start];
+        for ($q = 0; $q < count($queue); $q++) {
+            $k = $queue[$q];
+            $i = $k % $w;
+            $j = intdiv($k, $w);
+            foreach (self::NEIGHBOURS as [$di, $dj]) {
+                $ni = $i + $di;
+                $nj = $j + $dj;
+                if ($ni < 0 || $nj < 0 || $ni >= $w || $nj >= $world->h) {
+                    continue;
+                }
+                $nk = $nj * $w + $ni;
+                if ($dist[$nk] >= 0 || !$pass[$nk]) {
+                    continue;
+                }
+                $dist[$nk] = $dist[$k] + 1;
+                $queue[] = $nk;
+            }
+        }
+        if (count(self::$fieldCache) >= 64) {
+            self::$fieldCache = [];
+        }
+        self::$fieldCache[$key] = $dist;
+        return $dist;
+    }
+
+    /** @param array<string,mixed> $f */
+    private static function walkTo(array &$f, int $speed, int $gx, int $gz): void
+    {
+        $ex = $gx - $f['x'];
+        $ez = $gz - $f['z'];
+        $e = max(1, IntMath::isqrt($ex * $ex + $ez * $ez));
+        $f['x'] += IntMath::idiv($ex * $speed, 30 * $e);
+        $f['z'] += IntMath::idiv($ez * $speed, 30 * $e);
+    }
+
+    /**
+     * R-FOE-6
+     *
+     * @param array<string,mixed> $state
+     * @param array<string,mixed> $input
+     * @param list<array<string,mixed>> $events
+     * @param list<array{string,int}> $batch
+     */
+    private static function updateFoes(World $world, array &$state, array $input, array &$events, array &$batch): void
+    {
+        $defs = $world->foes;
+        if ($defs === []) {
+            return;
+        }
+        $tick = $state['tick'];
+        if ($state['blows'] !== []) {
+            $keep = [];
+            foreach ($state['blows'] as $b) {
+                if ($b['at'] !== $tick) {
+                    $keep[] = $b;
+                } else {
+                    self::landBlow($world, $state, $b['foe'], $events, $batch);
+                }
+            }
+            $state['blows'] = $keep;
+        }
+        $p = $state['player'];
+        if (($input['buttons'] & self::BTN_RUN) && ($input['move'][0] !== 0 || $input['move'][1] !== 0)) {
+            self::noise($world, $state, $p['x'], $p['z'], self::NOISE_RUN, 'run', $events);
+        }
+        foreach (array_keys($state['foes']) as $n) { // R-FOE-4
+            if ($state['foes'][$n]['wake'] && self::awakeCount($state) < World::MAX_AWAKE) {
+                self::requestWake($world, $state, $n, $events);
+            }
+        }
+        $lit = $p['oil'] > 0 && !$p['hooded'] && $p['hung'] < 0;
+        $sight = $lit ? self::SIGHT_LIT : self::SIGHT_DARK;
+        $fields = ['walk' => null, 'fly' => null];
+        $pi = IntMath::fdiv($p['x'], self::CELL_MM);
+        $pj = IntMath::fdiv($p['z'], self::CELL_MM);
+        $w = $world->w;
+        foreach ($defs as $n => $def) {
+            $kind = $def['kind'];
+            $f = $state['foes'][$n];
+            if ($f['st'] === 'dormant' || $f['st'] === 'dead' || $f['st'] === 'asleep') {
+                continue;
+            }
+            if ($f['st'] === 'rising') {
+                $f['t'] -= 1;
+                if ($f['t'] === 0) {
+                    $f['st'] = 'hunting';
+                    $events[] = ['e' => 'foe', 'id' => $def['id'], 'st' => 'hunting'];
+                }
+                $state['foes'][$n] = $f;
+                continue;
+            }
+            $f['stun'] = max(0, $f['stun'] - 1);
+            $f['atk'] = max(0, $f['atk'] - 1);
+            $dx = $p['x'] - $f['x'];
+            $dz = $p['z'] - $f['z'];
+            if ($f['st'] === 'hunting' && $f['t'] > 0) {
+                $f['t'] -= 1;
+                if ($f['t'] === 0) {
+                    $state['foes'][$n] = $f;
+                    $r = $kind['reach'] + 450;
+                    if ($dx * $dx + $dz * $dz < $r * $r) {
+                        self::hurt($state, $kind['damage'], $events, 'beast');
+                        if ($state['dead'] !== null) {
+                            return;
+                        }
+                    }
+                    $f['atk'] = $kind['cooldown'];
+                }
+                $state['foes'][$n] = $f;
+                continue;
+            }
+            if ($f['stun'] > 0) {
+                $state['foes'][$n] = $f;
+                continue;
+            }
+            if ($f['st'] === 'hunting') {
+                $d = max(1, IntMath::isqrt($dx * $dx + $dz * $dz));
+                if ($d < $kind['reach'] && $f['atk'] === 0) {
+                    $f['t'] = $kind['wind'];
+                } elseif ($d > intdiv(3 * $kind['reach'], 4)) {
+                    $fi = IntMath::fdiv($f['x'], self::CELL_MM);
+                    $fj = IntMath::fdiv($f['z'], self::CELL_MM);
+                    $gx = -1;
+                    $gz = -1;
+                    if (($fi === $pi && $fj === $pj) || (abs($fi - $pi) <= 1 && abs($fj - $pj) <= 1 && self::losFrom($world, $state, $f['x'], $f['z'], $p['x'], $p['z']))) {
+                        $gx = $p['x'];
+                        $gz = $p['z'];
+                    } else {
+                        $key = $kind['fly'] ? 'fly' : 'walk';
+                        if ($fields[$key] === null) {
+                            $fields[$key] = self::field($world, $state, $kind['fly']);
+                        }
+                        $dist = $fields[$key];
+                        $here = $dist[$fj * $w + $fi] ?? -1;
+                        if ($here > 0) {
+                            $bestD = $here;
+                            foreach (self::NEIGHBOURS as [$di, $dj]) {
+                                $ni = $fi + $di;
+                                $nj = $fj + $dj;
+                                $nd = $dist[$nj * $w + $ni] ?? -1;
+                                if ($nd >= 0 && $nd < $bestD) {
+                                    $bestD = $nd;
+                                    $gx = $ni * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                                    $gz = $nj * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                                }
+                            }
+                        }
+                    }
+                    if ($gx >= 0) {
+                        self::walkTo($f, $kind['speed'], $gx, $gz);
+                    }
+                }
+            } else { // idle
+                $sx = $f['x'] - $p['x'];
+                $sz = $f['z'] - $p['z'];
+                if ($sx * $sx + $sz * $sz <= $sight * $sight && self::losFrom($world, $state, $f['x'], $f['z'], $p['x'], $p['z'])) {
+                    $f['st'] = 'hunting';
+                    $f['t'] = 0;
+                    $f['gx'] = -1;
+                    $f['gz'] = -1;
+                    $events[] = ['e' => 'foe', 'id' => $def['id'], 'st' => 'hunting'];
+                } elseif ($f['gx'] < 0) {
+                    if ($f['t'] > 0) {
+                        $f['t'] -= 1;
+                    }
+                    if ($f['t'] === 0) {
+                        $z = $world->zoneAt($def['k']);
+                        $cells = [];
+                        if ($z >= 0) {
+                            for ($k = 0; $k < $w * $world->h; $k++) {
+                                if ($world->zoneAt($k) === $z && self::enterable($world, $state, $k % $w, intdiv($k, $w), $kind['fly'])) {
+                                    $cells[] = $k;
+                                }
+                            }
+                        }
+                        if ($cells === []) {
+                            $f['t'] = 30 + Rng::below($state['rng'], 61);
+                        } else {
+                            $k = $cells[Rng::below($state['rng'], count($cells))];
+                            $f['gx'] = ($k % $w) * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                            $f['gz'] = intdiv($k, $w) * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                            $f['t'] = 300;
+                        }
+                    }
+                } else {
+                    self::walkTo($f, $kind['speed'], $f['gx'], $f['gz']);
+                    $f['t'] -= 1;
+                    if ((IntMath::fdiv($f['x'], self::CELL_MM) === IntMath::fdiv($f['gx'], self::CELL_MM) && IntMath::fdiv($f['z'], self::CELL_MM) === IntMath::fdiv($f['gz'], self::CELL_MM)) || $f['t'] <= 0) {
+                        $f['gx'] = -1;
+                        $f['gz'] = -1;
+                        $f['t'] = 30 + Rng::below($state['rng'], 61);
+                    }
+                }
+            }
+            // Separation from the other foes, then the walls and props.
+            foreach ($defs as $m => $odef) {
+                $o = $state['foes'][$m];
+                if ($m === $n || $o['st'] === 'dormant' || $o['st'] === 'dead') {
+                    continue;
+                }
+                $ox = $f['x'] - $o['x'];
+                $oz = $f['z'] - $o['z'];
+                $rr = $kind['radius'] + $odef['kind']['radius'];
+                $od2 = $ox * $ox + $oz * $oz;
+                if ($od2 > 0 && $od2 < $rr * $rr) {
+                    $od = IntMath::isqrt($od2); // |ox·(rr-od)| < 2^22
+                    $f['x'] += IntMath::idiv($ox * ($rr - $od), 2 * $od);
+                    $f['z'] += IntMath::idiv($oz * ($rr - $od), 2 * $od);
+                }
+            }
+            self::pushOut($world, $state, $f, $kind['radius'], $f['x'], $f['z'], false, !$kind['fly']);
+            $state['foes'][$n] = $f;
         }
     }
 

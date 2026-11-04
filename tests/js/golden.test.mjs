@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { ROOT, loadCore } from './lib/load.mjs';
-import { replay, GLOAMHOLLOW, expand, trapRoom, toolRoom, mirrorRoom, maskRoom } from '../golden/generate.mjs';
+import { replay, GLOAMHOLLOW, expand, trapRoom, toolRoom, mirrorRoom, maskRoom, foeRoom } from '../golden/generate.mjs';
 import { solidCell, b64decode, worldProps, DOOR_FULL } from '../../public/js/sim/world.js';
 const utf8 = (t) => new TextEncoder().encode(t);
 import { fdiv } from '../../public/js/sim/int.js';
@@ -316,4 +316,62 @@ test('the probe sets off a tip alcove but only touches a drown one (R-PROBE-2, d
   for (let k = 0; k < 20; k++) m.step({ yaw: 2048, move: [127, 0] });
   assert.deepEqual(m.step({ yaw: 2048, buttons: Sim.BTN.probe }), [{ e: 'probe', k: 'alcove' }]);
   assert.deepEqual(m.st.sealed, []);
+});
+
+// Step 5d (R-FOE-*, R-STRIKE-*).
+function foeWorld(edit) {
+  const g = JSON.parse(foeRoom()); edit(g);
+  const world = Sim.load(utf8(JSON.stringify(g))), st = Sim.init(world, 1, 'delve');
+  const step = (o = {}) => Sim.step(world, st, { move: [0, 0], yaw: 0, pitch: 0, buttons: 0, target: 0, ...o });
+  return { st, step };
+}
+
+test('the awake cap: a ninth foe waits for a slot (R-FOE-4, decision #45)', () => {
+  const { st, step } = foeWorld((g) => {
+    g.entities = Array.from({ length: 10 }, (_, k) => ({ id: 'q' + k, type: 'foe', kind: 'crawler', cell: [9 + (k % 5), 1 + ((k / 5) | 0)], start: 'dormant', group: 'all' }));
+    g.links = [{ id: 1, when: { inZone: 'w' }, do: [{ spawnFoes: 'all' }] }];
+  });
+  step();
+  assert.equal(st.foes.filter((f) => f.st === 'hunting').length, 8);
+  assert.deepEqual(st.foes.filter((f) => f.wake).length, 2, 'two wait');
+  st.foes[0].st = 'dead';                                  // a slot frees
+  step();
+  assert.equal(st.foes.filter((f) => f.st === 'hunting').length, 8);
+  assert.equal(st.foes.filter((f) => f.wake).length, 1);
+});
+
+test('running wakes an asleep foe within 4 cells; walking doesn\'t (R-FOE-7)', () => {
+  const quiet = foeWorld(() => {}), loud = foeWorld(() => {});
+  for (const r of [quiet, loud]) { r.st.player.x = 3 * 2400 + 1200; r.st.player.z = 4 * 2400 + 1200; r.st.zone = 0; } // 3 cells from f3
+  quiet.step({ move: [127, 0], yaw: 1024 });
+  loud.step({ move: [127, 0], yaw: 1024, buttons: Sim.BTN.run });
+  assert.equal(quiet.st.foes[2].st, 'asleep');
+  assert.equal(loud.st.foes[2].st, 'hunting');
+});
+
+test('a landing pebble lures an idle foe to the spot (R-FOE-7)', () => {
+  const { st, step } = foeWorld((g) => { g.entities = [{ id: 'c', type: 'foe', kind: 'crawler', cell: [13, 7], start: 'idle' }]; g.links = []; });
+  st.player.x = 13 * 2400 + 1200; st.player.z = 3 * 2400 + 1200; st.zone = 2; st.player.hooded = true; // 4 cells away, dark: unseen
+  st.foes[0].t = 999;                                      // still pausing
+  step({ yaw: 2048, pitch: -40, buttons: Sim.BTN.pebble });
+  for (let k = 0; k < 40 && st.flying.length > 0; k++) step({ yaw: 2048 });
+  assert.equal(st.foes[0].st, 'idle');
+  assert.ok(st.foes[0].gx > 0, 'it has the landing point as its goal');
+  assert.equal(st.foes[0].t, 300);
+});
+
+test('Gloamhollow: the second wrong ringing raises the keepers (link 3), who rise for 39 ticks', () => {
+  const world = Sim.load(utf8(GLOAMHOLLOW)), st = Sim.init(world, 1, 'delve'), g = JSON.parse(GLOAMHOLLOW);
+  const num = (id) => g.entities.findIndex((e) => e.id === id) + 1;
+  st.player.x = 17 * 2400 + 1200; st.player.z = 26 * 2400 + 1200; st.zone = g.zones.findIndex((z) => z.id === 'bells');
+  const step = (o = {}) => Sim.step(world, st, { move: [0, 0], yaw: 0, pitch: 0, buttons: 0, target: 0, ...o });
+  step({ buttons: Sim.BTN.interact, target: num('great') }); step();
+  step({ buttons: Sim.BTN.interact, target: num('great') });
+  const w1 = g.entities.filter((e) => e.type === 'foe').findIndex((e) => e.id === 'warden1');
+  assert.equal(st.foes[w1].st, 'dormant');
+  for (let k = 0; k < 20; k++) step();
+  assert.equal(st.foes[w1].st, 'rising');
+  assert.deepEqual(st.groups, ['spawned', 'dormant']);
+  for (let k = 0; k < 39; k++) step();
+  assert.equal(st.foes[w1].st, 'hunting');
 });

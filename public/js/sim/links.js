@@ -4,11 +4,11 @@
 export const MAX_LINKS = 64;
 export const MAX_PASSES = 8;
 const MAX_EFFECTS = 16, MAX_TERMS = 8, MAX_DEPTH = 4, MAX_TRIGGERS = 16, MAX_MESSAGE_BYTES = 1000;
-const EVENTS = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired'];
-const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'bellsSolved', 'beamHits', 'linkActive'];
+const EVENTS = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired', 'foesDefeated'];
+const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'lanternHung', 'bellsSolved', 'beamHits', 'linkActive', 'foesAlive'];
 const GATES = ['all', 'any', 'atLeast', 'sequence', 'not'];
 const GATE_OPTS = { all: ['within'], any: ['within'], atLeast: ['k', 'within'], sequence: ['within', 'strict', 'onWrong'], not: [] };
-const EFFECTS = ['openDoor', 'closeDoor', 'sealDoor', 'reveal', 'hide', 'damage', 'message'];
+const EFFECTS = ['spawnFoes', 'openDoor', 'closeDoor', 'sealDoor', 'reveal', 'hide', 'damage', 'message'];
 
 const isObj = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isInt = (v) => Number.isSafeInteger(v);
@@ -56,6 +56,7 @@ function effects(list, ctx) {
       if (typeof v !== 'string' || new TextEncoder().encode(v).length > MAX_MESSAGE_BYTES) bad('message');
       return Object.freeze({ kind, text: v });
     }
+    if (kind === 'spawnFoes') return Object.freeze({ kind, group: group(v, ctx) });
     if (kind === 'reveal' || kind === 'hide') return Object.freeze({ kind, item: entity(v, ctx, (r) => r.type === 'item' && r.hidden).n });
     return Object.freeze({ kind, door: entity(v, ctx, (r) => r.type === 'door').door });
   }));
@@ -65,6 +66,12 @@ function entity(id, ctx, ok) {
   const r = typeof id === 'string' ? ctx.ents.get(id) : undefined;
   if (r === undefined || !ok(r)) bad('entity reference');
   return r;
+}
+
+function group(id, ctx) {
+  const g = typeof id === 'string' ? ctx.groups.get(id) : undefined;
+  if (g === undefined) bad('group reference');
+  return g;
 }
 
 function zone(id, ctx) {
@@ -89,8 +96,9 @@ function triggerArg(kind, v, c) {
     case 'bellsWrong': case 'bellsSolved': return entity(v, c.ctx, (r) => r.type === 'bellSet').set;
     case 'linkFired': case 'linkActive': return linkRef(v, c);
     case 'doorOpen': return entity(v, c.ctx, (r) => r.type === 'door').door;
+    case 'foesDefeated': case 'foesAlive': return group(v, c.ctx);
     case 'beamHits': return entity(v, c.ctx, (r) => r.type === 'crystal').crystal;
-    case 'lanternHooded': if (typeof v !== 'boolean') bad('lanternHooded'); return v;
+    case 'lanternHooded': case 'lanternHung': if (typeof v !== 'boolean') bad(kind); return v;
   }
   return bad('trigger');
 }
