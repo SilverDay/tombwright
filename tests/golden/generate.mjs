@@ -190,6 +190,140 @@ const tools = [
   [3, I([0,0], 0, 0, 0, 0)],
 ];
 
+// Bells and links (R-BELL-*, R-LINK-*, R-HP-*, R-DOOR-3/5). A 12x8 room: zone w (start 2, 4) holds three
+// bells on row 2 (sizes 1, 2, 3; order 2, 0, 1), zone e lies behind a grate (8, 4) in a wall at i = 8.
+// Links: solved -> grate opens after 27 ticks; wrong -> 28 damage after 20 (repeat); two wrongs -> a message;
+// entering e seals the grate behind you after 30 ticks.
+export function bellRoom() {
+  const w = 12, h = 8, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  for (let j = 1; j < h - 1; j++) set(8, j, 0);
+  set(8, 4, 2);
+  return JSON.stringify({
+    gdf: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: [2, 4] },
+    zones: [{ id: 'w', name: 'W', rects: [[1, 1, 7, 6]], ceil: 5400 }, { id: 'e', name: 'E', rects: [[9, 1, 2, 6]], ceil: 4200, checkpoint: { cell: [9, 4], yaw: 3072 } }],
+    entities: [
+      { id: 'grate', type: 'door', cell: [8, 4], style: 'grate', opens: 'trigger' },
+      { id: 'b1', type: 'bell', cell: [3, 2], size: 1, patina: 2, note: 330 },
+      { id: 'b2', type: 'bell', cell: [5, 2], size: 2, patina: 1, note: 196 },
+      { id: 'b3', type: 'bell', cell: [7, 2], size: 3, patina: 0, note: 98 },
+      { id: 'set', type: 'bellSet', bells: ['b1', 'b2', 'b3'], order: [2, 0, 1] },
+    ],
+    links: [
+      { id: 1, when: { bellsSolved: 'set' }, delay: 27, do: [{ openDoor: 'grate' }, { message: 'The grate rises.' }] },
+      { id: 2, when: { bellsWrong: 'set' }, repeat: true, delay: 20, do: [{ damage: 28 }] },
+      { id: 3, when: { sequence: [{ bellsWrong: 'set' }, { bellsWrong: 'set' }] }, do: [{ message: 'Two wrongs.' }] },
+      { id: 4, when: { enterZone: 'e' }, delay: 30, do: [{ sealDoor: 'grate' }] },
+      { id: 5, when: { interact: 'grate' }, repeat: true, do: [{ message: 'It will not move.' }] },
+    ],
+  });
+}
+
+// Random link graphs (R-LINK-*) over a room with every link-able component, built from the sim's own RNG so the
+// vector is reproducible: 3 zones, 3 doors, 3 items, 3 bells in a set, and 12 links with random gates and effects.
+export function linkRoom(seed) {
+  const r = rngSeed(seed), pick = (a) => a[rngBelow(r, a.length)], chance = (n) => rngBelow(r, 100) < n;
+  const w = 14, h = 9, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  for (const i of [5, 9]) { for (let j = 1; j < h - 1; j++) set(i, j, 0); set(i, 4, 2); set(i, 6, 2); }
+  const doors = ['d1', 'd2', 'd3'], items = ['f1', 't1', 't2'], zones = ['z1', 'z2', 'z3'], ids = Array.from({ length: 12 }, (_, k) => 10 + 3 * k);
+  const evs = () => {
+    const k = pick(['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired']);
+    if (k === 'interact') return { interact: pick([...doors, ...items, 'b1', 'b2', 'b3']) };
+    if (k === 'itemTaken') return { itemTaken: pick(items) };
+    if (k === 'enterZone' || k === 'leaveZone') return { [k]: pick(zones) };
+    if (k === 'bellsWrong') return { bellsWrong: 'set' };
+    return { linkFired: pick(ids) };
+  };
+  const cond = () => {
+    const k = pick(['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'bellsSolved', 'linkActive']);
+    if (k === 'doorOpen') return { doorOpen: pick(doors) };
+    if (k === 'inZone') return { inZone: pick(zones) };
+    if (k === 'hasItem') return { hasItem: pick(items) };
+    if (k === 'lanternHooded') return { lanternHooded: chance(50) };
+    if (k === 'bellsSolved') return { bellsSolved: 'set' };
+    return { linkActive: pick(ids) };
+  };
+  const effects = () => Array.from({ length: 1 + rngBelow(r, 3) }, () => {
+    const k = pick(['openDoor', 'openDoor', 'closeDoor', 'sealDoor', 'damage', 'message']);
+    if (k === 'damage') return { damage: 1 + rngBelow(r, 12) };
+    if (k === 'message') return { message: 'm' + rngBelow(r, 100) };
+    return { [k]: pick(doors) };
+  });
+  const term = (depth, condOnly) => {
+    const g = depth >= 3 ? 'leaf' : pick(['leaf', 'leaf', 'all', 'any', 'atLeast', 'sequence', 'not']);
+    if (g === 'leaf' || (condOnly && g === 'sequence')) return condOnly || chance(50) ? cond() : evs();
+    if (g === 'not') return { not: term(depth + 1, true) };
+    const n = 2 + rngBelow(r, 3);
+    if (g === 'sequence') {
+      const t = { sequence: Array.from({ length: n }, evs) };
+      if (chance(50)) t.within = 30 + rngBelow(r, 300);
+      if (chance(50)) { t.strict = true; if (chance(60)) t.onWrong = effects(); }
+      return t;
+    }
+    const t = { [g]: Array.from({ length: n }, () => term(depth + 1, false)) };
+    if (g === 'atLeast') t.k = 1 + rngBelow(r, n);
+    if (chance(50)) t.within = 10 + rngBelow(r, 200);
+    return t;
+  };
+  const links = ids.map((id) => {
+    const l = { id, when: term(1, false), do: effects() };
+    // linkFired / linkActive must name another link (R-LINK-2).
+    const fix = (t) => { for (const k of Object.keys(t)) { if ((k === 'linkFired' || k === 'linkActive') && t[k] === id) t[k] = ids[(ids.indexOf(id) + 1) % ids.length]; else if (typeof t[k] === 'object' && t[k] !== null) fix(t[k]); } };
+    fix(l.when);
+    const evValued = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired', 'sequence'].some((k) => Object.hasOwn(l.when, k));
+    if (chance(40) && !evValued) l.undo = effects(); // no undo on event-valued whens (decision #31)
+    if (chance(60)) l.repeat = true;
+    if (chance(40)) l.delay = rngBelow(r, 60);
+    return l;
+  });
+  return JSON.stringify({
+    gdf: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: [2, 4] },
+    zones: [{ id: 'z1', name: '1', rects: [[1, 1, 4, 7]], ceil: 4200 }, { id: 'z2', name: '2', rects: [[6, 1, 3, 7]], ceil: 4200, checkpoint: { cell: [7, 3], yaw: 0 } },
+      { id: 'z3', name: '3', rects: [[10, 1, 3, 7]], ceil: 4200, checkpoint: { cell: [11, 3], yaw: 0 } }],
+    entities: [
+      { id: 'd1', type: 'door', cell: [5, 4], style: 'stone', opens: 'interact' },
+      { id: 'd2', type: 'door', cell: [9, 4], style: 'stone', opens: 'trigger' },
+      { id: 'd3', type: 'door', cell: [9, 6], style: 'mask', opens: 'interact', face: 'blank' },
+      { id: 'f1', type: 'item', kind: 'flask', cell: [2, 2] }, { id: 't1', type: 'item', kind: 'treasure', cell: [7, 6], value: 10 },
+      { id: 't2', type: 'item', kind: 'treasure', cell: [11, 6], value: 20 },
+      { id: 'b1', type: 'bell', cell: [3, 6], size: 1, patina: 0, note: 300 }, { id: 'b2', type: 'bell', cell: [7, 1], size: 2, patina: 1, note: 200 },
+      { id: 'b3', type: 'bell', cell: [11, 1], size: 1, patina: 2, note: 100 },
+      { id: 'set', type: 'bellSet', bells: ['b1', 'b2', 'b3'], order: [0, 1, 2] },
+    ],
+    links,
+  });
+}
+
+// The bell room by hand: ring the small bell twice (two wrongs: two delayed darts, the two-wrongs message), then
+// great, small, middle (solved: the grate rises 27 ticks later), walk through into e (checkpoint; the grate seals
+// 30 ticks later), come back and try it (sealed: the message link).
+const bells = [
+  [24, I([127,0], 0, 0, 0, 0)],
+  [25, I([127,0], 3072, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 2)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 2)],
+  [30, I([0,0], 0, 0, 0, 0)],
+  [80, I([127,0], 3072, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 4)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [80, I([127,0], 1024, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 2)],
+  [1, I([0,0], 0, 0, 0, 0)],
+  [45, I([127,0], 3072, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 3)],
+  [60, I([0,0], 0, 0, 0, 0)],
+  [25, I([127,0], 2048, 0, 0, 0)],
+  [100, I([127,0], 3072, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 1)],
+  [60, I([0,0], 0, 0, 0, 0)],
+  [1, I([127,0], 1024, 0, 0, 0)],
+  [40, I([127,0], 1024, 0, 0, 0)],
+  [1, I([0,0], 0, X, 0, 1)],
+  [20, I([0,0], 0, 0, 0, 0)],
+];
+
 // Vectors carry the GDF as its exact text: Sim.load takes bytes (R-GDF-0).
 export const GLOAMHOLLOW = readFileSync(ROOT + 'dungeons/gloamhollow.gdf.json', 'utf8');
 const utf8 = (s) => new TextEncoder().encode(s);
@@ -208,6 +342,11 @@ const VECTORS = {
   '0012-tools-practice-fuzz': { gdf: toolRoom(), seed: 12, mode: 'practice', inputs: fuzz(0x51DE, 9000, 11) },
   '0013-eyes-fuzz': { gdf: toolRoom([10, 4]), seed: 13, mode: 'delve', inputs: fuzz(0xE7E5, 9000, 11) },
   '0014-east-fuzz': { gdf: toolRoom([10, 4], false), seed: 14, mode: 'practice', inputs: fuzz(0xEA57, 12000, 11) },
+  '0015-bells': { gdf: bellRoom(), seed: 15, mode: 'delve', inputs: bells },
+  '0016-links-fuzz-1': { gdf: linkRoom(1), seed: 16, mode: 'delve', inputs: fuzz(0x1111, 8000, 12) },
+  '0017-links-fuzz-2': { gdf: linkRoom(2), seed: 17, mode: 'practice', inputs: fuzz(0x2222, 8000, 12) },
+  '0018-links-fuzz-3': { gdf: linkRoom(3), seed: 18, mode: 'delve', inputs: fuzz(0x3333, 8000, 12) },
+  '0019-links-fuzz-4': { gdf: linkRoom(4), seed: 19, mode: 'practice', inputs: fuzz(0x4444, 8000, 12) },
 };
 
 export function replay(gdf, seed, mode, rle, each) {
@@ -259,7 +398,7 @@ function gdfCases() {
     raw('not an object', utf8('[1,2]')), raw('null', utf8('null')), raw('trailing garbage', utf8(text(r) + 'x')),
     raw('too large', utf8(text(r).replace('"gdf":1', '"gdf":1,"pad":"' + 'a'.repeat(262144) + '"'))),
   ];
-  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw));
+  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw));
   return cases.map((c) => { try { return { ...c, ok: true, id: Sim.load(b64decodeBytes(c.bytes)).id }; } catch { return { ...c, ok: false }; } });
 }
 
@@ -383,6 +522,74 @@ function itemCases(raw) {
     one('eyes: wake 17', set('e1', { wake: 17 })), one('eyes: wake 1800', set('e1', { wake: 1800 })), one('eyes: wake 1801', set('e1', { wake: 1801 })),
     one('eyes: extra key', set('e1', { glow: true })), one('eyes: zone before zones listed ok', (g) => { g.entities.unshift(g.entities.splice(g.entities.findIndex((e) => e.id === 'e1'), 1)[0]); }),
     one('eyes: no zones', (g) => { delete g.zones; }),
+  ];
+}
+
+// Links and bells (R-LINK-1..3, R-BELL-1/2): edits of the bell room, which loads as it stands.
+function linkCases(raw) {
+  const base = JSON.parse(bellRoom());
+  const one = (name, f) => { const g = structuredClone(base); f(g); return raw(name, utf8(JSON.stringify(g))); };
+  const L = (o) => (g) => { g.links = [{ id: 9, do: [{ message: 'x' }], ...o }]; };
+  const W = (when, o = {}) => L({ when, ...o });
+  const ent = (id) => (g) => g.entities.find((e) => e.id === id);
+  const set = (id, o) => (g) => Object.assign(ent(id)(g), o);
+  const deep = (n) => { let t = { doorOpen: 'grate' }; for (let k = 0; k < n; k++) t = { all: [t, { doorOpen: 'grate' }] }; return t; };
+  const many = (n, f) => Array.from({ length: n }, (_, k) => f(k));
+  return [
+    one('links: bell room', () => {}), one('links: none', (g) => { delete g.links; }), one('links: empty', (g) => { g.links = []; }),
+    one('links: object', (g) => { g.links = { a: 1 }; }), one('links: 64', (g) => { g.links = many(64, (k) => ({ id: k + 1, when: { doorOpen: 'grate' }, do: [{ message: 'x' }] })); }),
+    one('links: 65', (g) => { g.links = many(65, (k) => ({ id: k + 1, when: { doorOpen: 'grate' }, do: [{ message: 'x' }] })); }),
+    one('links: id 0', L({ id: 0, when: { doorOpen: 'grate' } })), one('links: id 65535', L({ id: 65535, when: { doorOpen: 'grate' } })),
+    one('links: id 65536', L({ id: 65536, when: { doorOpen: 'grate' } })), one('links: id string', L({ id: '9', when: { doorOpen: 'grate' } })),
+    one('links: duplicate id', (g) => { g.links[1].id = 1; }), one('links: extra key', W({ doorOpen: 'grate' }, { name: 'x' })),
+    one('links: no when', L({})), one('links: no do', (g) => { g.links = [{ id: 9, when: { doorOpen: 'grate' } }]; }),
+    one('links: do empty', W({ doorOpen: 'grate' }, { do: [] })), one('links: 16 effects', W({ doorOpen: 'grate' }, { do: many(16, () => ({ message: 'x' })) })),
+    one('links: 17 effects', W({ doorOpen: 'grate' }, { do: many(17, () => ({ message: 'x' })) })),
+    one('links: repeat string', W({ doorOpen: 'grate' }, { repeat: 'yes' })), one('links: delay 600', W({ doorOpen: 'grate' }, { delay: 600 })),
+    one('links: delay 601', W({ doorOpen: 'grate' }, { delay: 601 })), one('links: delay -1', W({ doorOpen: 'grate' }, { delay: -1 })),
+    one('links: when list', W([{ doorOpen: 'grate' }])), one('links: two triggers', W({ doorOpen: 'grate', inZone: 'w' })),
+    one('links: unknown trigger', W({ leverOn: 'grate' })), one('links: interact zone', W({ interact: 'w' })), one('links: interact bellSet', W({ interact: 'set' })),
+    one('links: interact bell ok', W({ interact: 'b1' })), one('links: itemTaken door', W({ itemTaken: 'grate' })), one('links: enterZone unknown', W({ enterZone: 'x' })),
+    one('links: enterZone entity', W({ enterZone: 'grate' })), one('links: bellsWrong bell', W({ bellsWrong: 'b1' })), one('links: linkFired self', W({ linkFired: 9 })),
+    one('links: linkFired missing', W({ linkFired: 99 })), one('links: linkFired string', W({ linkFired: '1' })),
+    one('links: linkFired other ok', (g) => { g.links.push({ id: 9, when: { linkFired: 1 }, do: [{ message: 'x' }] }); }),
+    one('links: lanternHooded string', W({ lanternHooded: 'yes' })), one('links: lanternHooded false ok', W({ lanternHooded: false })),
+    one('links: doorOpen bell', W({ doorOpen: 'b1' })), one('links: two gates', W({ all: [{ doorOpen: 'grate' }, { inZone: 'w' }], any: [{ doorOpen: 'grate' }, { inZone: 'w' }] })),
+    one('links: gate bad option', W({ all: [{ doorOpen: 'grate' }, { inZone: 'w' }], k: 1 })), one('links: all 1 term', W({ all: [{ doorOpen: 'grate' }] })),
+    one('links: all 8 terms', W({ all: many(8, () => ({ doorOpen: 'grate' })) })), one('links: all 9 terms', W({ all: many(9, () => ({ doorOpen: 'grate' })) })),
+    one('links: atLeast no k', W({ atLeast: [{ doorOpen: 'grate' }, { inZone: 'w' }] })), one('links: atLeast k 0', W({ atLeast: [{ doorOpen: 'grate' }, { inZone: 'w' }], k: 0 })),
+    one('links: atLeast k 3 of 2', W({ atLeast: [{ doorOpen: 'grate' }, { inZone: 'w' }], k: 3 })), one('links: atLeast k 2 ok', W({ atLeast: [{ doorOpen: 'grate' }, { inZone: 'w' }], k: 2 })),
+    one('links: within 0', W({ any: [{ interact: 'b1' }, { inZone: 'w' }], within: 0 })), one('links: within 1800', W({ any: [{ interact: 'b1' }, { inZone: 'w' }], within: 1800 })),
+    one('links: within 1801', W({ any: [{ interact: 'b1' }, { inZone: 'w' }], within: 1801 })),
+    one('links: sequence condition step', W({ sequence: [{ interact: 'b1' }, { doorOpen: 'grate' }] })), one('links: sequence gate step', W({ sequence: [{ interact: 'b1' }, { all: [{ interact: 'b2' }, { interact: 'b3' }] }] })),
+    one('links: sequence ok', W({ sequence: [{ interact: 'b1' }, { interact: 'b2' }], within: 60, strict: true, onWrong: [{ damage: 1 }] })),
+    one('links: onWrong without strict', W({ sequence: [{ interact: 'b1' }, { interact: 'b2' }], onWrong: [{ damage: 1 }] })),
+    one('links: onWrong strict false', W({ sequence: [{ interact: 'b1' }, { interact: 'b2' }], strict: false, onWrong: [{ damage: 1 }] })),
+    one('links: strict string', W({ sequence: [{ interact: 'b1' }, { interact: 'b2' }], strict: 'yes' })),
+    one('links: not list', W({ not: [{ doorOpen: 'grate' }] })), one('links: not event', W({ not: { interact: 'b1' } })),
+    one('links: not sequence', W({ not: { sequence: [{ interact: 'b1' }, { interact: 'b2' }] } })), one('links: not all of events ok', W({ not: { all: [{ interact: 'b1' }, { interact: 'b2' }] } })),
+    one('links: not with option', W({ not: { doorOpen: 'grate' }, within: 5 })),
+    one('links: depth 4 ok', W(deep(4))), one('links: depth 5', W(deep(5))),
+    one('links: 16 triggers ok', W({ all: many(8, () => ({ any: [{ doorOpen: 'grate' }, { inZone: 'w' }] })) })),
+    one('links: 17 triggers', W({ all: [...many(7, () => ({ any: [{ doorOpen: 'grate' }, { inZone: 'w' }] })), { any: [{ doorOpen: 'grate' }, { inZone: 'w' }, { inZone: 'e' }] }] })),
+    one('links: undo on event', W({ interact: 'b1' }, { undo: [{ message: 'y' }] })), one('links: undo on sequence', W({ sequence: [{ interact: 'b1' }, { interact: 'b2' }] }, { undo: [{ message: 'y' }] })),
+    one('links: undo on condition ok', W({ doorOpen: 'grate' }, { undo: [{ message: 'y' }] })), one('links: undo on all of events ok', W({ all: [{ interact: 'b1' }, { interact: 'b2' }] }, { undo: [{ message: 'y' }] })),
+    one('links: undo empty', W({ doorOpen: 'grate' }, { undo: [] })),
+    one('links: effect two keys', W({ doorOpen: 'grate' }, { do: [{ message: 'x', damage: 1 }] })), one('links: effect unknown', W({ doorOpen: 'grate' }, { do: [{ spawnFoes: 'g' }] })),
+    one('links: damage 0', W({ doorOpen: 'grate' }, { do: [{ damage: 0 }] })), one('links: damage 1000', W({ doorOpen: 'grate' }, { do: [{ damage: 1000 }] })),
+    one('links: damage 1001', W({ doorOpen: 'grate' }, { do: [{ damage: 1001 }] })), one('links: message number', W({ doorOpen: 'grate' }, { do: [{ message: 3 }] })),
+    one('links: message 1000 bytes', W({ doorOpen: 'grate' }, { do: [{ message: '\u00e4'.repeat(500) }] })), one('links: message 1002 bytes', W({ doorOpen: 'grate' }, { do: [{ message: '\u00e4'.repeat(501) }] })),
+    one('links: openDoor bell', W({ doorOpen: 'grate' }, { do: [{ openDoor: 'b1' }] })), one('links: sealDoor ok', W({ doorOpen: 'grate' }, { do: [{ sealDoor: 'grate' }] })),
+    one('links: closeDoor unknown', W({ doorOpen: 'grate' }, { do: [{ closeDoor: 'nope' }] })),
+    one('bells: size 0', set('b1', { size: 0 })), one('bells: size 4', set('b1', { size: 4 })), one('bells: patina 3', set('b1', { patina: 3 })),
+    one('bells: note 19', set('b1', { note: 19 })), one('bells: note 20000 ok', set('b1', { note: 20000 })), one('bells: extra key', set('b1', { name: 'x' })),
+    one('bells: on wall', set('b1', { cell: [8, 2] })), one('bells: on door', set('b1', { cell: [8, 4] })), one('bells: on start', set('b1', { cell: [2, 4] })),
+    one('bells: on checkpoint', set('b1', { cell: [9, 4] })), one('bells: no set', (g) => { g.entities.push({ id: 'b4', type: 'bell', cell: [4, 5], size: 1, patina: 0, note: 100 }); }),
+    one('bells: two sets', (g) => { g.entities.push({ id: 'set2', type: 'bellSet', bells: ['b1', 'b2'], order: [0, 1] }); }),
+    one('bells: unknown bell', set('set', { bells: ['b1', 'b2', 'zz'] })), one('bells: set names door', set('set', { bells: ['b1', 'b2', 'grate'] })),
+    one('bells: same bell twice', set('set', { bells: ['b1', 'b1', 'b2'] })), one('bells: order not permutation', set('set', { order: [0, 0, 1] })),
+    one('bells: order short', set('set', { order: [0, 1] })), one('bells: order 3', set('set', { order: [0, 1, 3] })), one('bells: one bell', set('set', { bells: ['b1'], order: [0] })),
+    one('bells: bell id number', set('set', { bells: ['b1', 'b2', 3] })), one('bells: set before bells ok', (g) => { g.entities.unshift(g.entities.pop()); }),
   ];
 }
 

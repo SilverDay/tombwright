@@ -45,6 +45,12 @@ final class World
     private const KEYS_ITEM = ['id', 'type', 'kind', 'cell'];
     private const KEYS_TREASURE = ['id', 'type', 'kind', 'cell', 'value'];
     private const KEYS_EYES = ['id', 'type', 'zone', 'wake'];
+    private const KEYS_BELL = ['id', 'type', 'cell', 'size', 'patina', 'note'];
+    private const KEYS_BELL_SET = ['id', 'type', 'bells', 'order'];
+    /** R-BELL-1, R-BELL-3: footprint radius and reach by size 1..3. */
+    private const BELL_R = [470, 650, 830];
+    private const BELL_REACH = [2420, 2600, 2780];
+    public const DOOR_CLOSE_STEP = 33;
     private const ITEM_KINDS = ['flask', 'rubble', 'treasure'];
     private const KEYS_ZONE = ['id', 'name', 'rects', 'ceil'];
     private const KEYS_ZONE_CP = ['id', 'name', 'rects', 'ceil', 'checkpoint'];
@@ -67,6 +73,9 @@ final class World
      * @param list<array{id:string,cp:array{x:int,z:int,yaw:int,enter:bool}|null}> $zones
      * @param list<array{id:string,kind:string,k:int,x:int,z:int,reach:int}> $items in entity order
      * @param list<array{id:string,zone:int,wake:int}> $eyes in entity order
+     * @param list<array{id:string,k:int,x:int,z:int,reach:int,set:int,index:int}> $bells
+     * @param list<array{id:string,bells:list<int>,order:list<int>}> $bellSets
+     * @param list<array<string,mixed>> $links compiled, ascending id
      */
     private function __construct(
         public readonly string $id,
@@ -87,6 +96,9 @@ final class World
         public readonly int $startZone,
         public readonly array $items,
         public readonly array $eyes,
+        public readonly array $bells,
+        public readonly array $bellSets,
+        public readonly array $links,
     ) {
     }
 
@@ -273,12 +285,16 @@ final class World
                 throw new \RangeException('checkpoint cell taken');
             }
         }
+        // R-LINK-*: compile the links against the entity and zone ids.
+        $links = Links::compile(array_key_exists('links', $gdf) ? $gdf['links'] : [], [
+            'ents' => $ents['byId'], 'zones' => array_flip(array_column($zs['zones'], 'id')),
+        ]);
         // R-WORLD-3: world id = first 16 bytes of SHA-256 over the canonical GDF, as hex.
         $id = substr(hash('sha256', Canonical::encode($gdf)), 0, 32);
         return new self(
             $id, $w, $h, $grid, $si, $sj, $ents['doorAt'], $ents['slab'], $ents['doors'], $ents['props'], $ents['refs'],
             $ents['ventAt'], $ents['vents'], $zs['zoneOf'], $zs['zones'], $zs['zoneOf'][$startK] ?? -1,
-            $ents['items'], $ents['eyes'],
+            $ents['items'], $ents['eyes'], $ents['bells'], $ents['bellSets'], $links,
         );
     }
 
@@ -418,6 +434,9 @@ final class World
         $ventAt = [];
         $items = [];
         $eyes = [];
+        $bells = [];
+        $bellSets = [];
+        $byId = [];
         foreach ($list as $e) {
             if (!is_array($e) || array_is_list($e) || !is_string($e['id'] ?? null) || preg_match(self::ID_RE, $e['id']) !== 1) {
                 throw new \RangeException('entity id');
@@ -566,8 +585,78 @@ final class World
                 }
                 $refs[] = ['type' => 'eyes'];
                 $eyes[] = ['id' => $e['id'], 'zone' => $zi, 'wake' => $e['wake']];
+            } elseif ($type === 'bell') {
+                if (!self::hasExactKeys($e, self::KEYS_BELL)) {
+                    throw new \RangeException('bell keys');
+                }
+                if (!is_int($e['size']) || $e['size'] < 1 || $e['size'] > 3) {
+                    throw new \RangeException('bell size');
+                }
+                if (!is_int($e['patina']) || $e['patina'] < 0 || $e['patina'] > 2) {
+                    throw new \RangeException('bell patina');
+                }
+                if (!is_int($e['note']) || $e['note'] < 20 || $e['note'] > 20000) {
+                    throw new \RangeException('bell note');
+                }
+                $k = self::cellIndex($e['cell'], $w, $h);
+                $code = ord($grid[$k]);
+                if ($code !== self::ROOM && $code !== self::CORR) {
+                    throw new \RangeException('bell cell');
+                }
+                [$ci, $cj] = $e['cell'];
+                $x = $ci * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                $z = $cj * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                $r = self::BELL_R[$e['size'] - 1];
+                $props[] = ['circle' => true, 'x' => $x, 'z' => $z, 'r' => $r, 'x0' => $x - $r, 'x1' => $x + $r, 'z0' => $z - $r, 'z1' => $z + $r];
+                $refs[] = ['type' => 'bell', 'bell' => count($bells)];
+                $bells[] = ['id' => $e['id'], 'k' => $k, 'x' => $x, 'z' => $z, 'reach' => self::BELL_REACH[$e['size'] - 1], 'set' => -1, 'index' => -1];
+            } elseif ($type === 'bellSet') {
+                if (!self::hasExactKeys($e, self::KEYS_BELL_SET)) {
+                    throw new \RangeException('bellSet keys');
+                }
+                $bl = $e['bells'];
+                if (!is_array($bl) || !array_is_list($bl) || count($bl) < 2 || count($bl) > 5 || count(array_filter($bl, 'is_string')) !== count($bl)) {
+                    throw new \RangeException('bellSet bells');
+                }
+                $order = $e['order'];
+                if (!is_array($order) || !array_is_list($order) || count($order) !== count($bl) || count(array_filter($order, 'is_int')) !== count($order)) {
+                    throw new \RangeException('bellSet order');
+                }
+                for ($x = 0; $x < count($order); $x++) {
+                    if (!in_array($x, $order, true)) {
+                        throw new \RangeException('bellSet order');
+                    }
+                }
+                $refs[] = ['type' => 'bellSet', 'set' => count($bellSets)];
+                $bellSets[] = ['id' => $e['id'], 'names' => $bl, 'order' => $order];
             } else {
                 throw new \RangeException('unknown entity type');
+            }
+            $byId[$e['id']] = $refs[count($refs) - 1] + ['n' => count($refs), 'kind' => $type === 'item' ? $e['kind'] : null];
+        }
+        // R-BELL-1, R-BELL-2: bells on free cells; every bell in exactly one set, named by bell id.
+        foreach ($bells as $b) {
+            if (isset($doorAt[$b['k']]) || isset($slab[$b['k']])) {
+                throw new \RangeException('bell cell taken');
+            }
+        }
+        foreach ($bellSets as $si => &$set) {
+            $set['bells'] = [];
+            foreach ($set['names'] as $i => $name) {
+                $r = $byId[$name] ?? null;
+                if ($r === null || $r['type'] !== 'bell' || $bells[$r['bell']]['set'] >= 0) {
+                    throw new \RangeException('bellSet bell');
+                }
+                $bells[$r['bell']]['set'] = $si;
+                $bells[$r['bell']]['index'] = $i;
+                $set['bells'][] = $r['bell'];
+            }
+            unset($set['names']);
+        }
+        unset($set);
+        foreach ($bells as $b) {
+            if ($b['set'] < 0) {
+                throw new \RangeException('bell without a set');
             }
         }
         // R-ITEM-1: no item on a door or slab cell (checked after the loop, whatever the order).
@@ -600,7 +689,8 @@ final class World
                 }
             }
         }
-        return ['doorAt' => $doorAt, 'slab' => $slab, 'doors' => $doors, 'props' => $props, 'refs' => $refs, 'ventAt' => $ventAt, 'vents' => $vents, 'items' => $items, 'eyes' => $eyes];
+        return ['doorAt' => $doorAt, 'slab' => $slab, 'doors' => $doors, 'props' => $props, 'refs' => $refs, 'ventAt' => $ventAt, 'vents' => $vents, 'items' => $items, 'eyes' => $eyes,
+            'bells' => $bells, 'bellSets' => $bellSets, 'byId' => $byId];
     }
 
     /**

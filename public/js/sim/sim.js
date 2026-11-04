@@ -8,11 +8,12 @@ import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
 import {
   loadWorld, solidCell, assertWorld, worldProps, worldDoors, entityRef, cellCode, slabAt, ventAt, zoneAt, worldZones, startZone,
-  worldItems, worldEyes, sightBlocked,
-  CELL, DOOR_FULL, DOOR_STEP,
+  worldItems, worldEyes, sightBlocked, worldBells, worldBellSets, worldLinks,
+  CELL, DOOR_FULL, DOOR_STEP, DOOR_CLOSE_STEP,
 } from './world.js';
+import { runLinks, initLinkState, copyLinkState } from './links.js';
 
-export const CORE_VERSION = 'm0.5';
+export const CORE_VERSION = 'm0.6';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -35,6 +36,8 @@ export const RISE_TICKS = 51;
 export const RISE_OIL = 50 * 30000;
 // R-TOOL-2 cooldowns in ticks (Gloamhollow 0.7 s and 0.5 s). R-PEB-1: pouch. R-PEB-4: pick-up radius.
 export const PROBE_CD = 21, PEBBLE_CD = 15, PEBBLE_MAX = 12, PICKUP_MM = 750;
+// R-HP-1: hp in 1/30-hp units; regeneration +4 a tick once calm > 150 (Gloamhollow 4 hp/s after 5 s).
+export const HP_UNIT = 30, HP_FULL = 100 * HP_UNIT, HP_REGEN = 4, CALM_MAX = 151;
 
 export const BTN = Object.freeze({
   strike: 1 << 0, hood: 1 << 1, probe: 1 << 2, pebble: 1 << 3,
@@ -74,7 +77,7 @@ export function init(world, seed, mode) {
       x: cellCentre(ci), z: cellCentre(cj),
       vx: 0, vz: 0, rx: 0, rz: 0,   // velocity mm/s; sub-mm remainders in 1/30 mm (R-MOVE-3)
       yaw: 0, pitch: 0,
-      hp: 100, oil: 100 * OIL_UNIT, hooded: false,
+      hp: HP_FULL, calm: CALM_MAX, oil: 100 * OIL_UNIT, hooded: false, // R-HP-1
       flasks: 1, pebbles: 10, probeCd: 0, pebbleCd: 0, // R-OIL-3, R-PEB-1, R-TOOL-2
     },
     doors: worldDoors(world).map(() => ({ open: false, t: 0 })), // R-DOOR-2
@@ -88,6 +91,10 @@ export function init(world, seed, mode) {
     flying: [],             // R-PEB-2: pebbles in flight, { x, z, at }
     taken: [],              // R-ITEM-2: entity numbers of items taken
     eyes: worldEyes(world).map(() => 0), // R-EYES-1
+    zone: startZone(world),  // R-ZONE-3
+    sealed: [],              // R-DOOR-5 (a lesson)
+    bellSets: worldBellSets(world).map(() => ({ seq: [], solved: false })), // R-BELL-2
+    links: initLinkState(worldLinks(world)),                               // R-LINK-4
     checkpoints: [],        // R-CP-1
     cp: 0,
     prevButtons: 0,
@@ -102,8 +109,11 @@ function lifeOf(state) {
   return {
     hp: p.hp, oil: p.oil, hooded: p.hooded, flasks: p.flasks, pebbles: p.pebbles,
     doors: state.doors.map((d) => d.open), floor: state.floor.map((f) => ({ x: f.x, z: f.z })), taken: state.taken.slice(),
+    bellSets: copyBellSets(state.bellSets), links: copyLinkState(state.links),
   };
 }
+
+function copyBellSets(b) { return b.map((x) => ({ seq: x.seq.slice(), solved: x.solved })); }
 
 /** Sim.step(world, state, input) -> events. Mutates state; advances exactly one tick. */
 export function step(world, state, input) {
@@ -119,21 +129,84 @@ export function step(world, state, input) {
     // R-DEATH-2: while dead only rising and the doors go on.
     if ((pressed & BTN.rise) && state.tick >= state.dead.at + RISE_TICKS) rise(world, state, input.target, events);
     moveDoors(state);
-  } else live(world, state, input, pressed, events);
-  landPebbles(world, state, events);
+    landPebbles(world, state, events);
+  } else {
+    const batch = [];                                 // R-LINK-5: batch 0
+    live(world, state, input, pressed, events, batch);
+    landPebbles(world, state, events);
+    if (state.dead === null) links(world, state, batch, events); // R-LINK-7
+    if (state.dead === null) regenerate(state.player);             // R-HP-1
+  }
 
   state.prevButtons = input.buttons;
   state.tick += 1;
   return events;
 }
 
-/** R-DOOR-3: opening doors move on. */
+/** R-DOOR-3: opening doors move on, closing ones move back (33 a tick: 0.7 s). */
 function moveDoors(state) {
-  for (const d of state.doors) if (d.open && d.t < DOOR_FULL) d.t = Math.min(DOOR_FULL, d.t + DOOR_STEP);
+  for (const d of state.doors) {
+    if (d.open && d.t < DOOR_FULL) d.t = Math.min(DOOR_FULL, d.t + DOOR_STEP);
+    else if (!d.open && d.t > 0) d.t = Math.max(0, d.t - DOOR_CLOSE_STEP);
+  }
+}
+
+/** R-LINK-7, R-LINK-8: run the links with the sim's conditions and effects. */
+function links(world, state, batch, events) {
+  const doors = worldDoors(world);
+  runLinks(worldLinks(world), state.links, batch, {
+    tick: state.tick,
+    dead: () => state.dead !== null,
+    fired: (id) => events.push({ e: 'link', id }),
+    cond: (kind, arg) => {
+      const p = state.player;
+      switch (kind) {
+        case 'doorOpen': return state.doors[arg].open;
+        case 'inZone': return zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM)) === arg;
+        case 'hasItem': return state.taken.includes(arg);
+        case 'lanternHooded': return p.hooded === arg;
+        case 'bellsSolved': return state.bellSets[arg].solved;
+        case 'linkActive': return state.links[worldLinks(world).findIndex((l) => l.id === arg)].active;
+      }
+      throw new Error('cond');
+    },
+    apply: (list) => {
+      let changed = false;
+      for (const fx of list) {
+        if (fx.kind === 'message') { events.push({ e: 'message', text: fx.text }); continue; }
+        if (fx.kind === 'damage') { hurt(state, fx.n, events); changed = true; if (state.dead !== null) return true; continue; }
+        const d = state.doors[fx.door], id = doors[fx.door].id, sealed = state.sealed.includes(fx.door);
+        if (fx.kind === 'openDoor') {
+          if (!sealed && !d.open) { d.open = true; changed = true; events.push({ e: 'door', id, open: true }); }
+        } else if (fx.kind === 'closeDoor') {
+          if (d.open) { d.open = false; changed = true; events.push({ e: 'door', id, open: false }); }
+        } else if (!sealed) {           // sealDoor
+          state.sealed.push(fx.door); d.open = false; changed = true;
+          events.push({ e: 'door', id, open: false, sealed: true });
+        }
+      }
+      return changed;
+    },
+  });
+}
+
+/** R-HP-1: regeneration once calm, then calm counts on (after the links, so a hurt tick doesn't heal). */
+function regenerate(p) {
+  if (p.hp < HP_FULL && p.calm > 150) p.hp = Math.min(HP_FULL, p.hp + HP_REGEN);
+  p.calm = Math.min(CALM_MAX, p.calm + 1);
+}
+
+/** R-HP-2 */
+function hurt(state, n, events) {
+  const p = state.player;
+  p.hp = Math.max(0, p.hp - HP_UNIT * n);
+  p.calm = 0;
+  events.push({ e: 'hurt', hp: idiv(p.hp, HP_UNIT) });
+  if (p.hp === 0) die(state, 'damage', events);
 }
 
 /** One tick of a living player. */
-function live(world, state, input, pressed, events) {
+function live(world, state, input, pressed, events, batch) {
   const p = state.player;
   p.yaw = input.yaw;
   p.pitch = input.pitch;
@@ -146,7 +219,7 @@ function live(world, state, input, pressed, events) {
   if (pressed & BTN.probe) probe(world, state, events);
   if (pressed & BTN.pebble) throwPebble(world, state, events);
   if (pressed & BTN.oil) pourOil(p, events);
-  if ((pressed & BTN.interact) && input.target !== 0) interact(world, state, input.target, events); // R-ACT-1
+  if ((pressed & BTN.interact) && input.target !== 0) interact(world, state, input.target, events, batch); // R-ACT-1
 
   // R-MOVE-2: normalise the move vector to length <= 127.
   let [fw, st] = input.move;
@@ -170,6 +243,12 @@ function live(world, state, input, pressed, events) {
   pushOut(world, state, p, PLAYER_R_MM, ox, oz);
   moveDoors(state);
   checkpoint(world, state, events);
+  const zNow = zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM)); // R-ZONE-3
+  if (zNow !== state.zone) {
+    if (state.zone >= 0) batch.push(['leaveZone', state.zone]);
+    if (zNow >= 0) batch.push(['enterZone', zNow]);
+    state.zone = zNow;
+  }
   const cause = trap(world, state);
   if (cause !== null) { die(state, cause, events); return; }
   if (wakeEyes(world, state, events)) { die(state, 'eyes', events); return; }
@@ -316,13 +395,14 @@ function lineOfSight(world, state, ix, iz) {
 }
 
 /** R-ITEM-2 */
-function takeItem(world, state, n, it, events) {
+function takeItem(world, state, n, it, events, batch) {
   const p = state.player;
   if (it.kind === 'rubble' ? p.pebbles >= PEBBLE_MAX : state.taken.includes(n)) return;
   const dx = p.x - it.x, dz = p.z - it.z; // squares < 2^36
   if (dx * dx + dz * dz > it.reach * it.reach || !lineOfSight(world, state, it.x, it.z)) return;
+  batch.push(['interact', n]);
   if (it.kind === 'rubble') p.pebbles = PEBBLE_MAX;
-  else { state.taken.push(n); if (it.kind === 'flask') p.flasks += 1; }
+  else { state.taken.push(n); if (it.kind === 'flask') p.flasks += 1; batch.push(['itemTaken', n]); }
   events.push({ e: 'item', id: it.id, kind: it.kind });
 }
 
@@ -381,8 +461,11 @@ function rise(world, state, target, events) {
   }
   const c = state.checkpoints[n], p = state.player, life = c.life;
   state.cp = n;
-  state.doors.forEach((d, k) => { d.open = life.doors[k]; d.t = d.open ? DOOR_FULL : 0; });
-  p.hp = 100;
+  state.doors.forEach((d, k) => { d.open = life.doors[k] && !state.sealed.includes(k); d.t = d.open ? DOOR_FULL : 0; });
+  p.hp = HP_FULL;
+  p.calm = CALM_MAX;
+  state.bellSets = copyBellSets(life.bellSets);
+  state.links = copyLinkState(life.links);
   p.oil = Math.max(life.oil, RISE_OIL);
   p.hooded = life.hooded;
   p.flasks = life.flasks;
@@ -393,21 +476,44 @@ function rise(world, state, target, events) {
   state.eyes = state.eyes.map(() => 0);
   p.x = c.x; p.z = c.z; p.yaw = c.yaw; p.pitch = 0;
   p.vx = 0; p.vz = 0; p.rx = 0; p.rz = 0;
+  state.zone = zoneAt(world, fdiv(p.z, CELL_MM) * world.w + fdiv(p.x, CELL_MM));
   state.dead = null;
   events.push({ e: 'rise', zone: c.zone >= 0 ? worldZones(world)[c.zone].id : null });
 }
 
-/** R-ACT-1: open an interact door within reach. Anything else does nothing. */
-function interact(world, state, n, events) {
+/** R-ACT-1: interact with a door, item or bell within reach. Anything else does nothing. */
+function interact(world, state, n, events, batch) {
   const ref = entityRef(world, n);
-  if (ref && ref.type === 'item') { takeItem(world, state, n, worldItems(world)[ref.item], events); return; }
+  if (ref && ref.type === 'item') { takeItem(world, state, n, worldItems(world)[ref.item], events, batch); return; }
+  if (ref && ref.type === 'bell') { ringBell(world, state, n, worldBells(world)[ref.bell], events, batch); return; }
   if (!ref || ref.type !== 'door') return;
   const def = worldDoors(world)[ref.door], d = state.doors[ref.door], p = state.player;
-  if (!def.interact || d.open) return;
+  if (d.open) return;
   const dx = p.x - def.cx, dz = p.z - def.cz; // |dx|, |dz| <= 64*2400, so the squares stay below 2^36
   if (dx * dx + dz * dz > REACH_MM * REACH_MM) return;
+  batch.push(['interact', n]);
+  if (!def.interact || state.sealed.includes(ref.door)) return;
   d.open = true;
   events.push({ e: 'door', id: def.id, open: true });
+}
+
+/** R-BELL-3 */
+function ringBell(world, state, n, b, events, batch) {
+  const p = state.player, dx = p.x - b.x, dz = p.z - b.z; // squares < 2^36
+  if (dx * dx + dz * dz > b.reach * b.reach || !lineOfSight(world, state, b.x, b.z)) return;
+  batch.push(['interact', n]);
+  events.push({ e: 'bell', id: b.id });
+  const set = worldBellSets(world)[b.set], st = state.bellSets[b.set];
+  if (st.solved) return;
+  st.seq.push(b.index);
+  if (st.seq.some((x, k) => x !== set.order[k])) {
+    st.seq = [];
+    batch.push(['bellsWrong', b.set]);
+    events.push({ e: 'bellsWrong', id: set.id });
+  } else if (st.seq.length === set.order.length) {
+    st.solved = true;
+    events.push({ e: 'bellsSolved', id: set.id });
+  }
 }
 
 /**

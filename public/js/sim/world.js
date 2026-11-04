@@ -4,6 +4,7 @@
 import { assertInt, fdiv } from './int.js';
 import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
+import { compileLinks } from './links.js';
 
 // GDF cell codes (spec §7.1).
 export const CELL = Object.freeze({ WALL: 0, ROOM: 1, CORR: 2, PLATE: 3, HPIT: 4, VOID: 5, BRIDGE: 6, VENT: 7, ALCOVE: 8 });
@@ -19,6 +20,7 @@ const CELL_MM = 2400;
 // solid while 20*t < 17*DOOR_FULL (Gloamhollow anim < 0.85).
 export const DOOR_FULL = 693;
 export const DOOR_STEP = 21;
+export const DOOR_CLOSE_STEP = 33; // R-DOOR-3: 693 / 33 = 21 ticks (Gloamhollow 0.7 s)
 const ID_RE = /^[A-Za-z_][A-Za-z0-9_]{0,31}$/;
 // R-PROP-1: footprints per kind, in mm. Circles: r. Boxes: half-extents at yaw 0 (swap at 1024/3072).
 const PROP_KINDS = new Map([
@@ -31,10 +33,13 @@ const KEYS = {
   vent: ['id', 'type', 'cells', 'period', 'phase', 'warn', 'fire'],
   item: ['id', 'type', 'kind', 'cell'], treasure: ['id', 'type', 'kind', 'cell', 'value'],
   eyes: ['id', 'type', 'zone', 'wake'],
+  bell: ['id', 'type', 'cell', 'size', 'patina', 'note'], bellSet: ['id', 'type', 'bells', 'order'],
   zone: ['id', 'name', 'rects', 'ceil'], zoneCp: ['id', 'name', 'rects', 'ceil', 'checkpoint'],
   cp: ['cell', 'yaw'], cpReach: ['cell', 'yaw', 'reach'],
 };
 const ITEM_KINDS = ['flask', 'rubble', 'treasure'];
+// R-BELL-1, R-BELL-3: by size 1..3, the footprint radius and the extra reach (Gloamhollow r + 0.05 m and 2 m + r).
+const BELL_R = [470, 650, 830], BELL_REACH = [2420, 2600, 2780];
 const DOOR_STYLES = ['stone', 'grate', 'mask'], DOOR_OPENS = ['interact', 'trigger'], MASK_FACES = ['weep', 'laugh', 'sleep', 'blank'];
 
 // The decoded grid and entity tables of each genuine world. Kept out of the frozen world object so
@@ -158,10 +163,12 @@ function worldFrom(gdf) {
   const ents = loadEntities(gdf.entities, grid, w, h, startK, zs.cpCells, zs.zoneIds);
   // R-ZONE-2: checkpoint cells hold no door or slab (props were checked in loadEntities).
   for (const k of zs.cpCells) if (ents.doorAt[k] >= 0 || ents.slab[k]) throw new RangeError('checkpoint cell taken');
+  // R-LINK-*: compile the links against the entity and zone ids.
+  const links = compileLinks(gdf.links, { ents: ents.byId, zones: new Map(zs.zoneIds.map((id, n) => [id, n])) });
   // R-WORLD-3: world id = first 16 bytes of SHA-256 over the canonical GDF, as hex.
   const id = toHex(sha256(canonicalBytes(gdf)).subarray(0, 16));
   const world = Object.freeze({ id, w, h, start: Object.freeze({ i: si, j: sj }) });
-  GRIDS.set(world, { grid, zoneOf: zs.zoneOf, zones: zs.zones, startZone: zs.zoneOf[startK], ...ents });
+  GRIDS.set(world, { grid, zoneOf: zs.zoneOf, zones: zs.zones, startZone: zs.zoneOf[startK], ...ents, links });
   return world;
 }
 
@@ -227,6 +234,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
   if (!Array.isArray(list) || list.length > MAX_ENTITIES) throw new RangeError('entities');
   const ids = new Set(), doorAt = new Int16Array(w * h).fill(-1), slab = new Uint8Array(w * h);
   const doors = [], props = [], refs = [], vents = [], ventAt = new Int16Array(w * h).fill(-1), items = [], eyes = [];
+  const bells = [], bellSets = [], byId = new Map();
   for (const e of list) {
     if (!isObj(e) || typeof e.id !== 'string' || !ID_RE.test(e.id)) throw new RangeError('entity id');
     if (ids.has(e.id)) throw new RangeError('duplicate entity id');
@@ -296,8 +304,38 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       if (!isInt(e.wake) || e.wake < 18 || e.wake > 1800) throw new RangeError('eyes wake');
       refs.push({ type: 'eyes' });
       eyes.push(Object.freeze({ id: e.id, zone: zi, wake: e.wake }));
+    } else if (e.type === 'bell') {
+      if (!hasExactKeys(e, KEYS.bell)) throw new RangeError('bell keys');
+      if (!isInt(e.size) || e.size < 1 || e.size > 3) throw new RangeError('bell size');
+      if (!isInt(e.patina) || e.patina < 0 || e.patina > 2) throw new RangeError('bell patina');
+      if (!isInt(e.note) || e.note < 20 || e.note > 20000) throw new RangeError('bell note');
+      const k = cellIndex(e.cell, w, h);
+      if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR) throw new RangeError('bell cell');
+      const [ci, cj] = e.cell, x = ci * CELL_MM + CELL_MM / 2, z = cj * CELL_MM + CELL_MM / 2, r = BELL_R[e.size - 1];
+      props.push(Object.freeze({ circle: true, x, z, r, x0: x - r, x1: x + r, z0: z - r, z1: z + r }));
+      refs.push({ type: 'bell', bell: bells.length });
+      bells.push({ id: e.id, k, x, z, reach: BELL_REACH[e.size - 1], set: -1, index: -1 });
+    } else if (e.type === 'bellSet') {
+      if (!hasExactKeys(e, KEYS.bellSet)) throw new RangeError('bellSet keys');
+      if (!Array.isArray(e.bells) || e.bells.length < 2 || e.bells.length > 5 || !e.bells.every((b) => typeof b === 'string')) throw new RangeError('bellSet bells');
+      if (!Array.isArray(e.order) || e.order.length !== e.bells.length || !e.order.every(isInt)) throw new RangeError('bellSet order');
+      for (let x = 0; x < e.order.length; x++) if (!e.order.includes(x)) throw new RangeError('bellSet order');
+      refs.push({ type: 'bellSet', set: bellSets.length });
+      bellSets.push({ id: e.id, names: e.bells.slice(), order: Object.freeze(e.order.slice()) });
     } else throw new RangeError('unknown entity type');
+    byId.set(e.id, { ...refs[refs.length - 1], n: refs.length, kind: e.type === 'item' ? e.kind : undefined });
   }
+  // R-BELL-1, R-BELL-2: bells on free cells; every bell in exactly one set, named by bell id.
+  for (const b of bells) if (doorAt[b.k] >= 0 || slab[b.k]) throw new RangeError('bell cell taken');
+  bellSets.forEach((set, si) => {
+    set.bells = set.names.map((name, i) => {
+      const r = byId.get(name);
+      if (r === undefined || r.type !== 'bell' || bells[r.bell].set >= 0) throw new RangeError('bellSet bell');
+      bells[r.bell].set = si; bells[r.bell].index = i;
+      return r.bell;
+    });
+  });
+  if (bells.some((b) => b.set < 0)) throw new RangeError('bell without a set');
   // R-ITEM-1: no item on a door or slab cell (checked after the loop, whatever the order).
   for (const it of items) if (doorAt[it.k] >= 0 || slab[it.k]) throw new RangeError('item cell taken');
   // R-VENT-1: every vent cell belongs to a vent.
@@ -312,7 +350,10 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       if (grid[k] === CELL.WALL || doorAt[k] >= 0 || slab[k] || k === startK || cpCells.includes(k)) throw new RangeError('prop footprint blocked');
     }
   }
-  return { doorAt, slab, ventAt, vents: Object.freeze(vents), items: Object.freeze(items), eyes: Object.freeze(eyes), doors: Object.freeze(doors), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
+  return {
+    byId, bells: Object.freeze(bells.map(Object.freeze)),
+    bellSets: Object.freeze(bellSets.map((b) => Object.freeze({ id: b.id, bells: Object.freeze(b.bells), order: b.order }))),
+    doorAt, slab, ventAt, vents: Object.freeze(vents), items: Object.freeze(items), eyes: Object.freeze(eyes), doors: Object.freeze(doors), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
 }
 
 /** Throws unless world came from loadWorld (not a look-alike object). */
@@ -352,6 +393,11 @@ export function ventAt(world, k) { const W = GRIDS.get(world), v = W.ventAt[k]; 
 export function zoneAt(world, k) { return GRIDS.get(world).zoneOf[k]; }
 export function worldZones(world) { return GRIDS.get(world).zones; }
 export function startZone(world) { return GRIDS.get(world).startZone; }
+
+/** R-BELL-*, R-LINK-*: bells, bell sets and the compiled links (frozen). */
+export function worldBells(world) { return GRIDS.get(world).bells; }
+export function worldBellSets(world) { return GRIDS.get(world).bellSets; }
+export function worldLinks(world) { return GRIDS.get(world).links; }
 
 /** R-ITEM-*, R-EYES-*: the items and eyes, in entity order (frozen). */
 export function worldItems(world) { return GRIDS.get(world).items; }

@@ -61,6 +61,27 @@ const ITEMS = [
   ['f1', 'flask', 32, 57], ['f2', 'flask', 38, 26], ['f3', 'flask', 40, 20], ['f4', 'flask', 3, 23], ['f5', 'flask', 11, 23],
   ['rub1', 'rubble', 33, 35], ['rub2', 'rubble', 27, 1],
 ];
+// The Garden of Bells (Gloamhollow BELLS, BELL_ORDER; R-BELL-*): size from the radius (0.42 / 0.6 / 0.78 m),
+// patina 0 bright, 1 dull brown, 2 verdigris. Order of casting: green, brown, great.
+const BELLS = [
+  { id: 'great', cell: [17, 25], size: 3, patina: 0, note: 98 },
+  { id: 'green', cell: [18, 25], size: 1, patina: 2, note: 330 },
+  { id: 'brown', cell: [19, 25], size: 2, patina: 1, note: 196 },
+];
+const BELL_ORDER = ['green', 'brown', 'great'];
+// Links (R-LINK-*), with Gloamhollow's texts. Delays: 0.65 s and 0.9 s in ticks. The second failure's
+// wardens come with foes (link 3, step 5d).
+const LINKS = [
+  { id: 1, when: { bellsSolved: 'bells' }, delay: 27,
+    do: [{ openDoor: 'bell' }, { message: 'The three notes hang in the air together. With a long rattle, the bronze grate in the east wall rises.' }] },
+  { id: 2, when: { bellsWrong: 'bells' }, repeat: true, delay: 20,
+    do: [{ damage: 28 }, { message: 'The bells clash horribly. Darts spit from the stone trees around you.' }] },
+  { id: 4, when: { interact: 'vest' }, do: [{ message: 'The door is not locked. It swings down into the floor with a breath of very old air.' }] },
+  { id: 5, when: { interact: 'script' }, do: [{ message: 'The door sinks into the floor. Cold air rises from somewhere far below.' }] },
+  { id: 6, when: { interact: 'bell' }, repeat: true, do: [{ message: 'The bronze grate will not move. Something in this garden must raise it.' }] },
+  { id: 7, when: { interact: 'vault' }, repeat: true, do: [{ message: 'The door has no handle and no keyhole. It does not move.' }] },
+];
+
 // Props (Gloamhollow buildProps addCircle/addBox), positions in mm. cx/cz = cell centre.
 const MM = 2400, cx = (i) => i * MM + MM / 2;
 const PROPS = [
@@ -102,9 +123,14 @@ const gdf = {
     ...ITEMS.map(([id, kind, i, j, value]) => ({ id, type: 'item', kind, cell: [i, j], ...(kind === 'treasure' ? { value } : {}) })),
     { id: 'eyes', type: 'eyes', zone: 'gallery', wake: 30 },  // the Waking Eyes: 1.0 s (R-EYES-*)
     ...VENTS.map((i, n) => ({ id: `vent${n + 1}`, type: 'vent', cells: VENT_ROWS.map((j) => [i, j]), period: 108, phase: VENT_PHASES[n], warn: 27, fire: 33 })),
-    ...PROPS.map(([kind, x, z, yaw], n) => ({ id: kind + PROPS.slice(0, n + 1).filter((p) => p[0] === kind).length, type: 'prop', kind, pos: [x, z], yaw })),
+    ...PROPS.flatMap(([kind, x, z, yaw], n) => {
+      const prop = { id: kind + PROPS.slice(0, n + 1).filter((p) => p[0] === kind).length, type: 'prop', kind, pos: [x, z], yaw };
+      // The bells hang between the frame's posts and the plinth, as in Gloamhollow's obstacle list (push order).
+      return kind === 'plinth' ? [...BELLS.map((b) => ({ type: 'bell', ...b })), prop] : [prop];
+    }),
+    { id: 'bells', type: 'bellSet', bells: BELLS.map((b) => b.id), order: BELL_ORDER.map((id) => BELLS.findIndex((b) => b.id === id)) },
   ],
-  links: [],
+  links: LINKS,
 };
 writeFileSync(ROOT + 'dungeons/gloamhollow.gdf.json', JSON.stringify(gdf, null, 1) + '\n');
 console.log('dungeons/gloamhollow.gdf.json:', gdf.grid.cells.length, 'base64 chars for', W * H, 'cells');

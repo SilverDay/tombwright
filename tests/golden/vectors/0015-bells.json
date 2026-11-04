@@ -1,0 +1,574 @@
+{
+ "name": "0015-bells",
+ "core": "m0.6",
+ "seed": 15,
+ "mode": "delve",
+ "gdf": "{\"gdf\":1,\"grid\":{\"w\":12,\"h\":8,\"cells\":\"DQAHAQEAAgECAAcBAQACAQIABwEBAAIBAgAHAQECAgECAAcBAQACAQIABwEBAAIBDQA=\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"w\",\"name\":\"W\",\"rects\":[[1,1,7,6]],\"ceil\":5400},{\"id\":\"e\",\"name\":\"E\",\"rects\":[[9,1,2,6]],\"ceil\":4200,\"checkpoint\":{\"cell\":[9,4],\"yaw\":3072}}],\"entities\":[{\"id\":\"grate\",\"type\":\"door\",\"cell\":[8,4],\"style\":\"grate\",\"opens\":\"trigger\"},{\"id\":\"b1\",\"type\":\"bell\",\"cell\":[3,2],\"size\":1,\"patina\":2,\"note\":330},{\"id\":\"b2\",\"type\":\"bell\",\"cell\":[5,2],\"size\":2,\"patina\":1,\"note\":196},{\"id\":\"b3\",\"type\":\"bell\",\"cell\":[7,2],\"size\":3,\"patina\":0,\"note\":98},{\"id\":\"set\",\"type\":\"bellSet\",\"bells\":[\"b1\",\"b2\",\"b3\"],\"order\":[2,0,1]}],\"links\":[{\"id\":1,\"when\":{\"bellsSolved\":\"set\"},\"delay\":27,\"do\":[{\"openDoor\":\"grate\"},{\"message\":\"The grate rises.\"}]},{\"id\":2,\"when\":{\"bellsWrong\":\"set\"},\"repeat\":true,\"delay\":20,\"do\":[{\"damage\":28}]},{\"id\":3,\"when\":{\"sequence\":[{\"bellsWrong\":\"set\"},{\"bellsWrong\":\"set\"}]},\"do\":[{\"message\":\"Two wrongs.\"}]},{\"id\":4,\"when\":{\"enterZone\":\"e\"},\"delay\":30,\"do\":[{\"sealDoor\":\"grate\"}]},{\"id\":5,\"when\":{\"interact\":\"grate\"},\"repeat\":true,\"do\":[{\"message\":\"It will not move.\"}]}]}",
+ "inputs": [
+  [
+   24,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   25,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 2
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 2
+   }
+  ],
+  [
+   30,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   80,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 4
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   80,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 2
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   45,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 3
+   }
+  ],
+  [
+   60,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   25,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 2048,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   100,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 1
+   }
+  ],
+  [
+   60,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   40,
+   {
+    "move": [
+     127,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 32,
+    "target": 1
+   }
+  ],
+  [
+   20,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 0,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ]
+ ],
+ "ticks": 600,
+ "hashEvery": 300,
+ "hashes": {
+  "0": "0a02a7651d12ee13f2c82f5b6ad4c1d2",
+  "300": "a86b934e01e10443ce081afb5debad12",
+  "600": "fbcdecb35247d09965e75b62179030da"
+ },
+ "final": "fbcdecb35247d09965e75b62179030da",
+ "finalState": {
+  "v": 1,
+  "core": "m0.6",
+  "world": "9b1ad0a2d813d0de3a03eda4eed8b5d0",
+  "mode": "delve",
+  "tick": 600,
+  "rng": [
+   2803201857,
+   1665901845,
+   109142579,
+   458181978
+  ],
+  "player": {
+   "x": 21960,
+   "z": 10899,
+   "vx": -2,
+   "vz": 2,
+   "rx": -25,
+   "rz": 13,
+   "yaw": 0,
+   "pitch": 0,
+   "hp": 2832,
+   "calm": 151,
+   "oil": 2952000,
+   "hooded": false,
+   "flasks": 1,
+   "pebbles": 10,
+   "probeCd": 0,
+   "pebbleCd": 0
+  },
+  "doors": [
+   {
+    "open": false,
+    "t": 0
+   }
+  ],
+  "deaths": 0,
+  "dead": null,
+  "sprung": [],
+  "pits": [],
+  "marked": [],
+  "bridge": [],
+  "floor": [],
+  "flying": [],
+  "taken": [],
+  "eyes": [],
+  "zone": 1,
+  "sealed": [
+   0
+  ],
+  "bellSets": [
+   {
+    "seq": [
+     2,
+     0,
+     1
+    ],
+    "solved": true
+   }
+  ],
+  "links": [
+   {
+    "val": true,
+    "active": true,
+    "spent": true,
+    "pend": [],
+    "m": []
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     51
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": true,
+    "pend": [],
+    "m": [
+     0,
+     51,
+     51
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": true,
+    "pend": [],
+    "m": [
+     454
+    ]
+   },
+   {
+    "val": false,
+    "active": false,
+    "spent": false,
+    "pend": [],
+    "m": [
+     579
+    ]
+   }
+  ],
+  "checkpoints": [
+   {
+    "zone": 0,
+    "x": 6000,
+    "z": 10800,
+    "yaw": 0,
+    "life": {
+     "hp": 3000,
+     "oil": 3000000,
+     "hooded": false,
+     "flasks": 1,
+     "pebbles": 10,
+     "doors": [
+      false
+     ],
+     "floor": [],
+     "taken": [],
+     "bellSets": [
+      {
+       "seq": [],
+       "solved": false
+      }
+     ],
+     "links": [
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": []
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        0,
+        -1,
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "zone": 1,
+    "x": 22800,
+    "z": 10800,
+    "yaw": 3072,
+    "life": {
+     "hp": 2248,
+     "oil": 2963680,
+     "hooded": false,
+     "flasks": 1,
+     "pebbles": 10,
+     "doors": [
+      true
+     ],
+     "floor": [],
+     "taken": [],
+     "bellSets": [
+      {
+       "seq": [
+        2,
+        0,
+        1
+       ],
+       "solved": true
+      }
+     ],
+     "links": [
+      {
+       "val": true,
+       "active": true,
+       "spent": true,
+       "pend": [],
+       "m": []
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        51
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": true,
+       "pend": [],
+       "m": [
+        0,
+        51,
+        51
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      },
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": [
+        -1
+       ]
+      }
+     ]
+    }
+   }
+  ],
+  "cp": 1,
+  "prevButtons": 0
+ }
+}

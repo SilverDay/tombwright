@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.5';
+    public const CORE_VERSION = 'm0.6';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -32,6 +32,11 @@ final class Sim
     public const PEBBLE_CD = 15;
     public const PEBBLE_MAX = 12;
     public const PICKUP_MM = 750;
+    /** R-HP-1: hp in 1/30-hp units; regeneration +4 a tick once calm > 150. */
+    public const HP_UNIT = 30;
+    public const HP_FULL = 3000;
+    public const HP_REGEN = 4;
+    public const CALM_MAX = 151;
 
     public const BTN_STRIKE = 1 << 0;
     public const BTN_HOOD = 1 << 1;
@@ -98,7 +103,7 @@ final class Sim
                 'x' => self::cellCentre($ci), 'z' => self::cellCentre($cj),
                 'vx' => 0, 'vz' => 0, 'rx' => 0, 'rz' => 0,
                 'yaw' => 0, 'pitch' => 0,
-                'hp' => 100, 'oil' => 100 * self::OIL_UNIT, 'hooded' => false,
+                'hp' => self::HP_FULL, 'calm' => self::CALM_MAX, 'oil' => 100 * self::OIL_UNIT, 'hooded' => false, // R-HP-1
                 'flasks' => 1, 'pebbles' => 10, 'probeCd' => 0, 'pebbleCd' => 0, // R-OIL-3, R-PEB-1, R-TOOL-2
             ],
             'doors' => array_map(static fn (): array => ['open' => false, 't' => 0], $world->doors), // R-DOOR-2
@@ -112,6 +117,10 @@ final class Sim
             'flying' => [],       // R-PEB-2
             'taken' => [],        // R-ITEM-2
             'eyes' => array_map(static fn (): int => 0, $world->eyes), // R-EYES-1
+            'zone' => $world->startZone, // R-ZONE-3
+            'sealed' => [],       // R-DOOR-5 (a lesson)
+            'bellSets' => array_map(static fn (): array => ['seq' => [], 'solved' => false], $world->bellSets), // R-BELL-2
+            'links' => Links::initState($world->links), // R-LINK-4
             'checkpoints' => [],  // R-CP-1
             'cp' => 0,
             'prevButtons' => 0,
@@ -135,6 +144,7 @@ final class Sim
             'hp' => $p['hp'], 'oil' => $p['oil'], 'hooded' => $p['hooded'], 'flasks' => $p['flasks'], 'pebbles' => $p['pebbles'],
             'doors' => array_map(static fn (array $d): bool => $d['open'], $state['doors']),
             'floor' => $state['floor'], 'taken' => $state['taken'],
+            'bellSets' => $state['bellSets'], 'links' => $state['links'],
         ];
     }
 
@@ -164,10 +174,22 @@ final class Sim
                 self::rise($world, $state, $input['target'], $events);
             }
             self::moveDoors($state);
+            self::landPebbles($world, $state, $events);
         } else {
-            self::live($world, $state, $input, $pressed, $events);
+            $batch = [];                                  // R-LINK-5: batch 0
+            self::live($world, $state, $input, $pressed, $events, $batch);
+            self::landPebbles($world, $state, $events);
+            if ($state['dead'] === null) {
+                self::links($world, $state, $batch, $events); // R-LINK-7
+            }
+            if ($state['dead'] === null) {
+                // R-HP-1: regeneration once calm, then calm counts on (after the links, so a hurt tick doesn't heal).
+                if ($state['player']['hp'] < self::HP_FULL && $state['player']['calm'] > 150) {
+                    $state['player']['hp'] = min(self::HP_FULL, $state['player']['hp'] + self::HP_REGEN);
+                }
+                $state['player']['calm'] = min(self::CALM_MAX, $state['player']['calm'] + 1);
+            }
         }
-        self::landPebbles($world, $state, $events);
 
         $state['prevButtons'] = $input['buttons'];
         $state['tick'] += 1;
@@ -184,9 +206,120 @@ final class Sim
         foreach ($state['doors'] as &$d) {
             if ($d['open'] && $d['t'] < World::DOOR_FULL) {
                 $d['t'] = min(World::DOOR_FULL, $d['t'] + World::DOOR_STEP);
+            } elseif (!$d['open'] && $d['t'] > 0) {
+                $d['t'] = max(0, $d['t'] - World::DOOR_CLOSE_STEP);
             }
         }
         unset($d);
+    }
+
+    /**
+     * R-LINK-7, R-LINK-8: run the links with the sim's conditions and effects.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array{string,int}> $batch
+     * @param list<array<string,mixed>> $events
+     */
+    private static function links(World $world, array &$state, array $batch, array &$events): void
+    {
+        if ($world->links === []) {
+            return;
+        }
+        $host = new SimLinkHost($world, $state, $events);
+        Links::run($world->links, $state['links'], $batch, $host);
+    }
+
+    /**
+     * R-HP-2
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    public static function hurt(array &$state, int $n, array &$events): void
+    {
+        $state['player']['hp'] = max(0, $state['player']['hp'] - self::HP_UNIT * $n);
+        $state['player']['calm'] = 0;
+        $events[] = ['e' => 'hurt', 'hp' => intdiv($state['player']['hp'], self::HP_UNIT)];
+        if ($state['player']['hp'] === 0) {
+            self::die($state, 'damage', $events);
+        }
+    }
+
+    /**
+     * R-LINK-8: apply effects in order; true if the state changed.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $list
+     * @param list<array<string,mixed>> $events
+     */
+    public static function applyEffects(World $world, array &$state, array $list, array &$events): bool
+    {
+        $changed = false;
+        foreach ($list as $fx) {
+            if ($fx['kind'] === 'message') {
+                $events[] = ['e' => 'message', 'text' => $fx['text']];
+                continue;
+            }
+            if ($fx['kind'] === 'damage') {
+                self::hurt($state, $fx['n'], $events);
+                $changed = true;
+                if ($state['dead'] !== null) {
+                    return true;
+                }
+                continue;
+            }
+            $n = $fx['door'];
+            $id = $world->doors[$n]['id'];
+            $sealed = in_array($n, $state['sealed'], true);
+            if ($fx['kind'] === 'openDoor') {
+                if (!$sealed && !$state['doors'][$n]['open']) {
+                    $state['doors'][$n]['open'] = true;
+                    $changed = true;
+                    $events[] = ['e' => 'door', 'id' => $id, 'open' => true];
+                }
+            } elseif ($fx['kind'] === 'closeDoor') {
+                if ($state['doors'][$n]['open']) {
+                    $state['doors'][$n]['open'] = false;
+                    $changed = true;
+                    $events[] = ['e' => 'door', 'id' => $id, 'open' => false];
+                }
+            } elseif (!$sealed) {
+                $state['sealed'][] = $n;
+                $state['doors'][$n]['open'] = false;
+                $changed = true;
+                $events[] = ['e' => 'door', 'id' => $id, 'open' => false, 'sealed' => true];
+            }
+        }
+        return $changed;
+    }
+
+    /**
+     * R-LINK-6: a condition trigger's value.
+     *
+     * @param array<string,mixed> $state
+     */
+    public static function linkCond(World $world, array $state, string $kind, int|bool $arg): bool
+    {
+        $p = $state['player'];
+        switch ($kind) {
+            case 'doorOpen':
+                return $state['doors'][$arg]['open'];
+            case 'inZone':
+                return $world->zoneAt(IntMath::fdiv($p['z'], self::CELL_MM) * $world->w + IntMath::fdiv($p['x'], self::CELL_MM)) === $arg;
+            case 'hasItem':
+                return in_array($arg, $state['taken'], true);
+            case 'lanternHooded':
+                return $p['hooded'] === $arg;
+            case 'bellsSolved':
+                return $state['bellSets'][$arg]['solved'];
+            case 'linkActive':
+                foreach ($world->links as $n => $l) {
+                    if ($l['id'] === $arg) {
+                        return $state['links'][$n]['active'];
+                    }
+                }
+        }
+        throw new \LogicException('cond');
     }
 
     /**
@@ -196,7 +329,7 @@ final class Sim
      * @param array<string,mixed> $input
      * @param list<array<string,mixed>> $events
      */
-    private static function live(World $world, array &$state, array $input, int $pressed, array &$events): void
+    private static function live(World $world, array &$state, array $input, int $pressed, array &$events, array &$batch): void
     {
         $p = &$state['player'];
         $p['yaw'] = $input['yaw'];
@@ -221,7 +354,7 @@ final class Sim
             self::pourOil($state['player'], $events);
         }
         if (($pressed & self::BTN_INTERACT) && $input['target'] !== 0) {
-            self::interact($world, $state, $input['target'], $events); // R-ACT-1
+            self::interact($world, $state, $input['target'], $events, $batch); // R-ACT-1
         }
         $p = &$state['player'];
 
@@ -254,6 +387,16 @@ final class Sim
         unset($p);
         self::moveDoors($state);
         self::checkpoint($world, $state, $events);
+        $zNow = $world->zoneAt(IntMath::fdiv($state['player']['z'], self::CELL_MM) * $world->w + IntMath::fdiv($state['player']['x'], self::CELL_MM)); // R-ZONE-3
+        if ($zNow !== $state['zone']) {
+            if ($state['zone'] >= 0) {
+                $batch[] = ['leaveZone', $state['zone']];
+            }
+            if ($zNow >= 0) {
+                $batch[] = ['enterZone', $zNow];
+            }
+            $state['zone'] = $zNow;
+        }
         $cause = self::trap($world, $state);
         if ($cause !== null) {
             self::die($state, $cause, $events);
@@ -582,7 +725,7 @@ final class Sim
      * @param array{id:string,kind:string,k:int,x:int,z:int,reach:int} $it
      * @param list<array<string,mixed>> $events
      */
-    private static function takeItem(World $world, array &$state, int $n, array $it, array &$events): void
+    private static function takeItem(World $world, array &$state, int $n, array $it, array &$events, array &$batch): void
     {
         $p = $state['player'];
         if ($it['kind'] === 'rubble' ? $p['pebbles'] >= self::PEBBLE_MAX : in_array($n, $state['taken'], true)) {
@@ -593,6 +736,7 @@ final class Sim
         if ($dx * $dx + $dz * $dz > $it['reach'] * $it['reach'] || !self::lineOfSight($world, $state, $it['x'], $it['z'])) {
             return;
         }
+        $batch[] = ['interact', $n];
         if ($it['kind'] === 'rubble') {
             $state['player']['pebbles'] = self::PEBBLE_MAX;
         } else {
@@ -600,6 +744,7 @@ final class Sim
             if ($it['kind'] === 'flask') {
                 $state['player']['flasks'] += 1;
             }
+            $batch[] = ['itemTaken', $n];
         }
         $events[] = ['e' => 'item', 'id' => $it['id'], 'kind' => $it['kind']];
     }
@@ -731,12 +876,15 @@ final class Sim
         $life = $c['life'];
         $state['cp'] = $n;
         foreach ($state['doors'] as $k => &$d) {
-            $d['open'] = $life['doors'][$k];
+            $d['open'] = $life['doors'][$k] && !in_array($k, $state['sealed'], true);
             $d['t'] = $d['open'] ? World::DOOR_FULL : 0;
         }
         unset($d);
+        $state['bellSets'] = $life['bellSets'];
+        $state['links'] = $life['links'];
         $p = &$state['player'];
-        $p['hp'] = 100;
+        $p['hp'] = self::HP_FULL;
+        $p['calm'] = self::CALM_MAX;
         $p['oil'] = max($life['oil'], self::RISE_OIL);
         $p['hooded'] = $life['hooded'];
         $p['flasks'] = $life['flasks'];
@@ -754,6 +902,7 @@ final class Sim
         $state['taken'] = $life['taken'];
         $state['flying'] = [];
         $state['eyes'] = array_map(static fn (): int => 0, $state['eyes']);
+        $state['zone'] = $world->zoneAt(IntMath::fdiv($c['z'], self::CELL_MM) * $world->w + IntMath::fdiv($c['x'], self::CELL_MM));
         $state['dead'] = null;
         $events[] = ['e' => 'rise', 'zone' => $c['zone'] >= 0 ? $world->zones[$c['zone']]['id'] : null];
     }
@@ -764,19 +913,22 @@ final class Sim
      * @param array<string,mixed> $state
      * @param list<array<string,mixed>> $events
      */
-    private static function interact(World $world, array &$state, int $n, array &$events): void
+    private static function interact(World $world, array &$state, int $n, array &$events, array &$batch): void
     {
         $ref = $world->entityRef($n);
         if ($ref !== null && $ref['type'] === 'item') {
-            self::takeItem($world, $state, $n, $world->items[$ref['item']], $events);
+            self::takeItem($world, $state, $n, $world->items[$ref['item']], $events, $batch);
+            return;
+        }
+        if ($ref !== null && $ref['type'] === 'bell') {
+            self::ringBell($world, $state, $n, $world->bells[$ref['bell']], $events, $batch);
             return;
         }
         if ($ref === null || $ref['type'] !== 'door') {
             return;
         }
         $def = $world->doors[$ref['door']];
-        $d = &$state['doors'][$ref['door']];
-        if (!$def['interact'] || $d['open']) {
+        if ($state['doors'][$ref['door']]['open']) {
             return;
         }
         // |dx|, |dz| <= 64*2400, so the squares stay below 2^36.
@@ -785,8 +937,53 @@ final class Sim
         if ($dx * $dx + $dz * $dz > self::REACH_MM * self::REACH_MM) {
             return;
         }
-        $d['open'] = true;
+        $batch[] = ['interact', $n];
+        if (!$def['interact'] || in_array($ref['door'], $state['sealed'], true)) {
+            return;
+        }
+        $state['doors'][$ref['door']]['open'] = true;
         $events[] = ['e' => 'door', 'id' => $def['id'], 'open' => true];
+    }
+
+    /**
+     * R-BELL-3
+     *
+     * @param array<string,mixed> $state
+     * @param array{id:string,k:int,x:int,z:int,reach:int,set:int,index:int} $b
+     * @param list<array<string,mixed>> $events
+     * @param list<array{string,int}> $batch
+     */
+    private static function ringBell(World $world, array &$state, int $n, array $b, array &$events, array &$batch): void
+    {
+        $dx = $state['player']['x'] - $b['x'];
+        $dz = $state['player']['z'] - $b['z'];
+        if ($dx * $dx + $dz * $dz > $b['reach'] * $b['reach'] || !self::lineOfSight($world, $state, $b['x'], $b['z'])) {
+            return;
+        }
+        $batch[] = ['interact', $n];
+        $events[] = ['e' => 'bell', 'id' => $b['id']];
+        $set = $world->bellSets[$b['set']];
+        $st = &$state['bellSets'][$b['set']];
+        if ($st['solved']) {
+            return;
+        }
+        $st['seq'][] = $b['index'];
+        $wrong = false;
+        foreach ($st['seq'] as $k => $x) {
+            if ($x !== $set['order'][$k]) {
+                $wrong = true;
+                break;
+            }
+        }
+        if ($wrong) {
+            $st['seq'] = [];
+            $batch[] = ['bellsWrong', $b['set']];
+            $events[] = ['e' => 'bellsWrong', 'id' => $set['id']];
+        } elseif (count($st['seq']) === count($set['order'])) {
+            $st['solved'] = true;
+            $events[] = ['e' => 'bellsSolved', 'id' => $set['id']];
+        }
+        unset($st);
     }
 
     /**

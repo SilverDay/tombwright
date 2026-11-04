@@ -675,6 +675,39 @@
    "yaw": 0
   },
   {
+   "type": "bell",
+   "id": "great",
+   "cell": [
+    17,
+    25
+   ],
+   "size": 3,
+   "patina": 0,
+   "note": 98
+  },
+  {
+   "type": "bell",
+   "id": "green",
+   "cell": [
+    18,
+    25
+   ],
+   "size": 1,
+   "patina": 2,
+   "note": 330
+  },
+  {
+   "type": "bell",
+   "id": "brown",
+   "cell": [
+    19,
+    25
+   ],
+   "size": 2,
+   "patina": 1,
+   "note": 196
+  },
+  {
    "id": "plinth1",
    "type": "prop",
    "kind": "plinth",
@@ -703,7 +736,99 @@
     75600
    ],
    "yaw": 0
+  },
+  {
+   "id": "bells",
+   "type": "bellSet",
+   "bells": [
+    "great",
+    "green",
+    "brown"
+   ],
+   "order": [
+    1,
+    2,
+    0
+   ]
   }
  ],
- "links": []
+ "links": [
+  {
+   "id": 1,
+   "when": {
+    "bellsSolved": "bells"
+   },
+   "delay": 27,
+   "do": [
+    {
+     "openDoor": "bell"
+    },
+    {
+     "message": "The three notes hang in the air together. With a long rattle, the bronze grate in the east wall rises."
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "when": {
+    "bellsWrong": "bells"
+   },
+   "repeat": true,
+   "delay": 20,
+   "do": [
+    {
+     "damage": 28
+    },
+    {
+     "message": "The bells clash horribly. Darts spit from the stone trees around you."
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "when": {
+    "interact": "vest"
+   },
+   "do": [
+    {
+     "message": "The door is not locked. It swings down into the floor with a breath of very old air."
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "when": {
+    "interact": "script"
+   },
+   "do": [
+    {
+     "message": "The door sinks into the floor. Cold air rises from somewhere far below."
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "when": {
+    "interact": "bell"
+   },
+   "repeat": true,
+   "do": [
+    {
+     "message": "The bronze grate will not move. Something in this garden must raise it."
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "when": {
+    "interact": "vault"
+   },
+   "repeat": true,
+   "do": [
+    {
+     "message": "The door has no handle and no keyhole. It does not move."
+    }
+   ]
+  }
+ ]
 }

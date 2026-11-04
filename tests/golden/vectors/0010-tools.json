@@ -1,6 +1,6 @@
 {
  "name": "0010-tools",
- "core": "m0.5",
+ "core": "m0.6",
  "seed": 10,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAFAQEABgECAAMBAQMBAQEAAQEBBgEFAQECAwIABQEBAAYBAgAFAQECBgECAAUBAQAGAQIAAwEBBAEBAQABAQEEAQEBBwEBAQgCAAUBAQAGAQ8A\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,5,7]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[7,1,6,7]],\"ceil\":3600,\"checkpoint\":{\"cell\":[7,4],\"yaw\":3072}}],\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[6,4],\"style\":\"stone\",\"opens\":\"interact\"},{\"id\":\"f1\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[3,3]},{\"id\":\"r1\",\"type\":\"item\",\"kind\":\"rubble\",\"cell\":[2,6]},{\"id\":\"t1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[1,1],\"value\":100},{\"id\":\"t2\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[12,4],\"value\":250},{\"id\":\"b1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[8,2],\"value\":7},{\"id\":\"e1\",\"type\":\"eyes\",\"zone\":\"g\",\"wake\":18},{\"id\":\"v1\",\"type\":\"vent\",\"cells\":[[10,6]],\"period\":90,\"phase\":0,\"warn\":20,\"fire\":30},{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[12,2]}]}",
@@ -399,13 +399,13 @@
  "ticks": 529,
  "hashEvery": 300,
  "hashes": {
-  "0": "1eee53c90977feed561a8ca9d3e57131",
-  "300": "30a1c4690d2552f3c5bce08efe46935c"
+  "0": "a49b1f4387ef6e6a42f12bae174a942f",
+  "300": "9531fbd121a8c6b5a6165cc03aa5ce91"
  },
- "final": "77beca5b2b31182963a5c8dcae297d59",
+ "final": "3b1f8b25862ffa10c6b2bafa0e21bf94",
  "finalState": {
   "v": 1,
-  "core": "m0.5",
+  "core": "m0.6",
   "world": "ed07117ae227eea674dbae0f20b67882",
   "mode": "delve",
   "tick": 529,
@@ -424,7 +424,8 @@
    "rz": 0,
    "yaw": 0,
    "pitch": 0,
-   "hp": 100,
+   "hp": 3000,
+   "calm": 151,
    "oil": 2992065,
    "hooded": true,
    "flasks": 1,
@@ -454,6 +455,10 @@
   "eyes": [
    0
   ],
+  "zone": 1,
+  "sealed": [],
+  "bellSets": [],
+  "links": [],
   "checkpoints": [
    {
     "zone": 0,
@@ -461,7 +466,7 @@
     "z": 10800,
     "yaw": 0,
     "life": {
-     "hp": 100,
+     "hp": 3000,
      "oil": 3000000,
      "hooded": false,
      "flasks": 1,
@@ -470,7 +475,9 @@
       false
      ],
      "floor": [],
-     "taken": []
+     "taken": [],
+     "bellSets": [],
+     "links": []
     }
    },
    {
@@ -479,7 +486,7 @@
     "z": 10800,
     "yaw": 3072,
     "life": {
-     "hp": 100,
+     "hp": 3000,
      "oil": 2992140,
      "hooded": true,
      "flasks": 1,
@@ -488,7 +495,9 @@
       true
      ],
      "floor": [],
-     "taken": []
+     "taken": [],
+     "bellSets": [],
+     "links": []
     }
    }
   ],
