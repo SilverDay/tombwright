@@ -140,3 +140,10 @@ export const FOE_NAMES = { ...Object.fromEntries(Object.entries(DELVE_NAMES).fil
 export const FLASK_NAME = 'a flask of lamp oil';
 export const READ_LABEL = { plaque: 'Read the plaque', carving: 'Read the carving', scrawl: 'Read the scratches on the wall', stele: 'Read the stele', book: 'Read the book', look: 'Look closer' };
 export const FACE_NAME = { weep: 'weeping', laugh: 'laughing', sleep: 'sleeping', blank: 'blank' };
+
+/** What the player calls an item: the official tomb's text table, else the tomb's own `name` (core m0.16), else `fallback`. */
+export function itemName(T, it, fallback) {
+  const t = T.text.items?.[it?.id]?.name;
+  if (typeof t === 'string') return t;
+  return typeof it?.name === 'string' ? it.name : fallback;
+}

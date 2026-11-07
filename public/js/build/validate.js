@@ -21,6 +21,7 @@ const HINTS = {
   'cell already taken': 'Two things share one cell.',
   'slab not on a plate': 'A slab needs a pressure plate under it.',
   'vent cell': 'A fire vent cell is not a vent cell.',
+  'vent cell without a vent': 'Fire-vent cells need a vent: use the Fire vent tool on them.',
   'entity cell': 'An entity has a bad cell.',
   'entity cell outside grid': 'An entity lies outside the grid.',
   'dressing wall cell': 'A torch, mark or inscription is not on a room or corridor cell.',
@@ -43,4 +44,10 @@ function warn(doc, warnings) {
   const s = g.start?.cell;
   if (s && isFloor(cellAt(doc, s[0], s[1])) && zoneIndexAt(doc, s[0], s[1]) < 0) warnings.push('The start lies outside every chamber.');
   if ((g.zones ?? []).length === 0) warnings.push('There are no chambers yet.');
+  // Things that only work once a link wires them (the wiring view comes in a later step of the builder).
+  const effects = (g.links ?? []).flatMap((l) => (Array.isArray(l.do) ? l.do : []).concat(Array.isArray(l.undo) ? l.undo : []));
+  for (const e of g.entities ?? []) {
+    if (e.type === 'door' && e.opens === 'trigger' && !effects.some((x) => x.openDoor === e.id)) warnings.push(`Door “${e.id}” opens on a trigger, but no link opens it yet.`);
+    if (e.type === 'item' && e.hidden === true && !effects.some((x) => x.reveal === e.id)) warnings.push(`Item “${e.id}” is hidden, but no link reveals it yet.`);
+  }
 }

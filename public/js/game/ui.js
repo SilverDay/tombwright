@@ -4,7 +4,7 @@
 // Text goes in with textContent; nodes are built with createElement (spec §11).
 import * as Sim from '../sim/sim.js';
 import { AUD, audioInit, sfx } from './audio.js';
-import { DEATHS, EPITAPHS, FLASK_NAME, cap } from './text.js';
+import { DEATHS, EPITAPHS, FLASK_NAME, cap, itemName } from './text.js';
 
 const $ = (id) => document.getElementById(id);
 const S = 2400, CELL = { WALL: 0, CORR: 2, PLATE: 3, HPIT: 4, VOID: 5, BRIDGE: 6, VENT: 7 };
@@ -50,8 +50,8 @@ export class UI {
         case 'hurt': sfx.hurt(); this.vig(true); setTimeout(() => { if (st.dead === null) this.vig(false); }, 260); break;
         case 'item': {
           const it = ents.find((e) => e.id === ev.id);
-          if (ev.kind === 'treasure') { sfx.gold(); if (it.cell || it.value) this.toast(cap(T.text.items?.[it.id]?.name ?? 'treasure'), `+${it.value} treasure`); if (it.id === 'heart') sfx.win(); }
-          else if (ev.kind === 'key') { sfx.pickup(); this.toast(cap(T.text.items?.[it.id]?.name ?? 'a key')); }
+          if (ev.kind === 'treasure') { sfx.gold(); if (it.cell || it.value) this.toast(cap(itemName(T, it, 'treasure')), `+${it.value} treasure`); if (it.id === 'heart') sfx.win(); }
+          else if (ev.kind === 'key') { sfx.pickup(); this.toast(cap(itemName(T, it, 'a key'))); }
           else sfx.pickup();
           break;
         }
@@ -142,7 +142,7 @@ export class UI {
     const rating = d === 0 ? 'Not one death. The tomb will tell stories about you.' : d <= 3 ? 'Light on your feet, and only a little dead.' : d <= 10 ? 'Stubborn. The tomb tried, and kept trying.' : 'The tomb’s most faithful visitor.';
     setTimeout(() => {
       $('winLede').textContent = rating;
-      const names = st.taken.map((n) => ents[n - 1]).filter((e) => e.kind === 'treasure').map((e) => g.T.text.items?.[e.id]?.name ?? e.id);
+      const names = st.taken.map((n) => ents[n - 1]).filter((e) => e.kind === 'treasure').map((e) => itemName(g.T, e, e.id));
       this.summary($('winSum'), [['Treasure', `${this.treasure()} of ${this.treasureTotal}`], ['Carried out', names.join(', ') || 'nothing'], ['Deaths', d], ['Time', fmtTime(st.tick)]]);
       $('win').hidden = false; $('winNew').focus({ preventScroll: true }); fade.classList.remove('on'); setTimeout(() => fade.classList.remove('day'), 600);
     }, this.reduced ? 200 : 1400);

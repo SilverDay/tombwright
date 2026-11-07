@@ -5,6 +5,7 @@ import { loadSineTable } from '../sim/sine.js';
 import { loadBestiary } from '../sim/bestiary.js';
 import { CELL, MAX_GDF_BYTES } from '../sim/world.js';
 import * as M from './model.js';
+import * as E from './entities.js';
 import { validate } from './validate.js';
 
 const $ = (id) => document.getElementById(id);
@@ -17,12 +18,12 @@ const CELL_TOOLS = [
   { code: CELL.ALCOVE, label: 'Alcove trap', color: '#6a3f80' },
 ];
 const PLACE_TOOLS = [
-  { id: 'zone', label: 'Chamber (drag)' }, { id: 'checkpoint', label: 'Checkpoint' }, { id: 'start', label: 'Start' }, { id: 'exit', label: 'Exit' },
+  { id: 'select', label: 'Select / move' }, { id: 'zone', label: 'Chamber (drag)' }, { id: 'checkpoint', label: 'Checkpoint' }, { id: 'start', label: 'Start' }, { id: 'exit', label: 'Exit' },
 ];
 const ZONE_COLORS = ['#e0a458', '#7aa6d6', '#8fcf8f', '#d68fb8', '#c9c36a', '#8fd0cf', '#cf8f6a', '#a58fd6'];
 
 const S = {
-  doc: M.newTomb(), tool: { kind: 'cell', code: CELL.ROOM }, zoom: 20, sel: null, undo: [], redo: [],
+  doc: M.newTomb(), tool: { kind: 'cell', code: CELL.ROOM }, zoom: 20, sel: null, ent: null, undo: [], redo: [],
   drag: null, core: false, problems: { ok: true, error: null, warnings: [] }, saveTimer: 0,
 };
 
@@ -53,15 +54,7 @@ function redo() { if (!S.redo.length) return; S.undo.push(snap()); restore(S.red
 const cv = $('grid'), ctx = cv.getContext('2d');
 const zoneColor = (n) => ZONE_COLORS[n % ZONE_COLORS.length];
 
-/** Where an entity sits, in cells (floats), or null if it has no single place. */
-function entityAt(e) {
-  if (Array.isArray(e.cell)) return [e.cell[0] + 0.5, e.cell[1] + 0.5];
-  if (Array.isArray(e.pos)) return [e.pos[0] / 2400, e.pos[1] / 2400];
-  if (Array.isArray(e.wall)) return [e.wall[0][0] + 0.5, e.wall[0][1] + 0.5];
-  if (Array.isArray(e.cells) && Array.isArray(e.cells[0])) return [e.cells[0][0] + 0.5, e.cells[0][1] + 0.5];
-  if (Array.isArray(e.bells) && e.bells[0] && Array.isArray(e.bells[0].cell)) return [e.bells[0].cell[0] + 0.5, e.bells[0].cell[1] + 0.5];
-  return null;
-}
+const entityAt = E.entityPoint;
 
 function draw() {
   const { doc, zoom: z } = S, W = doc.w * z, H = doc.h * z, dpr = window.devicePixelRatio || 1;
@@ -85,14 +78,20 @@ function draw() {
     ctx.strokeStyle = zoneColor(n); ctx.fillStyle = zoneColor(n) + '22'; ctx.lineWidth = zn.id === S.sel ? 3 : 1.5;
     for (const [x, y, w, h] of zn.rects ?? []) { ctx.fillRect(x * z, y * z, w * z, h * z); ctx.strokeRect(x * z + 1, y * z + 1, w * z - 2, h * z - 2); }
     const r = zn.rects?.[0];
-    if (r && z >= 14) { ctx.fillStyle = zoneColor(n); ctx.font = '12px Spectral, serif'; ctx.textBaseline = 'top'; ctx.fillText(String(zn.name).slice(0, 24), r[0] * z + 4, r[1] * z + 3); }
+    if (r && z >= 14) { ctx.fillStyle = zoneColor(n); ctx.font = '12px Spectral, serif'; ctx.textBaseline = 'top'; ctx.fillText(String(zn.name ?? '').slice(0, 24), r[0] * z + 4, r[1] * z + 3); }
     if (zn.checkpoint) mark(zn.checkpoint.cell[0], zn.checkpoint.cell[1], '◆', zoneColor(n));
   });
   // what this slice does not edit, shown so the author knows it is there
   ctx.font = `${Math.max(9, z * 0.5)}px Spectral, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const e of doc.gdf.entities ?? []) {
+    const cells = Array.isArray(e.cells) ? e.cells : null;
+    if (cells) {                                                   // vents and marks cover several cells
+      for (const c of cells) if (Array.isArray(c)) { ctx.fillStyle = e.type === 'vent' ? 'rgba(242,168,78,.45)' : 'rgba(154,215,240,.4)'; ctx.fillRect(c[0] * z + 2, c[1] * z + 2, z - 4, z - 4); }
+    }
     const p = entityAt(e); if (!p) continue;
-    ctx.fillStyle = 'rgba(242,168,78,.85)'; ctx.beginPath(); ctx.arc(p[0] * z, p[1] * z, z * 0.22, 0, 6.3); ctx.fill();
+    const side = E.sideOf(e);
+    if (side) { const d = { n: [0, -1], e: [1, 0], s: [0, 1], w: [-1, 0] }[side]; ctx.strokeStyle = 'rgba(242,168,78,.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(p[0] * z + d[0] * z * .3 - d[1] * z * .25, p[1] * z + d[1] * z * .3 - d[0] * z * .25); ctx.lineTo(p[0] * z + d[0] * z * .5 - d[1] * z * .25, p[1] * z + d[1] * z * .5 - d[0] * z * .25); ctx.stroke(); }
+    ctx.fillStyle = e.id === S.ent ? '#ffffff' : 'rgba(242,168,78,.85)'; ctx.beginPath(); ctx.arc(p[0] * z, p[1] * z, z * (e.id === S.ent ? 0.3 : 0.22), 0, 6.3); ctx.fill();
     if (z >= 14) { ctx.fillStyle = '#0b0a0c'; ctx.fillText(String(e.type ?? '?')[0].toUpperCase(), p[0] * z, p[1] * z + 1); }
   }
   const st = doc.gdf.start?.cell, ex = doc.gdf.exit?.cell;
@@ -128,11 +127,20 @@ function buildTools() {
   };
   mk($('cellTools'), CELL_TOOLS, null, (it) => { S.tool = { kind: 'cell', code: it.code }; }, true);
   mk($('placeTools'), PLACE_TOOLS, null, (it) => { S.tool = { kind: it.id }; }, false);
+  const things = $('thingTools'); things.replaceChildren();
+  let group = null;
+  for (const p of E.PALETTE) {
+    if (p.group !== group) { group = p.group; const h = document.createElement('h3'); h.textContent = group; things.appendChild(h); }
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.k = 'thing:' + p.id; b.textContent = p.label;
+    b.addEventListener('click', () => { S.tool = { kind: 'thing', entry: p }; markTools(); });
+    things.appendChild(b);
+  }
   markTools();
 }
 function markTools() {
   for (const b of $('cellTools').children) b.setAttribute('aria-checked', String(S.tool.kind === 'cell' && String(S.tool.code) === b.dataset.k));
   for (const b of $('placeTools').children) b.setAttribute('aria-checked', String(S.tool.kind === b.dataset.k));
+  for (const b of $('thingTools').querySelectorAll('button')) b.setAttribute('aria-checked', String(S.tool.kind === 'thing' && 'thing:' + S.tool.entry.id === b.dataset.k));
 }
 
 function panels() {
@@ -148,6 +156,7 @@ function panels() {
   $('undoBtn').disabled = !S.undo.length; $('redoBtn').disabled = !S.redo.length;
   $('zoomLabel').textContent = S.zoom + ' px';
   zonesPanel();
+  inspectorPanel();
 }
 
 function zonesPanel() {
@@ -159,9 +168,9 @@ function zonesPanel() {
     li.addEventListener('click', () => { if (S.sel !== z.id) { S.sel = z.id; refresh(); } });
     const r1 = document.createElement('div'); r1.className = 'zrow';
     const chip = document.createElement('span'); chip.className = 'chip'; chip.style.background = zoneColor(n);
-    const name = document.createElement('input'); name.type = 'text'; name.maxLength = 60; name.value = z.name; name.setAttribute('aria-label', 'Chamber name');
+    const name = document.createElement('input'); name.type = 'text'; name.maxLength = 60; name.value = typeof z.name === 'string' ? z.name : ''; name.setAttribute('aria-label', 'Chamber name');
     name.addEventListener('change', () => edit(() => M.updateZone(S.doc, z.id, { name: name.value })));
-    const del = document.createElement('button'); del.type = 'button'; del.textContent = '✕'; del.setAttribute('aria-label', 'Remove chamber ' + z.name);
+    const del = document.createElement('button'); del.type = 'button'; del.textContent = '✕'; del.setAttribute('aria-label', 'Remove chamber ' + String(z.name ?? z.id));
     del.addEventListener('click', (ev) => { ev.stopPropagation(); edit(() => M.removeZone(S.doc, z.id)); });
     r1.append(chip, name, del);
     const r2 = document.createElement('div'); r2.className = 'zrow';
@@ -174,7 +183,13 @@ function zonesPanel() {
     }));
     cp.append(cpb, document.createTextNode(' checkpoint'));
     r2.append(document.createTextNode('Ceiling '), ceil, document.createTextNode(' m'), cp);
-    li.append(r1, r2); ul.appendChild(li);
+    const r3 = document.createElement('div'); r3.className = 'zrow';
+    const eyes = E.eyesOf(S.doc, z.id), eb = document.createElement('label'), ebox = document.createElement('input'); ebox.type = 'checkbox'; ebox.checked = Boolean(eyes);
+    const wake = document.createElement('input'); wake.type = 'number'; wake.min = '18'; wake.max = '1800'; wake.value = String(eyes?.wake ?? 30); wake.disabled = !eyes; wake.setAttribute('aria-label', 'Ticks until the eyes wake');
+    ebox.addEventListener('change', () => { let r; edit(() => { r = E.setEyes(S.doc, z.id, ebox.checked ? 30 : null); }); if (r !== true) toast(r); });
+    wake.addEventListener('change', () => { let r; edit(() => { r = E.setEyes(S.doc, z.id, Number(wake.value)); }); if (r !== true) toast(r); });
+    eb.append(ebox, document.createTextNode(' waking eyes, wake after ')); r3.append(eb, wake, document.createTextNode(' ticks'));
+    li.append(r1, r2, r3); ul.appendChild(li);
   });
   $('zoneHint').textContent = zs.length ? 'Move a checkpoint with the Checkpoint tool.' : 'Use the Chamber tool and drag over the floor.';
 }
@@ -188,6 +203,62 @@ function refresh() {
   if (S.sel && !(S.doc.gdf.zones ?? []).some((z) => z.id === S.sel)) S.sel = null;
   panels(); draw();
   clearTimeout(S.saveTimer); S.saveTimer = setTimeout(() => store(STORE, snap()), 400);
+}
+
+// ------------------------------------------------------------------ the inspector (select a thing to edit it)
+const selected = () => (S.ent ? E.byId(S.doc, S.ent) : undefined);
+function applyField(e, k, v) { let r; edit(() => { r = E.setField(S.doc, e, k, v); }); if (r !== true) toast(r); }
+const labelOf = (id) => PALETTE_LABEL.get(id);
+const PALETTE_LABEL = new Map([['door', 'Door'], ['slab', 'Falling slab'], ['vent', 'Fire vent'], ['alcove', 'Alcove trap'], ['item', 'Item'], ['chest', 'Chest'], ['inscription', 'Inscription'], ['torch', 'Torch'], ['marks', "Masons' marks"], ['prop', 'Prop'], ['decor', 'Decor']]);
+
+function inspectorPanel() {
+  const host = $('inspector'), e = selected();
+  if (host.contains(document.activeElement) && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && e) return;   // don't rebuild under the caret
+  host.replaceChildren();
+  if (S.ent && !e) S.ent = null;
+  if (!e) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'Nothing selected. Use Select / move, then click a placed thing; or pick something in the palette and click the plan.'; host.appendChild(p); return; }
+  const head = document.createElement('p'); head.textContent = `${labelOf(e.type) ?? e.type} “${e.id}”`;
+  const del = document.createElement('button'); del.type = 'button'; del.textContent = 'Remove'; del.setAttribute('aria-label', `Remove ${e.id}`);
+  del.addEventListener('click', () => { edit(() => E.removeEntity(S.doc, e.id)); S.ent = null; refresh(); });
+  host.append(head, del);
+  for (const f of E.FIELDS[e.type] ?? []) {
+    if (f.show && !f.show(e)) continue;
+    const row = document.createElement('label'); row.className = 'frow'; row.append(document.createTextNode(f.label + ' '));
+    const cur = E.getField(e, f.k);
+    let ctl;
+    if (f.t === 'select' || f.t === 'ref') {
+      ctl = document.createElement('select');
+      const opts = f.t === 'select' ? f.o.map((o) => [o, o]) : f.refs(S.doc).map((x) => [x.id, x.id]);
+      if (f.t === 'ref' && f.none) opts.unshift(['', f.none]);
+      for (const [val, text] of opts) { const o = document.createElement('option'); o.value = val; o.textContent = text; ctl.appendChild(o); }
+      ctl.value = cur ?? '';
+      ctl.addEventListener('change', () => applyField(e, f.k, ctl.value));
+    } else if (f.t === 'int') {
+      ctl = document.createElement('input'); ctl.type = 'number'; ctl.min = String(f.min); ctl.max = String(f.max); ctl.value = String(cur ?? '');
+      ctl.addEventListener('change', () => applyField(e, f.k, ctl.value === '' ? NaN : Number(ctl.value)));
+    } else if (f.t === 'text') {
+      ctl = document.createElement('input'); ctl.type = 'text'; ctl.maxLength = f.max; ctl.value = cur ?? '';
+      ctl.addEventListener('change', () => applyField(e, f.k, ctl.value));
+    } else if (f.t === 'bool') {
+      ctl = document.createElement('input'); ctl.type = 'checkbox'; ctl.checked = Boolean(cur);
+      ctl.addEventListener('change', () => applyField(e, f.k, ctl.checked));
+    } else if (f.t === 'pages') {
+      const box = document.createElement('div'); box.className = 'pages';
+      const pages = Array.isArray(cur) ? cur : [];
+      pages.forEach((txt, n) => {
+        const ta = document.createElement('textarea'); ta.rows = 4; ta.value = txt; ta.setAttribute('aria-label', 'Page ' + (n + 1));
+        ta.addEventListener('change', () => applyField(e, 'pages', pages.map((x, m) => (m === n ? ta.value : x))));
+        const rm = document.createElement('button'); rm.type = 'button'; rm.textContent = 'Remove page ' + (n + 1);
+        rm.addEventListener('click', () => applyField(e, 'pages', pages.filter((_, m) => m !== n)));
+        box.append(ta, rm);
+      });
+      const add = document.createElement('button'); add.type = 'button'; add.textContent = 'Add a page';
+      add.addEventListener('click', () => applyField(e, 'pages', [...pages, '…']));
+      box.appendChild(add); ctl = box;
+    }
+    row.appendChild(ctl); host.appendChild(row);
+  }
+  if (Array.isArray(e.cells)) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = `${e.cells.length} cell${e.cells.length === 1 ? '' : 's'}.`; host.appendChild(p); }
 }
 
 /** Make a freshly read document the current one; if it is malformed in a way that breaks drawing or the panels, keep the old one. */
@@ -209,6 +280,12 @@ cv.addEventListener('pointerdown', (ev) => {
   const [i, j] = cellOf(ev);
   cv.setPointerCapture(ev.pointerId);
   S.drag = { i0: i, j0: j, i1: i, j1: j, before: snap(), rect: dragsRect() };
+  if (S.tool.kind === 'select') {                          // pick the next thing in this cell after the one already selected
+    const here = E.entitiesAt(S.doc, i, j), at = here.findIndex((x) => x.id === S.ent);
+    S.ent = (here[(at + 1) % here.length] ?? null)?.id ?? null;
+    S.drag.moving = S.ent;
+    refresh();
+  }
   if (S.tool.kind === 'cell' && !S.drag.rect) { M.paint(S.doc, i, j, S.tool.code); draw(); }
 });
 cv.addEventListener('pointermove', (ev) => {
@@ -225,6 +302,13 @@ cv.addEventListener('pointerup', (ev) => {
   const k = S.tool.kind;
   if (k === 'cell' && d.rect) M.paintRect(S.doc, d.i0, d.j0, d.i1, d.j1, S.tool.code);
   else if (k === 'zone') { const z = M.addZone(S.doc, d.i0, d.j0, d.i1, d.j1); if (z) S.sel = z.id; else toast('A chamber needs free space inside the walls, not touching another chamber (at most 16).'); }
+  else if (k === 'select') {
+    if (d.moving && (i !== d.i0 || j !== d.j0)) { const e = E.byId(S.doc, d.moving), r = e ? E.move(S.doc, e, i, j) : 'Gone.'; if (r !== true) toast(r); }
+  }
+  else if (k === 'thing') {
+    const r = E.place(S.doc, S.tool.entry, i, j);
+    if (typeof r === 'string') toast(r); else { S.ent = r.id; }
+  }
   else if (k === 'start') { if (!M.setStart(S.doc, i, j)) toast('The start goes on a room or corridor cell.'); }
   else if (k === 'exit') { if (!M.setExit(S.doc, i, j)) toast('The exit goes on a room or corridor cell.'); }
   else if (k === 'checkpoint') {
@@ -259,13 +343,13 @@ $('file').addEventListener('change', async () => {
   try {
     const doc = M.fromBytes(new Uint8Array(await f.arrayBuffer())), before = snap();
     if (!adopt(doc)) throw new Error('its chambers or things are malformed');
-    pushUndo(before); S.sel = null; refresh(); toast('Opened ' + (doc.gdf.meta?.title ?? f.name));
+    pushUndo(before); S.sel = null; S.ent = null; refresh(); toast('Opened ' + (doc.gdf.meta?.title ?? f.name));
   } catch (e) { toast('That file is not a tomb this builder can read: ' + (e instanceof Error ? e.message : 'error')); }
 });
 $('newBtn').addEventListener('click', () => $('newDlg').showModal());
 $('newDlg').addEventListener('close', () => {
   if ($('newDlg').returnValue !== 'ok') return;
-  try { const doc = M.newTomb(Number($('newW').value), Number($('newH').value)); const before = snap(); S.doc = doc; pushUndo(before); S.sel = null; refresh(); }
+  try { const doc = M.newTomb(Number($('newW').value), Number($('newH').value)); const before = snap(); S.doc = doc; pushUndo(before); S.sel = null; S.ent = null; refresh(); }
   catch { toast('The size must be between 6 and 64 cells each way.'); }
 });
 $('undoBtn').addEventListener('click', undo);
@@ -300,7 +384,7 @@ async function boot() {
   } catch (e) { toast('The rules could not be loaded, so the tomb cannot be checked. Reload the page.'); console.error(e); }
   refresh();
   if (window.__twTest === true) window.__twBuild = {
-    M, get doc() { return S.doc; }, get problems() { return S.problems; }, get text() { return snap(); },
+    M, E, get doc() { return S.doc; }, get problems() { return S.problems; }, get text() { return snap(); },
     use(text) { return adopt(M.fromText(text)); },
   };
 }

@@ -102,3 +102,67 @@ test('playtest without a tomb says so instead of crashing', async ({ page }) => 
   await page.goto(BASE + '/play/test');
   await expect(page.locator('#err')).toContainText('could not be loaded');
 });
+
+test('builder: place things, name the loot, then play them', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.route(/^https?:\/\/(?!127\.0\.0\.1:8765)/, (r) => r.abort());
+  await page.addInitScript(() => { window.__twTest = true; window.__twNoRender = true; });
+  await page.goto(BASE + '/build');
+  await page.waitForFunction(() => !!window.__twBuild);
+  const Z = 20, box = await page.locator('#grid').boundingBox();
+  const click = async (i, j) => { const x = box.x + (i + 0.5) * Z, y = box.y + (j + 0.5) * Z; await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.up(); };
+  const ents = () => page.evaluate(() => window.__twBuild.doc.gdf.entities);
+
+  // Palette: a door in the way (opens on interact), a treasure with a name, an inscription on the north wall.
+  await page.getByRole('radio', { name: 'Door', exact: true }).click(); await click(6, 6);
+  await page.getByRole('radio', { name: 'Treasure' }).click(); await click(4, 5);
+  await page.getByRole('radio', { name: 'Inscription' }).click(); await click(9, 1);
+  await page.getByRole('radio', { name: 'Torch' }).click(); await click(12, 1);
+  await page.getByRole('radio', { name: 'Chest' }).click(); await click(3, 1);
+  expect((await ents()).map((e) => e.type)).toEqual(['door', 'item', 'inscription', 'torch', 'chest']);
+  // Refusals say why.
+  await page.getByRole('radio', { name: 'Chest' }).click(); await click(8, 6);
+  await expect(page.locator('#toast')).toContainText('against a wall');
+
+  // The inspector edits the selected thing (the chest placed last is selected; pick the treasure by Select).
+  await page.getByRole('radio', { name: 'Select / move' }).click(); await click(4, 5);
+  await expect(page.locator('#inspector')).toContainText('Item');
+  await page.getByLabel('Name (optional)').fill('a silver lamp-chain'); await page.getByLabel('Name (optional)').press('Enter');
+  await page.getByLabel('Value').fill('75'); await page.getByLabel('Value').press('Enter');
+  expect(await page.evaluate(() => { const t = window.__twBuild.doc.gdf.entities[1]; return [t.name, t.value]; })).toEqual(['a silver lamp-chain', 75]);
+  // Move the torch by dragging it, and remove the chest.
+  { const a = [12, 1], b = [14, 1]; await page.mouse.move(box.x + (a[0] + .5) * Z, box.y + (a[1] + .5) * Z); await page.mouse.down(); await page.mouse.move(box.x + (b[0] + .5) * Z, box.y + (b[1] + .5) * Z, { steps: 4 }); await page.mouse.up(); }
+  expect(await page.evaluate(() => window.__twBuild.doc.gdf.entities[3].cell)).toEqual([14, 1]);
+  await click(3, 1); await page.getByRole('button', { name: 'Remove chest1' }).click();
+  expect((await ents()).map((e) => e.type)).toEqual(['door', 'item', 'inscription', 'torch']);
+  await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
+  // Undo brings the chest back.
+  await page.locator('#undoBtn').click();
+  expect((await ents()).length).toBe(5);
+  await page.locator('#undoBtn').click();   // the torch move
+  await page.locator('#redoBtn').click();
+  await page.locator('#redoBtn').click();
+  expect((await ents()).length).toBe(4);
+
+  // Play it: the treasure has its own name, the door opens, the inscription reads.
+  await page.locator('#playBtn').click();
+  await page.waitForURL(BASE + '/play/test');
+  await page.waitForFunction(() => !!window.__tw);
+  await page.evaluate(readFileSync(ROOT + 'tests/e2e/lib/tombwright-driver.js', 'utf8'));
+  await page.evaluate(() => window.__tw.start(3));
+  const S = 2.4, cx = (i) => (i + 0.5) * S;
+  const walk = (x, z) => page.evaluate(([a, b]) => window.__wt.walkTo(a, b, { tol: 0.4 }), [x, z]);
+  expect(await walk(cx(4) - 1.0, cx(5))).toBe('arrived');
+  const label = await page.evaluate(([x, z]) => window.__wt.use(x, z), [cx(4), cx(5)]);
+  expect(label).toContain('a silver lamp-chain');
+  expect(await page.evaluate(() => window.__wt.st().taken)).toEqual([2]);
+  expect(await walk(cx(6) - 1.3, cx(6))).toBe('arrived');
+  expect(await page.evaluate(([x, z]) => window.__wt.use(x, z), [cx(6), cx(6)])).toMatch(/door/i);
+  await page.evaluate(() => window.__wt.tick(40));
+  expect(await page.evaluate(() => window.__wt.st().doors.map((d) => d.open))).toEqual([true]);
+  expect(await walk(cx(9), cx(1))).toBe('arrived');
+  expect(await page.evaluate(() => window.__wt.prompt())).toContain('Read');
+  expect(errors).toEqual([]);
+});

@@ -27,12 +27,15 @@ declare(strict_types=1);
     <h2>Place</h2>
     <div id="placeTools" role="radiogroup" aria-label="Placement tools"></div>
     <label class="check"><input id="rectMode" type="checkbox"> Fill rectangles</label>
+    <h2>Things</h2>
+    <div id="thingTools" role="radiogroup" aria-label="Things to place"></div>
     <h2>View</h2>
     <div class="row"><button id="zoomOut" type="button" aria-label="Zoom out">−</button><span id="zoomLabel"></span><button id="zoomIn" type="button" aria-label="Zoom in">+</button></div>
   </nav>
   <main class="stage" id="stage"><canvas id="grid" aria-label="Tomb plan" tabindex="0"></canvas></main>
   <aside class="side">
     <section><h2>Checks</h2><p id="status" role="status" aria-live="polite"></p><ul id="problems"></ul></section>
+    <section><h2>Selected</h2><div id="inspector"></div></section>
     <section><h2>Chambers</h2><ul id="zones" class="zones"></ul><p class="hint" id="zoneHint"></p></section>
     <section><h2>This tomb</h2><p id="summary"></p></section>
     <section class="note"><p>Saved in this browser as you work. <b>Export</b> keeps a copy as a file; <b>Open…</b> loads one. Playtest runs the tomb in practice mode.</p></section>

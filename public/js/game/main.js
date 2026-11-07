@@ -9,7 +9,7 @@ import { b64decode, rleDecode } from '../sim/world.js';
 import { audioInit } from './audio.js';
 import { TombView, yawRad } from './render.js';
 import { UI } from './ui.js';
-import { SAY, DEATHS, TOMB_TEXT, FOE_NAMES, FLASK_NAME, READ_LABEL, FACE_NAME, cap } from './text.js';
+import { SAY, DEATHS, TOMB_TEXT, FOE_NAMES, FLASK_NAME, READ_LABEL, FACE_NAME, cap, itemName } from './text.js';
 import { DELVE_NAMES } from './delve-art.js';
 
 const $ = (id) => document.getElementById(id);
@@ -97,7 +97,7 @@ function buildInteractions(T) {
     if (!it.cell) continue;
     const [i, j] = it.cell, n = num(it);
     if (it.kind === 'rubble') { IA.push({ n, pt: [cx(i) - 300, cx(j) - 300], r: 1600, cond: (st) => st.player.pebbles < Sim.PEBBLE_MAX, label: () => 'Gather pebbles from the rubble' }); continue; }
-    const name = it.kind === 'flask' ? FLASK_NAME : T.text.items?.[it.id]?.name ?? 'it';
+    const name = it.kind === 'flask' ? FLASK_NAME : itemName(T, it, 'it');
     IA.push({ n, pt: [cx(i), cx(j)], r: 1700, pri: it.hidden ? 2 : 1, cond: (st) => !st.taken.includes(n) && !st.foes.some((f) => f.loot === n) && !st.loot.some((l) => l.n === n) && (!it.hidden || st.revealed.includes(n)), label: () => `Take ${name}` });
   }
   // R-MIMIC-1: a disguised xeroc offers what it pretends to be.
@@ -207,7 +207,7 @@ class Game {
 
   lootName(l) {
     const T = this.T;
-    if (l.n > 0) { const it = T.gdf.entities[l.n - 1]; return T.text.items?.[it.id]?.name ?? 'the treasure'; }
+    if (l.n > 0) { const it = T.gdf.entities[l.n - 1]; return itemName(T, it, 'the treasure'); }
     return l.f > 0 ? FLASK_NAME : `${l.p} pebbles`;
   }
 
@@ -306,7 +306,7 @@ class Game {
       case 'item': {
         const it = T.gdf.entities.find((e) => e.id === ev.id);
         if (ev.kind === 'rubble') this.say(SAY.rubble);
-        else if (it.cell) this.say(SAY.take(ev.kind === 'flask' ? FLASK_NAME : T.text.items?.[it.id]?.name ?? 'it'));
+        else if (it.cell) this.say(SAY.take(ev.kind === 'flask' ? FLASK_NAME : itemName(T, it, 'it')));
         break;
       }
       case 'bell': {
@@ -334,7 +334,7 @@ class Game {
       case 'free': this.say(SAY.free); break;
       case 'steal': {                                   // R-THIEF-1, R-THIEF-2
         const f = T.gdf.entities.find((e) => e.id === ev.id), who = DELVE_NAMES[f?.kind] ?? 'thief';
-        if (ev.item) { const it = T.gdf.entities.find((e) => e.id === ev.item); this.say(SAY.stealTreasure(who, T.text.items?.[it?.id]?.name ?? 'your treasure')); }
+        if (ev.item) { const it = T.gdf.entities.find((e) => e.id === ev.item); this.say(SAY.stealTreasure(who, itemName(T, it, 'your treasure'))); }
         else if (ev.flasks > 0) this.say(SAY.stealFlask(who)); else this.say(SAY.stealPebbles(who, ev.pebbles));
         break;
       }
@@ -399,7 +399,7 @@ class Game {
     const b = document.createElement('b'); b.textContent = zn; status.append(b, '\n');
     const inv = [['Pebbles', P.pebbles], ['Flasks', P.flasks]];
     inv.forEach(([k, v], n) => { const i = document.createElement('i'); i.textContent = k; status.append(n ? '  ' : '', i, ` ${v}`); });
-    for (const num of st.taken) { const it = ents[num - 1]; if (it.kind === 'key') { const u = document.createElement('u'); u.textContent = T.text.items?.[it.id]?.hud ?? 'A key'; status.append('  ', u); } }
+    for (const num of st.taken) { const it = ents[num - 1]; if (it.kind === 'key') { const u = document.createElement('u'); u.textContent = T.text.items?.[it.id]?.hud ?? (typeof it.name === 'string' ? cap(it.name) : 'A key'); status.append('  ', u); } }
     // R-POW-*: what the foes' touch has done to you.
     const fx = [[P.frozen > 0, 'Frozen'], [P.held >= 0, 'Seized'], [P.confused > 0, 'Confused'], [P.poison > 0, 'Poisoned']].filter(([on]) => on).map(([, n]) => n);
     status.append(`\nDeaths ${st.deaths}`);

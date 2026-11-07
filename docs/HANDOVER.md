@@ -1,6 +1,6 @@
 # Handover: Tombwright (updated 2026-11-06 by Copilot, for the next AI)
 
-**Start here:** everything up to core m0.15 (step 7d) is on `main` and deployed; M1 is complete.
+**Start here:** M1 is complete. Core m0.15 (step 7d) is deployed; **m0.16** (item names) and builder slice 2 are on `main` and wait for the owner's deploy.
 Read `CLAUDE.md` first: its ground rules are binding (never guess, ask the owner, log every answer in
 `docs/decisions.md`, keep the JS and PHP sim cores identical, use the `sim-change` skill for any rule change).
 This file says where the work stands and what to do next.
@@ -48,9 +48,18 @@ Don't run the fuzzer beside the e2e walkthroughs: the walkthrough then hits its 
   **Slice 1 is done** (the grid, chambers, start/exit, checkpoints, import/export/autosave, live validation by
   `Sim.load`, `/play/test`): code in `public/js/build/` (`model.js` is DOM-free and unit-tested, `validate.js` wraps the
   core's loader, `main.js` is the UI), `templates/build.php`, `tests/e2e/build.spec.mjs`. Everything it doesn't edit
-  (entities, links, dressing) passes through untouched; a test proves Gloamhollow round-trips. **Next: slice 2** (doors,
-  hazards, items, text). The playtest page still has Gloamhollow's boss-frame text and an empty item/bell text table
-  for `test` tombs; slice 3 (foes, bosses) must give tombs their own names for these.
+  (entities, links, dressing) passes through untouched; a test proves Gloamhollow round-trips. **Slice 2 is done** (decisions #86-#87): core **m0.16** adds an optional display-only `name` on treasure and key
+  items (R-ITEM-1; the client's `itemName` in `game/text.js` shows it). The builder now places doors, slabs, vents,
+  alcoves, chests, items, inscriptions, torches, masons' marks, props and decor, and waking eyes per chamber. The
+  design is `public/js/build/entities.js`: one `PALETTE` + `FIELDS` table (UI metadata only; `Sim.load` is still the
+  validator), with `place`, `move`, `setField` (which adds and drops the keys that go with an option, since the loader
+  wants exact key sets), unit-tested in `tests/js/build-entities.test.mjs`; the inspector, Select / move tool and
+  the palette are in `main.js`. A vent cell without a vent entity is a load error (the loader says so; place the
+  Fire vent tool on it). Doors that open on a trigger and hidden items warn until a link exists (slice 4).
+  Entities can't be renamed (links will refer to ids). **Next: slice 3** (braziers, bells, mirrors, the lamp hook,
+  the crystal, foes, the boss, the threat budget). The playtest page still has Gloamhollow's boss-frame text for
+  `test` tombs (it picks the Warden's or the Candle-Eater's name by kind); slice 3 should give bosses and bells their
+  own names the way #86 did for items (an owner question first).
 
 ### What 7d left behind (worth knowing)
 
