@@ -324,3 +324,16 @@ test('example 4, two of three: AT LEAST 2(hasItem(silverKey), hasItem(ironKey), 
   g.st.player.x = 6 * 2400 + 1200; g.st.player.z = 1 * 2400 + 1200; g.run(2); g.use('L3'); g.run(30);
   assert.equal(g.st.revealed.includes(gem), false, 'the lever alone is not enough');
 });
+
+test('renames follow the exit and survive hand-edited junk', () => {
+  const doc = M.newTomb();
+  const gem = put(doc, 'treasure', 4, 4, {}, 'gem');
+  M.setExitRequires(doc, 'gem');
+  doc.gdf.entities.push(null, 7);
+  doc.gdf.links = [null, { id: 1, when: { sequence: [{ interact: 'gem' }, { interact: 'gem' }], strict: true, onWrong: [null, { damage: 3 }] }, do: [{ message: 'x' }] }];
+  must(renameEntity(doc, 'gem', 'jewel'), 'rename');
+  assert.equal(doc.gdf.exit.requires, 'jewel');
+  assert.equal(doc.gdf.links[1].when.sequence[0].interact, 'jewel');
+  must(renameLink(doc, 1, 2), 'renumber');
+  assert.equal(gem.id, 'jewel');
+});

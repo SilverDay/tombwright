@@ -44,7 +44,7 @@ function restore(text) { S.doc = M.fromText(text); }
 /** Run an edit; if the document changed, remember how it was for Undo. */
 function edit(fn) {
   const before = snap();
-  fn();
+  try { fn(); } catch (e) { console.error(e); restore(before); toast('That change could not be made to this tomb.'); refresh(); return; }   // never leave a half-made change
   if (snap() !== before) pushUndo(before);
   refresh();
 }
