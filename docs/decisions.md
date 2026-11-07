@@ -95,6 +95,9 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 88 | 2026-11-07 | **A way out of the tomb:** every card of the game page (title, pause menu, death, win) has a link out: "Leave the tomb" to the main page for an official tomb, "Back to the builder" (which keeps the tomb) for a playtest. | Owner |
 | 89 | 2026-11-07 | **No link to the builder from the landing page** until access control is in place; `/build` is reachable by its address only. | Owner |
 | 90 | 2026-11-07 | **Bell names:** a builder tomb's bells are named by their looks in the client ("the great bright bell", size × patina); no core key. Bosses are named by their kind. | Implementation (no owner question: client text only) |
+| 91 | 2026-11-07 | **Wiring view V1 is a structured editor:** each link a card with its `when` as a nested tree built from dropdowns, then Do / Undo effect lists and options. The node-graph canvas (spec M2 wording) moves to V2. | Owner |
+| 92 | 2026-11-07 | **Buttons, levers, `pebbleHit` and the effects that go with them** (spec §4.3) are added to both cores as their own step (4b) after slice 4, before slice 5 (the exit test: Gloamhollow rebuilt and the four §4.3.6 examples). Slice 4 wires what the core supports today. | Owner |
+| 93 | 2026-11-07 | **Live wiring during a playtest:** a Wiring panel inside the playtest page (`/play/test`) shows each link's state read from the sim state (when true, active, spent, pending delay, when each event last fired); the editor stays on `/build`. | Owner |
 
 ## Still open (spec §17)
 

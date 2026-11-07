@@ -28,8 +28,10 @@ declare(strict_types=1);
     <button class="chip" id="mapBtn" type="button" tabindex="-1">Map</button>
     <button class="chip" id="notesBtn" type="button" tabindex="-1">Notes</button>
     <button class="chip" id="menuBtn" type="button" tabindex="-1">Menu</button>
+    <button class="chip" id="wireBtn" type="button" tabindex="-1" hidden>Wiring (L)</button>
   </div>
 </div>
+<aside class="hud" id="wirePanel" aria-label="Wiring of this tomb" hidden></aside>
 <div class="hud" id="pframe" hidden>
   <div class="pf-head"><span>Health</span><span id="pfTre"></span></div>
   <div class="bar"><i id="hpBar"></i><span id="hpTxt"></span></div>

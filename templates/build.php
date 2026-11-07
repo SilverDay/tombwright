@@ -11,6 +11,7 @@ declare(strict_types=1);
 <header class="bar">
   <a class="brand" href="/">Tombwright</a><span class="preview">Builder · preview</span>
   <label class="title">Title <input id="title" type="text" maxlength="60" autocomplete="off"></label>
+  <span class="views" role="tablist" aria-label="View"><button id="viewPlan" type="button" role="tab" aria-selected="true">Plan</button><button id="viewWiring" type="button" role="tab" aria-selected="false">Wiring</button></span>
   <span class="spacer"></span>
   <button id="newBtn" type="button">New</button>
   <button id="openBtn" type="button">Open…</button>
@@ -33,6 +34,7 @@ declare(strict_types=1);
     <h2>View</h2>
     <div class="row"><button id="zoomOut" type="button" aria-label="Zoom out">−</button><span id="zoomLabel"></span><button id="zoomIn" type="button" aria-label="Zoom in">+</button></div>
   </nav>
+  <main class="wiring" id="wiring" hidden aria-label="Wiring"></main>
   <main class="stage" id="stage"><canvas id="grid" aria-label="Tomb plan" tabindex="0"></canvas></main>
   <aside class="side">
     <section><h2>Checks</h2><p id="status" role="status" aria-live="polite"></p><ul id="problems"></ul></section>

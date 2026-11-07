@@ -180,3 +180,14 @@ details[open] summary{margin-bottom:10px}
 .cd{--cd:0}
 
 a.btn{display:inline-block;text-decoration:none}
+
+#wirePanel{position:fixed;top:56px;right:8px;width:min(24rem,92vw);max-height:calc(100vh - 80px);overflow:auto;background:rgba(16,14,16,.92);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;z-index:6;pointer-events:auto}
+#wirePanel h2{font-family:var(--f-term);font-weight:400;font-size:22px;margin:0 0 6px}
+#wirePanel .wl{border:1px solid var(--line);border-radius:4px;padding:5px 7px;margin:6px 0}
+#wirePanel .wl.on{border-color:var(--ember);background:rgba(242,168,78,.08)}
+#wirePanel .wl.done{opacity:.55}
+#wirePanel .wlhead{display:flex;gap:8px;justify-content:space-between}
+#wirePanel .wlbadge{color:var(--ember)}
+#wirePanel .wlsum{margin:2px 0 4px;color:var(--stone)}
+#wirePanel .wlterm{display:flex;gap:8px;justify-content:space-between;color:var(--stone)}
+#wirePanel .wlstate{color:var(--ghost);white-space:nowrap}

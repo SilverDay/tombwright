@@ -7,6 +7,7 @@ import { CELL, MAX_GDF_BYTES } from '../sim/world.js';
 import * as M from './model.js';
 import * as E from './entities.js';
 import { validate } from './validate.js';
+import { renderWiring } from './wiring.js';
 
 const $ = (id) => document.getElementById(id);
 const STORE = 'tw.build.v1', PLAYTEST = 'tw.playtest.v1';
@@ -23,7 +24,7 @@ const PLACE_TOOLS = [
 const ZONE_COLORS = ['#e0a458', '#7aa6d6', '#8fcf8f', '#d68fb8', '#c9c36a', '#8fd0cf', '#cf8f6a', '#a58fd6'];
 
 const S = {
-  doc: M.newTomb(), tool: { kind: 'cell', code: CELL.ROOM }, zoom: 20, sel: null, ent: null, undo: [], redo: [],
+  doc: M.newTomb(), tool: { kind: 'cell', code: CELL.ROOM }, zoom: 20, sel: null, ent: null, view: 'plan', undo: [], redo: [],
   drag: null, core: false, problems: { ok: true, error: null, warnings: [] }, saveTimer: 0,
 };
 
@@ -160,6 +161,7 @@ function panels() {
   $('zoomLabel').textContent = S.zoom + ' px';
   zonesPanel();
   inspectorPanel();
+  wiringPanel();
 }
 
 function zonesPanel() {
@@ -207,6 +209,22 @@ function refresh() {
   panels(); draw();
   clearTimeout(S.saveTimer); S.saveTimer = setTimeout(() => store(STORE, snap()), 400);
 }
+
+// ------------------------------------------------------------------ the wiring view
+function wiringPanel() {
+  document.querySelector('.work').dataset.view = S.view;
+  $('wiring').hidden = S.view !== 'wiring';
+  $('viewPlan').setAttribute('aria-selected', String(S.view === 'plan')); $('viewWiring').setAttribute('aria-selected', String(S.view === 'wiring'));
+  if (S.view !== 'wiring') return;
+  const host = $('wiring');
+  if (host.contains(document.activeElement) && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;   // don't redraw under the caret
+  const top = host.scrollTop;
+  try { renderWiring(host, S.doc, { edit, toast }); }
+  catch (e) { console.error(e); S.view = 'plan'; toast('The links of this tomb could not be drawn; showing the plan instead.'); document.querySelector('.work').dataset.view = 'plan'; host.hidden = true; host.replaceChildren(); }
+  host.scrollTop = top;
+}
+$('viewPlan').addEventListener('click', () => { S.view = 'plan'; refresh(); });
+$('viewWiring').addEventListener('click', () => { S.view = 'wiring'; refresh(); });
 
 // ------------------------------------------------------------------ the inspector (select a thing to edit it)
 const selected = () => (S.ent ? E.byId(S.doc, S.ent) : undefined);
@@ -413,6 +431,7 @@ async function boot() {
   if (window.__twTest === true) window.__twBuild = {
     M, E, get doc() { return S.doc; }, get problems() { return S.problems; }, get text() { return snap(); },
     use(text) { return adopt(M.fromText(text)); },
+    setView(v) { S.view = v; refresh(); },
   };
 }
 boot();

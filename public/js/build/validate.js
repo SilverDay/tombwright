@@ -27,7 +27,7 @@ const HINTS = {
   'dressing wall cell': 'A torch, mark or inscription is not on a room or corridor cell.',
   'dressing not on a wall': 'A torch, mark or inscription does not face a wall.',
 };
-export const explain = (msg) => (HINTS[msg] ? `${HINTS[msg]} (${msg})` : msg);
+export const explain = (msg) => (HINTS[msg] ? `${HINTS[msg]} (${msg})` : msg.startsWith('links: ') ? `Wiring: ${msg.slice(7)}. Check the link cards in the Wiring view.` : msg);
 
 /** @returns {{ok: boolean, error: string|null, warnings: string[]}} */
 export function validate(doc) {

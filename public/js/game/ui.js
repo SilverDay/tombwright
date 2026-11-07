@@ -362,7 +362,7 @@ export class UI {
         if (this.panel === 'read' && (e.code === 'ArrowRight' || e.code === 'ArrowLeft')) { this.readPage = clamp(this.readPage + (e.code === 'ArrowRight' ? 1 : -1), 0, this.readT.pages.length - 1); this.renderRead(); e.preventDefault(); }
         return;
       }
-      if (g.mode === 'play' && g.st?.dead === null && !e.repeat) { if (e.code === 'KeyM') { this.openMap(); e.preventDefault(); } else if (e.code === 'KeyN') { this.openNotes(); e.preventDefault(); } }
+      if (g.mode === 'play' && g.st?.dead === null && !e.repeat) { if (e.code === 'KeyM') { this.openMap(); e.preventDefault(); } else if (e.code === 'KeyN') { this.openNotes(); e.preventDefault(); } else if (e.code === 'KeyL' && g.toggleWire) { g.toggleWire(); e.preventDefault(); } }
     });
     document.addEventListener('pointerdown', () => audioInit(), { once: true });
     addEventListener('pagehide', () => this.save());

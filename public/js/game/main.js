@@ -9,6 +9,7 @@ import { b64decode, rleDecode } from '../sim/world.js';
 import { audioInit } from './audio.js';
 import { TombView, yawRad } from './render.js';
 import { UI } from './ui.js';
+import { WiringLive } from './wiring-live.js';
 import { SAY, DEATHS, TOMB_TEXT, FOE_NAMES, FLASK_NAME, READ_LABEL, FACE_NAME, cap, itemName, bellName } from './text.js';
 import { DELVE_NAMES } from './delve-art.js';
 
@@ -393,6 +394,7 @@ class Game {
   // ---------------------------------------------------------------- HUD (Gloamhollow hud / updatePrompt)
   hud() {
     const st = this.st; if (!st) return;
+    this.wire?.update(st);
     const P = st.player, T = this.T, ents = T.gdf.entities;
     const z = this.zoneAt(), zn = z >= 0 ? cap(this.zoneName(z)) : 'A narrow passage';
     const status = $('status'); status.replaceChildren();
@@ -556,7 +558,13 @@ async function boot() {
   game.bindInput();
   // A way out of every card: a playtest goes back to the builder (which keeps the tomb), an official tomb to the main page.
   for (const a of document.querySelectorAll('a.leave')) { a.href = name === 'test' ? '/build' : '/'; a.textContent = name === 'test' ? 'Back to the builder' : 'Leave the tomb'; }
-  if (name === 'test') {                                  // the builder's playtest: this tomb's own name, a fresh start every time
+  if (name === 'test') {                                  // the builder's playtest
+    // the live wiring panel (decision #93): a chip toggles it, the HUD refresh keeps it current
+    game.wire = new WiringLive(T, $('wirePanel'));
+    $('wireBtn').hidden = false;
+    game.toggleWire = () => { $('wirePanel').hidden = !$('wirePanel').hidden; game.wire.update(game.st); };      // the L key, or the chip
+    $('wireBtn').addEventListener('click', () => game.toggleWire());
+    // this tomb's own name, a fresh start every time
     game.ui.clearSave();
     const title = String(T.gdf.meta?.title ?? 'Test tomb');
     $('title').textContent = title; document.title = `${title} · Playtest · Tombwright`;

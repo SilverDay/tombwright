@@ -64,8 +64,23 @@ Don't run the fuzzer beside the e2e walkthroughs: the walkthrough then hits its 
   `bestiary: 1`. Bells are named in the client by size and patina. The game page now has a way out on every card
   (anchor `a.leave`: `/` for an official tomb, `/build` for a playtest). The landing page does **not** link to `/build`
   (owner, #89) until access control exists. Dormant foes and trigger doors warn until a link wires them.
-  **Next: slice 4, the wiring view** (links: triggers, gates ALL/ANY/AT LEAST/SEQUENCE/NOT, effects, "would fire now"
-  highlighting in a playtest; spec §4.3, §7.1), then slice 5 (rebuild Gloamhollow and the four §4.3.6 examples).
+  **Slice 4 is done** (decisions #91-#93): the **Wiring** tab of the builder (`public/js/build/wiring.js`, over the pure
+  `public/js/build/links.js`, tested in `tests/js/build-links.test.mjs`): each link a card with its `when` as a nested
+  tree (events ◆ and conditions ■ by colour; gates ALL / ANY / AT LEAST / SEQUENCE / NOT with their options), Do / Undo
+  lists, repeat and delay. `links.js` knows exactly the triggers and effects the core has today (R-LINK-2/3), refuses
+  shapes the core refuses (a sequence takes events only, a NOT a condition, 4 levels, 8 terms, 16 triggers) and its
+  slot map is tested against the core's memory layout. The playtest page has a live **Wiring** panel (chip or the `L`
+  key; `public/js/game/wiring-live.js`, display only): per link "true now / active / used up / effects in N s", and
+  when each event trigger last fired. The node-graph canvas is V2 (#91).
+  **Next: step 4b, buttons and levers in both cores** (decision #92), then **slice 5** (the exit test: rebuild
+  Gloamhollow in the editor, plus the four spec §4.3.6 examples). What 4b needs, from the spec and what the core lacks:
+  `button` entity (behaviour press/latch/toggle/timed, `pressedBy` hand/pebble/both, glyph, concealed, mounted on a
+  wall or pedestal) and `lever` (on/off, once/toggle); events `buttonPressed`, `pebbleHit`, `plateStepped`; conditions
+  `buttonDown`, `leverOn`; effects `grantItem`, `resetButton`, `setLever`; and the door `opens: trigger` already exists.
+  Example 1 needs pebbleHit, 2 needs leverOn, 3 buttons with glyphs and a strict SEQUENCE, 4 AT LEAST with leverOn and
+  hasItem. Follow the `sim-change` skill (rules doc, both cores, version bump, vectors, parity review), then give the
+  builder palette, the wiring view and the game client (renderer, prompts, sprites) the new pieces. Ask the owner about
+  anything the spec doesn't settle (e.g. glyph art, pebble hit radius).
 
 ### What 7d left behind (worth knowing)
 

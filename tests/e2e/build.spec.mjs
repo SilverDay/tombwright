@@ -241,3 +241,88 @@ test('an official tomb has a way out to the main page', async ({ page }) => {
   await a.click();
   await page.waitForURL(BASE + '/');
 });
+
+test('builder: wire a link, then watch it in the playtest', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.route(/^https?:\/\/(?!127\.0\.0\.1:8765)/, (r) => r.abort());
+  await page.addInitScript(() => { window.__twTest = true; window.__twNoRender = true; });
+  await page.goto(BASE + '/build');
+  await page.waitForFunction(() => !!window.__twBuild);
+  const Z = 20, box = await page.locator('#grid').boundingBox();
+  const click = async (i, j) => { const x = box.x + (i + 0.5) * Z, y = box.y + (j + 0.5) * Z; await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.up(); };
+  const radio = (n) => page.getByRole('radio', { name: n });
+
+  // A door that waits for a trigger, and a treasure to take. Without a link the door warns.
+  await radio('Door').click(); await click(6, 6);
+  await page.getByRole('radio', { name: 'Select / move' }).click(); await click(6, 6);
+  await page.getByLabel('Opens on').selectOption('trigger');
+  await expect(page.locator('#problems')).toContainText('no link opens it');
+  await radio('Treasure').click(); await click(4, 5);
+
+  // The wiring view: add a link, make it "when you take the treasure, open the door and say something".
+  await page.locator('#viewWiring').click();
+  await expect(page.locator('#wiring')).toBeVisible();
+  await page.getByRole('button', { name: 'Add a link' }).click();
+  const card = page.locator('article.link[data-link="1"]');
+  await expect(card).toBeVisible();
+  await card.locator('.term select').first().selectOption('itemTaken');
+  await expect(card.locator('.lsum')).toContainText('you take “gem1”');
+  await expect(card.locator('.term.event')).toHaveCount(1);
+  await card.getByRole('button', { name: 'Add an effect' }).first().click();
+  await card.locator('.leffects select').nth(2).selectOption('message');   // the second effect: its kind select
+  await card.locator('.leffects input.msg').fill('Stone grinds somewhere ahead.');
+  await card.locator('.leffects input.msg').press('Enter');
+  await expect(card.locator('.lsum')).toContainText('say “Stone grinds somewhere ahead.”');
+  await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
+  await expect(page.locator('#problems')).not.toContainText('no link opens it');
+
+  // Gates: wrap it in ALL (two terms appear), refuse a NOT of an event, and go back to the single trigger.
+  await card.locator('.term select').first().selectOption('all');
+  await expect(card.locator('.term.gate')).toHaveCount(1);
+  expect(await page.evaluate(() => window.__twBuild.doc.gdf.links[0].when.all.length)).toBe(2);
+  await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
+  await page.locator('#undoBtn').click();
+  await expect(card.locator('.term.gate')).toHaveCount(0);
+
+  // Playtest it: the Wiring chip shows the link; taking the treasure fires it and opens the door.
+  await page.locator('#playBtn').click();
+  await page.waitForURL(BASE + '/play/test');
+  await page.waitForFunction(() => !!window.__tw);
+  await page.evaluate(readFileSync(ROOT + 'tests/e2e/lib/tombwright-driver.js', 'utf8'));
+  await page.evaluate(() => window.__tw.start(9));
+  await page.keyboard.press('l');                                       // the mouse is captured by the game; L opens the panel
+  await expect(page.locator('#wirePanel')).toBeVisible();
+  const live = page.locator('#wirePanel article.wl');
+  await expect(live).toHaveCount(1);
+  await expect(live.locator('.wlbadge')).toHaveText('waiting');
+  const S = 2.4, cx = (i) => (i + 0.5) * S;
+  expect(await page.evaluate(([x, z]) => window.__wt.walkTo(x, z, { tol: 0.4 }), [cx(4) - 1.0, cx(5)])).toBe('arrived');
+  await page.evaluate(([x, z]) => window.__wt.use(x, z), [cx(4), cx(5)]);
+  await page.evaluate(() => window.__wt.tick(10));
+  expect(await page.evaluate(() => window.__wt.st().doors.map((d) => d.open))).toEqual([true]);
+  await page.evaluate(() => window.__tw.game.hud());                    // rendering is off in tests, so refresh the HUD by hand
+  await expect(live.locator('.wlbadge')).toContainText('used up');
+  await expect(live.locator('.wlterm .wlstate').first()).toContainText('fired');
+  expect(errors).toEqual([]);
+});
+
+test('wiring view: a hand-edited, malformed link is shown as such and can be removed', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.addInitScript(() => { window.__twTest = true; window.__twNoRender = true; });
+  await page.goto(BASE + '/build');
+  await page.waitForFunction(() => !!window.__twBuild);
+  await page.evaluate(() => {
+    const t = JSON.parse(window.__twBuild.text);
+    t.links = [{ id: 1, when: { constructor: 1 }, do: 'nope' }];
+    window.__twBuild.use(JSON.stringify(t));
+  });
+  await page.locator('#viewWiring').click();
+  await expect(page.locator('article.link.broken')).toContainText('malformed');
+  await page.getByRole('button', { name: 'Remove malformed link 1' }).click();
+  await expect(page.locator('article.link')).toHaveCount(0);
+  await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
+  expect(errors).toEqual([]);
+});
