@@ -29,15 +29,26 @@ async function fetchBytes(url) {
 }
 
 // ------------------------------------------------------------------ the tomb
+// The builder's playtest (decisions #79, #83): /play/test plays the tomb the builder left in this browser's storage,
+// in practice mode. It is validated like any other (Sim.load); its text never comes from the server.
+const PLAYTEST_KEY = 'tw.playtest.v1';
+function playtestBytes() {
+  let text = null;
+  try { text = localStorage.getItem(PLAYTEST_KEY); } catch { /* blocked */ }
+  if (typeof text !== 'string' || text.length === 0) throw new Error('no tomb to playtest');
+  return new TextEncoder().encode(text);
+}
+
 async function loadTomb(name) {
-  const [sine, best, bytes] = await Promise.all([fetchBytes('/js/sim/data/sine4096.bin'), fetchBytes('/js/sim/data/bestiary.v1.json'), fetchBytes(`/tombs/${name}.gdf.json`)]);
+  const test = name === 'test';
+  const [sine, best, bytes] = await Promise.all([fetchBytes('/js/sim/data/sine4096.bin'), fetchBytes('/js/sim/data/bestiary.v1.json'), test ? playtestBytes() : fetchBytes(`/tombs/${name}.gdf.json`)]);
   loadSineTable(sine); loadBestiary(best);
   const world = Sim.load(bytes);                        // validates everything (R-GDF-*, R-DRESS-*)
   const gdf = JSON.parse(new TextDecoder().decode(bytes));
   const { w, h } = gdf.grid, grid = rleDecode(b64decode(gdf.grid.cells), w * h);
   // Official tombs only: their text is keyed by the route's name, never by the tomb's own (user-editable) title.
   const text = Object.hasOwn(TOMB_TEXT, name) ? TOMB_TEXT[name] : { items: {}, bells: {}, reads: {} };
-  return { name, world, gdf, grid, w, h, text, bestiary: (k) => foeKind(k) };
+  return { name, world, gdf, grid, w, h, text, mode: test ? 'practice' : 'delve', bestiary: (k) => foeKind(k) };
 }
 
 // ------------------------------------------------------------------ what the player can use (Gloamhollow setupInteractions)
@@ -163,7 +174,7 @@ class Game {
   newGame(seed = crypto.getRandomValues(new Uint32Array(1))[0]) {
     const T = this.T;
     this.ui.clearSave(); this.ui.fresh();
-    this.begin(Sim.init(T.world, seed >>> 0, 'delve'), { yaw: 0, pitch: 0 }, []);
+    this.begin(Sim.init(T.world, seed >>> 0, T.mode), { yaw: 0, pitch: 0 }, []);
     this.say(T.text.intro ?? `You enter ${T.gdf.meta?.title ?? 'the tomb'}.`);
     this.ui.save();
   }
@@ -536,19 +547,27 @@ async function boot() {
   let T;
   // The tomb comes from the path (/play/<name>), allow-listed: the name never reaches the file system by itself.
   const played = /^\/play\/([a-z0-9-]{1,64})$/.exec(location.pathname);
-  const name = played !== null && ['gloamhollow'].includes(played[1]) ? played[1] : null;
+  const name = played !== null && ['gloamhollow', 'test'].includes(played[1]) ? played[1] : null;
   if (name === null) { showError('There is no tomb of that name.'); return; }
   try { T = await loadTomb(name); } catch (e) { showError('The tomb could not be loaded. Reload the page to try again.'); console.error(e); return; }
   let game;
   try { game = new Game(T); } catch (e) { showError('This page needs WebGL to draw the tomb, and it is turned off or unavailable in this browser.'); console.error(e); return; }
   { const b = T.gdf.entities.find((e) => e.type === 'boss'); T.bestiaryBoss = b ? bossKind(b.kind) : null; }
   game.bindInput();
+  if (name === 'test') {                                  // the builder's playtest: this tomb's own name, a fresh start every time
+    game.ui.clearSave();
+    const title = String(T.gdf.meta?.title ?? 'Test tomb');
+    $('title').textContent = title; document.title = `${title} · Playtest · Tombwright`;
+    document.querySelector('#intro .lede').textContent = 'A playtest from the builder, in practice mode: a death does not end the run. Close this tab or go back to return to the builder.';
+    const boss = T.gdf.entities.find((e) => e.type === 'boss');
+    document.querySelector('.tf-name').textContent = boss?.kind === 'deepWarden' ? 'The Warden of the Deep' : 'Ilvaris, the Candle-Eater';
+  }
   const resize = () => game.view.resize(innerWidth, innerHeight);
   addEventListener('resize', resize); if (window.visualViewport) visualViewport.addEventListener('resize', resize); resize();
   $('goBtn').disabled = false;
   game.ui.showTitle();
   // A first frame behind the title card.
-  game.st = Sim.init(T.world, 0, 'delve'); game.prev = structuredClone(game.st);
+  game.st = Sim.init(T.world, 0, T.mode); game.prev = structuredClone(game.st);
   let last = performance.now();
   const loop = (now) => { requestAnimationFrame(loop); const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now; if (game.mode === 'title' && !reduced) game.look.yaw += dt * 0.12; game.frame(dt); };
   requestAnimationFrame(loop);

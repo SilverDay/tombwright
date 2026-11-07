@@ -87,6 +87,9 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 80 | 2026-11-07 | **Builder view (M2):** a 2D top-down canvas grid editor at `/build` with palette and inspector; Playtest launches the existing 3D game client on the tomb in the editor. No 3D preview pane for now. | Owner |
 | 81 | 2026-11-07 | **M2 slices:** (1) grid, zones, start/exit, load/save/validate, playtest; (2) doors, hazards, items, text; (3) puzzles and foes with the threat-budget counter; (4) the wiring view; (5) Gloamhollow rebuilt in the editor and the four §4.3.6 examples as the exit test. One commit each, each playable and tested. | Owner |
 | 82 | 2026-11-07 | **Open questions Q1, Q3, Q5, Q7** (async only, guest play, content licence, player rating) don't affect the builder and stay open until M3. | Owner |
+| 83 | 2026-11-07 | **Playtest mode:** Playtest from the builder runs the tomb in `practice` mode (a death doesn't end or score the run); the game client starts a game in the mode the page gives it. | Owner |
+| 84 | 2026-11-07 | **`/build` is public from slice 1,** marked as a preview; it only touches the visitor's own browser storage. | Owner |
+| 85 | 2026-11-07 | **Exit while building:** the editor follows the core loader (a tomb with no exit loads) and shows a warning; "exactly one start and one exit" (spec §7.3.4) is enforced by the publish validator in M3. | Owner |
 
 ## Still open (spec §17)
 

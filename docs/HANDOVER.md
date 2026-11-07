@@ -44,7 +44,13 @@ Don't run the fuzzer beside the e2e walkthroughs: the walkthrough then hits its 
   as. Nothing of it exists yet; the sim core, the GDF loader and the link engine it builds on are finished and frozen
   behind `CORE_VERSION`.
 - **Decided (#79-#82):** browser autosave plus `.gdf.json` import/export, a 2D top-down editor at `/build` with
-  Playtest in the existing 3D client, five slices (see #81), Q1/Q3/Q5/Q7 stay open until M3. **Next: slice 1.**
+  Playtest in the existing 3D client, five slices (see #81), Q1/Q3/Q5/Q7 stay open until M3. Decisions #83-#85: Playtest runs in practice mode, `/build` is public as a preview, an exit is optional while building.
+  **Slice 1 is done** (the grid, chambers, start/exit, checkpoints, import/export/autosave, live validation by
+  `Sim.load`, `/play/test`): code in `public/js/build/` (`model.js` is DOM-free and unit-tested, `validate.js` wraps the
+  core's loader, `main.js` is the UI), `templates/build.php`, `tests/e2e/build.spec.mjs`. Everything it doesn't edit
+  (entities, links, dressing) passes through untouched; a test proves Gloamhollow round-trips. **Next: slice 2** (doors,
+  hazards, items, text). The playtest page still has Gloamhollow's boss-frame text and an empty item/bell text table
+  for `test` tombs; slice 3 (foes, bosses) must give tombs their own names for these.
 
 ### What 7d left behind (worth knowing)
 

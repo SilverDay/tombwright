@@ -9,7 +9,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 use Tombwright\Http\SecurityHeaders;
 
 const OFFICIAL_TOMBS = ['/tombs/gloamhollow.gdf.json' => 'gloamhollow.gdf.json'];
-const PAGES = ['/' => 'home.php', '/play/gloamhollow' => 'game.php'];
+const PAGES = ['/' => 'home.php', '/play/gloamhollow' => 'game.php', '/play/test' => 'game.php', '/build' => 'build.php'];
 
 $https = ($_SERVER['HTTPS'] ?? '') === 'on';
 foreach (SecurityHeaders::all($https) as $name => $value) {
