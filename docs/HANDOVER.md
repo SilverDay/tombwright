@@ -43,8 +43,8 @@ Don't run the fuzzer beside the e2e walkthroughs: the walkthrough then hits its 
 - **M2 is the tomb builder** (spec §16, §4.2, §4.3): the in-browser editor, the proof run, and the GDF a tomb is saved
   as. Nothing of it exists yet; the sim core, the GDF loader and the link engine it builds on are finished and frozen
   behind `CORE_VERSION`.
-- **Ask the owner** before starting: the spec leaves the editor's shape fairly open, and §17's open questions
-  (Q1, Q3, Q5, Q7) touch it.
+- **Decided (#79-#82):** browser autosave plus `.gdf.json` import/export, a 2D top-down editor at `/build` with
+  Playtest in the existing 3D client, five slices (see #81), Q1/Q3/Q5/Q7 stay open until M3. **Next: slice 1.**
 
 ### What 7d left behind (worth knowing)
 

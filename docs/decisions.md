@@ -83,6 +83,10 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 76 | 2026-11-06 | **The Warden's volley:** five bolts, 0.16 rad apart, 8 m/s, 15 damage each, every 4.5 s, while her strikes are below half, the player is more than 2.5 m away and there is line of sight. | Owner |
 | 77 | 2026-11-06 | **The Warden calls placed foes, not new ones:** the boss entity gets an optional `summons` key naming a group; every 11 s she calls the first two still-dormant foes of that group, in entity order, while fewer than four of the group are awake. The 8-awake cap still applies (R-FOE-4's wake queue). | Owner |
 | 78 | 2026-11-06 | **A called foe comes up at her feet:** it is moved to the first free spot of a ring of 8 fixed angles 2,000 mm from the Warden (a cell a walker may enter, clear of other foes), without a random draw. No free spot: it isn't called, and the 11 s timer still resets. | Owner |
+| 79 | 2026-11-07 | **Builder storage (M2):** until accounts exist (M3) a tomb being built is autosaved in the browser (localStorage/IndexedDB) and can be exported to and imported from a `.gdf.json` file. No server drafts yet. | Owner |
+| 80 | 2026-11-07 | **Builder view (M2):** a 2D top-down canvas grid editor at `/build` with palette and inspector; Playtest launches the existing 3D game client on the tomb in the editor. No 3D preview pane for now. | Owner |
+| 81 | 2026-11-07 | **M2 slices:** (1) grid, zones, start/exit, load/save/validate, playtest; (2) doors, hazards, items, text; (3) puzzles and foes with the threat-budget counter; (4) the wiring view; (5) Gloamhollow rebuilt in the editor and the four §4.3.6 examples as the exit test. One commit each, each playable and tested. | Owner |
+| 82 | 2026-11-07 | **Open questions Q1, Q3, Q5, Q7** (async only, guest play, content licence, player rating) don't affect the builder and stay open until M3. | Owner |
 
 ## Still open (spec §17)
 
