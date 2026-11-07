@@ -23,7 +23,7 @@ const ok = (doc) => { const v = validate(doc); assert.equal(v.ok, true, v.error)
 test('every palette entry places an entity the loader accepts', () => {
   const doc = workshop();
   ok(doc);
-  const spots = { door: [5, 5], slab: [8, 3], vent: [10, 3], alcove: [12, 3], flask: [4, 7], rubble: [5, 7], treasure: [6, 7], key: [7, 7], chest: [3, 1], inscription: [6, 1], torch: [9, 1], marks: [4, 4], prop: [9, 8], decor: [11, 8], brazier: [14, 8], bell: [15, 7], lampHook: [1, 9], mirror: [16, 9], crystal: [13, 1], foe: [14, 5], boss: [10, 9] };
+  const spots = { door: [5, 5], slab: [8, 3], vent: [10, 3], alcove: [12, 3], flask: [4, 7], rubble: [5, 7], treasure: [6, 7], key: [7, 7], chest: [3, 1], inscription: [6, 1], torch: [9, 1], marks: [4, 4], prop: [9, 8], decor: [11, 8], brazier: [14, 8], bell: [15, 7], lampHook: [1, 9], mirror: [16, 9], crystal: [13, 1], foe: [14, 5], boss: [10, 9], button: [18, 3], pedestal: [7, 3], lever: [18, 5] };
   // the alcove wants a door and a key door wants a key: place doors first (palette order does that)
   for (const p of E.PALETTE) {
     const [i, j] = spots[p.id];
@@ -290,4 +290,29 @@ test('malformed bell sets from an imported file do not break removing', () => {
   assert.equal(E.removeEntity(doc, 'bellY'), true);
   assert.equal(E.removeEntity(doc, 'bellsX'), true);
   assert.equal(E.byId(doc, 'bellsZ'), undefined, 'an emptied set goes');
+});
+
+
+// ------------------------------------------------------------------ step 4b: buttons and levers
+test('buttons and levers: options add and drop their keys, mounts convert, finding by cell', () => {
+  const doc = workshop();
+  const wall = E.place(doc, entry('button'), 18, 3), ped = E.place(doc, entry('pedestal'), 7, 3), lev = E.place(doc, entry('lever'), 18, 5);
+  assert.deepEqual(wall.wall, [[18, 3], 'e']); assert.deepEqual(ped.cell, [7, 3]); assert.equal(lev.mode, 'toggle'); ok(doc);
+  assert.match(E.place(doc, entry('button'), 8, 6), /wall/);
+  assert.match(E.place(doc, entry('lever'), 8, 6), /wall/);
+  assert.equal(E.setField(doc, wall, 'behaviour', 'timed'), true); assert.equal(wall.downTicks, 60); ok(doc);
+  assert.equal(E.setField(doc, wall, 'downTicks', 200), true); ok(doc);
+  assert.match(E.setField(doc, wall, 'downTicks', 5000), /1800/);
+  assert.equal(E.setField(doc, wall, 'behaviour', 'latch'), true); assert.equal('downTicks' in wall, false); ok(doc);
+  assert.equal(E.setField(doc, wall, 'glyph', 'serpent'), true); assert.match(E.setField(doc, wall, 'glyph', 'cat'), /Unknown/);
+  assert.equal(E.setField(doc, wall, 'pressedBy', 'both'), true);
+  assert.equal(E.setField(doc, wall, 'concealed', true), true); assert.equal(wall.concealed, true); ok(doc);
+  assert.equal(E.getField(wall, 'concealed'), true); assert.equal(E.setField(doc, wall, 'concealed', false), true); assert.equal('concealed' in wall, false);
+  assert.equal(E.setField(doc, wall, 'mount', 'pedestal'), true); assert.deepEqual(wall.cell, [18, 3]); assert.equal('wall' in wall, false); ok(doc);
+  assert.equal(E.setField(doc, wall, 'mount', 'wall'), true); assert.deepEqual(wall.wall, [[18, 3], 'e']); assert.equal('cell' in wall, false); ok(doc);
+  assert.equal(E.setField(doc, ped, 'mount', 'wall'), 'There is no wall beside this spot; move the button next to one first.');
+  assert.equal(E.setField(doc, lev, 'mode', 'once'), true); assert.equal(E.setField(doc, lev, 'on', true), true); ok(doc);
+  assert.equal(E.move(doc, lev, 18, 8), true); assert.deepEqual(lev.wall, [[18, 8], 'e']); ok(doc);
+  assert.equal(E.move(doc, ped, 9, 3), true); assert.deepEqual(E.entitiesAt(doc, 9, 3).map((e) => e.id), [ped.id]);
+  assert.match(E.setField(doc, lev, 'side', 'w'), /no wall/);
 });

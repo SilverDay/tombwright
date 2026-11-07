@@ -36,7 +36,7 @@ The 7d review's two open findings are done: the fuzzer now gives every `deepWard
 a few hundred cases); vectors 0053 (call at the awake cap, `summon: 1`) and 0054 (no free ring spot) cover the call's
 edges; both bestiary loaders range-check `ranged.speed`, `volleySpeed` and `ring`. The fuzzer still rarely reaches the
 volley (it needs 16 blows); vectors 0049/0050 cover it.
-Don't run the fuzzer beside the e2e walkthroughs: the walkthrough then hits its 10-minute timeout (alone ~2 minutes).
+Playwright runs with one worker (the single-threaded `php -S` can't serve parallel walkthroughs: they timed out). Don't run the fuzzer beside the e2e walkthroughs: the walkthrough then hits its 10-minute timeout (alone ~2 minutes).
 
 ## Next: M2, the builder
 
@@ -72,15 +72,20 @@ Don't run the fuzzer beside the e2e walkthroughs: the walkthrough then hits its 
   slot map is tested against the core's memory layout. The playtest page has a live **Wiring** panel (chip or the `L`
   key; `public/js/game/wiring-live.js`, display only): per link "true now / active / used up / effects in N s", and
   when each event trigger last fired. The node-graph canvas is V2 (#91).
-  **Next: step 4b, buttons and levers in both cores** (decision #92), then **slice 5** (the exit test: rebuild
-  Gloamhollow in the editor, plus the four spec §4.3.6 examples). What 4b needs, from the spec and what the core lacks:
-  `button` entity (behaviour press/latch/toggle/timed, `pressedBy` hand/pebble/both, glyph, concealed, mounted on a
-  wall or pedestal) and `lever` (on/off, once/toggle); events `buttonPressed`, `pebbleHit`, `plateStepped`; conditions
-  `buttonDown`, `leverOn`; effects `grantItem`, `resetButton`, `setLever`; and the door `opens: trigger` already exists.
-  Example 1 needs pebbleHit, 2 needs leverOn, 3 buttons with glyphs and a strict SEQUENCE, 4 AT LEAST with leverOn and
-  hasItem. Follow the `sim-change` skill (rules doc, both cores, version bump, vectors, parity review), then give the
-  builder palette, the wiring view and the game client (renderer, prompts, sprites) the new pieces. Ask the owner about
-  anything the spec doesn't settle (e.g. glyph art, pebble hit radius).
+  **Step 4b is done** (core **m0.17**, decisions #92, #94-#97, rules R-BTN-1..5 and R-LEVER-1/2): `button` entities
+  (wall-mounted or on a pedestal; press / latch / toggle / timed; hand, pebble or both; 16 rune glyphs; concealed until the
+  pole finds them) and `lever` (once / toggle), the events `buttonPressed` and `pebbleHit`, the conditions `buttonDown` and
+  `leverOn`, `interact` on a lever, and the effects `grantItem`, `resetButton`, `setLeverOn` / `setLeverOff`. Pebbles hit a
+  wall button when the flight is stopped by its wall from the cell in front, a pedestal when they land within 0.6 m
+  (`state.flying` entries carry `w`). `plateStepped` is deferred (#97). The builder places buttons and levers (palette,
+  inspector, wiring tables); the game draws them (runes in `game/textures.js`, `makeGlyph`), prompts "Press the moon
+  button" / "Pull the lever", and the live panel reads them. Vectors 0055-0057 and the `buttons:` load cases cover them;
+  the fuzzer generates them (and the button room).
+  **Next: slice 5, the exit test:** rebuild Gloamhollow in the editor (every piece it uses is now placeable and
+  wireable; check what the builder still can't do, e.g. its text tables and the boss/bell names) and make the four spec
+  §4.3.6 examples work: (1) ALL(buttonPressed, pebbleHit) within 120 → open the grate; (2) ALL(leverOn, lightLit) with an
+  undo; (3) a strict SEQUENCE of rune buttons with onWrong damage; (4) AT LEAST 2 of (hasItem, hasItem, leverOn). Then M2
+  is done; M3 (server MVP) starts with questions Q1, Q3, Q5, Q7.
 
 ### What 7d left behind (worth knowing)
 

@@ -1541,7 +1541,7 @@ final class Sim
         $def = $world->buttons[$bi];
         $dx = $state['player']['x'] - $def['x'];
         $dz = $state['player']['z'] - $def['z'];
-        if ($dx * $dx + $dz * $dz > $def['reach'] * $def['reach'] || !self::lineOfSight($world, $state, $def['x'], $def['z'])) {
+        if ($dx * $dx + $dz * $dz > $def['reach'] * $def['reach'] || !self::lineOfSight($world, $state, $def['x'], $def['z'])) { // squares < 2^36 (R-INT-2)
             return;
         }
         self::pressButton($world, $state, $bi, 'hand', $events, $batch);
@@ -1559,7 +1559,7 @@ final class Sim
         $def = $world->levers[$li];
         $dx = $state['player']['x'] - $def['x'];
         $dz = $state['player']['z'] - $def['z'];
-        if ($dx * $dx + $dz * $dz > $def['reach'] * $def['reach'] || !self::lineOfSight($world, $state, $def['x'], $def['z'])) {
+        if ($dx * $dx + $dz * $dz > $def['reach'] * $def['reach'] || !self::lineOfSight($world, $state, $def['x'], $def['z'])) { // squares < 2^36 (R-INT-2)
             return;
         }
         $batch[] = ['interact', $n];
@@ -1606,7 +1606,7 @@ final class Sim
                 continue;
             }
             $dx = $f['x'] - $d['x'];
-            $dz = $f['z'] - $d['z'];
+            $dz = $f['z'] - $d['z']; // squares < 2^36 (R-INT-2)
             if ($d['pedestal'] ? $dx * $dx + $dz * $dz > 600 * 600 : ($f['w'] !== $d['wk'] || $k !== $d['k'])) {
                 continue;
             }

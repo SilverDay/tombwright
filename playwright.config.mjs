@@ -7,6 +7,7 @@ export default defineConfig({
   testMatch: '**/*.spec.mjs',
   timeout: 10 * 60 * 1000,
   fullyParallel: false,
+  workers: 1, // one php -S serves every test; parallel workers starve the walkthroughs and make them time out
   reporter: [['list']],
   // The Tombwright client is served by PHP's built-in server through the front controller (spec §5.4).
   webServer: {

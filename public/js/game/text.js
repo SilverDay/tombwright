@@ -9,6 +9,7 @@ export const SAY = {
   msg: {
     lanternOut: 'Your lantern is out. Pour in some oil first.',
     lanternHung: 'You will not go on without your lantern. It still hangs on the hook.',
+    leverStuck: 'The lever will not move again.',
     pouchEmpty: 'Your pouch is empty. Walk over pebbles to pick them up, or gather more from loose rubble.',
     noFlasks: 'You have no oil flasks left.',
     lanternFull: 'Your lantern is already full.',

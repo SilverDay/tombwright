@@ -230,7 +230,7 @@ $('viewWiring').addEventListener('click', () => { S.view = 'wiring'; refresh(); 
 const selected = () => (S.ent ? E.byId(S.doc, S.ent) : undefined);
 function applyField(e, k, v) { let r; edit(() => { r = E.setField(S.doc, e, k, v); }); if (r !== true) toast(r); }
 const labelOf = (id) => PALETTE_LABEL.get(id);
-const PALETTE_LABEL = new Map([['door', 'Door'], ['slab', 'Falling slab'], ['vent', 'Fire vent'], ['alcove', 'Alcove trap'], ['item', 'Item'], ['chest', 'Chest'], ['inscription', 'Inscription'], ['torch', 'Torch'], ['marks', "Masons' marks"], ['prop', 'Prop'], ['decor', 'Decor']]);
+const PALETTE_LABEL = new Map([['door', 'Door'], ['slab', 'Falling slab'], ['vent', 'Fire vent'], ['alcove', 'Alcove trap'], ['item', 'Item'], ['chest', 'Chest'], ['inscription', 'Inscription'], ['torch', 'Torch'], ['marks', "Masons' marks"], ['prop', 'Prop'], ['decor', 'Decor'], ['brazier', 'Brazier'], ['bell', 'Bell'], ['bellSet', 'Bell set'], ['lampHook', 'Lamp hook'], ['mirror', 'Mirror'], ['crystal', 'Crystal'], ['foe', 'Foe'], ['boss', 'Boss'], ['button', 'Button'], ['lever', 'Lever']]);
 
 function inspectorPanel() {
   const host = $('inspector'), e = selected();

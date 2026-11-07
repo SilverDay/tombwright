@@ -16,13 +16,15 @@ const looseItems = (doc) => ofType(doc, 'item').filter((e) => e.kind !== 'rubble
 /** Triggers by key: `event` or `cond`, what the argument is, the options for it (null: fixed), and a sentence. */
 export const TRIGGERS = {
   // events (happen on one tick)
-  interact: { kind: 'event', label: 'you interact with', opts: (d) => ids(ofType(d, 'door', 'item', 'bell', 'lampHook', 'mirror', 'chest', 'brazier')), say: (a) => `you interact with “${a}”` },
+  interact: { kind: 'event', label: 'you interact with', opts: (d) => ids(ofType(d, 'door', 'item', 'bell', 'lampHook', 'mirror', 'chest', 'brazier', 'lever')), say: (a) => `you interact with “${a}”` },
   itemTaken: { kind: 'event', label: 'you take the item', opts: (d) => ids(looseItems(d)), say: (a) => `you take “${a}”` },
   enterZone: { kind: 'event', label: 'you enter the chamber', opts: (d) => zoneOpts(d), say: (a) => `you enter “${a}”` },
   leaveZone: { kind: 'event', label: 'you leave the chamber', opts: (d) => zoneOpts(d), say: (a) => `you leave “${a}”` },
   bellsWrong: { kind: 'event', label: 'the bell set is rung wrong', opts: (d) => ids(ofType(d, 'bellSet')), say: (a) => `the bells “${a}” are rung wrong` },
   linkFired: { kind: 'event', label: 'link … fires', opts: (d, self) => linkOpts(d, self), say: (a) => `link ${a} fires`, num: true },
   foesDefeated: { kind: 'event', label: 'the last foe of the group falls', opts: (d) => groupOpts(d), say: (a) => `the last foe of “${a}” falls` },
+  buttonPressed: { kind: 'event', label: 'the button is pressed', opts: (d) => ids(ofType(d, 'button')), say: (a) => `button “${a}” is pressed` },
+  pebbleHit: { kind: 'event', label: 'a pebble hits the button', opts: (d) => ids(ofType(d, 'button')), say: (a) => `a pebble hits button “${a}”` },
   bossDefeated: { kind: 'event', label: 'the boss is defeated', opts: null, fixed: true, needs: (d) => ofType(d, 'boss').length > 0, say: () => 'the boss is defeated' },
   // conditions (true or false at any tick)
   doorOpen: { kind: 'cond', label: 'the door is open', opts: (d) => ids(ofType(d, 'door')), say: (a) => `door “${a}” is open` },
@@ -35,6 +37,8 @@ export const TRIGGERS = {
   linkActive: { kind: 'cond', label: 'link … is active', opts: (d, self) => linkOpts(d, self), say: (a) => `link ${a} is active`, num: true },
   foesAlive: { kind: 'cond', label: 'foes of the group are alive', opts: (d) => groupOpts(d), say: (a) => `foes of “${a}” are alive` },
   bossAwake: { kind: 'cond', label: 'the boss is awake', opts: null, fixed: true, needs: (d) => ofType(d, 'boss').length > 0, say: () => 'the boss is awake' },
+  buttonDown: { kind: 'cond', label: 'the button is down', opts: (d) => ids(ofType(d, 'button')), say: (a) => `button “${a}” is down` },
+  leverOn: { kind: 'cond', label: 'the lever is on', opts: (d) => ids(ofType(d, 'lever')), say: (a) => `lever “${a}” is on` },
   lightLit: { kind: 'cond', label: 'the brazier is lit', opts: (d) => ids(ofType(d, 'brazier')), say: (a) => `brazier “${a}” is lit` },
 };
 const zoneOpts = (d) => (d.gdf.zones ?? []).map((z) => ({ value: z.id, text: `${z.id} (${z.name})` }));
@@ -53,6 +57,10 @@ export const EFFECTS = {
   setCheckpoint: { label: 'set the checkpoint of', opts: (d) => (d.gdf.zones ?? []).filter((z) => z.checkpoint).map((z) => ({ value: z.id, text: `${z.id} (${z.name})` })), say: (a) => `set the checkpoint of “${a}”` },
   reveal: { label: 'reveal the hidden item', opts: (d) => ids(ofType(d, 'item').filter((e) => e.hidden === true)), say: (a) => `reveal “${a}”` },
   hide: { label: 'hide the item again', opts: (d) => ids(ofType(d, 'item').filter((e) => e.hidden === true)), say: (a) => `hide “${a}”` },
+  grantItem: { label: 'give you the item', opts: (d) => ids(looseItems(d)), say: (a) => `give you “${a}”` },
+  resetButton: { label: 'pop the button back up', opts: (d) => ids(ofType(d, 'button')), say: (a) => `reset button “${a}”` },
+  setLeverOn: { label: 'switch the lever on', opts: (d) => ids(ofType(d, 'lever')), say: (a) => `switch lever “${a}” on` },
+  setLeverOff: { label: 'switch the lever off', opts: (d) => ids(ofType(d, 'lever')), say: (a) => `switch lever “${a}” off` },
   damage: { label: 'hurt you by', opts: null, int: { min: 1, max: 1000, def: 10 }, say: (a) => `hurt you by ${a}` },
   message: { label: 'show the message', opts: null, text: { max: 1000, def: 'Somewhere below, stone grinds against stone.' }, say: (a) => `say “${String(a).slice(0, 60)}”` },
 };

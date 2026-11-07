@@ -88,6 +88,17 @@ function buildInteractions(T) {
     IA.push({ n: num(hk), pt: [cx(hk.cell[0]) - 900 * d[0], cx(hk.cell[1]) - 900 * d[1]], r: 2200, pri: 1, label: (st) => (st.player.hung === n ? 'Take your lantern back' : 'Hang your lantern on the hook') });
   });
   for (const m of mirrors) IA.push({ n: num(m), pt: [cx(m.cell[0]), cx(m.cell[1])], r: 2150, label: () => 'Turn the mirror' });
+  // buttons and levers (R-BTN-2, R-LEVER-2): the same points and reaches as the sim; a concealed button is invisible until found
+  const SIDEV = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
+  ents.filter((e) => e.type === 'button').forEach((b, bi) => {
+    if (b.pressedBy === 'pebble') return;
+    const pt = b.cell ? [cx(b.cell[0]), cx(b.cell[1])] : [cx(b.wall[0][0]) + 1100 * SIDEV[b.wall[1]][0], cx(b.wall[0][1]) + 1100 * SIDEV[b.wall[1]][1]];
+    IA.push({ n: num(b), pt, r: b.cell ? 1900 : 2000, cond: (st) => !b.concealed || st.found.includes(bi), label: () => `Press the ${b.glyph} button` });
+  });
+  ents.filter((e) => e.type === 'lever').forEach((l, li) => {
+    const pt = [cx(l.wall[0][0]) + 1100 * SIDEV[l.wall[1]][0], cx(l.wall[0][1]) + 1100 * SIDEV[l.wall[1]][1]];
+    IA.push({ n: num(l), pt, r: 2000, label: (st) => (l.mode === 'once' && st.levers[li].used ? 'The lever is stuck' : 'Pull the lever') });
+  });
   chests.forEach((c, n) => {
     const d = SIDE[c.wall], g = c.style === 'gilded' ? 'gilded' : 'plain';
     IA.push({ n: num(c), pt: [cx(c.cell[0]) + 250 * d[0], cx(c.cell[1]) + 250 * d[1]], r: 2200, cond: (st) => !st.chests[n].open,

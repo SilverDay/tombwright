@@ -333,5 +333,34 @@ const ICON = {
   heart: pix(['..rr.rr..', '.rRRrRRr.', '.rRYYYRr.', '.rRYWYRr.', '..rRYRr..', '...rRr...', '....r....'], { r: '#8a2010', R: '#ff6a2a', Y: '#ffc040', W: '#fff4c0' }),
 };
 
-export { cv, makeBrick, makeFlag, makeCobble, makeCeil, makeShelf, makeGrate, makeGrateGlow, makeGlow, makePlanks,
+
+// ---------- button glyphs (decision #95): sixteen runes, drawn as strokes on a dark stone face ----------
+const GLYPH_DRAW = {
+  moon: (g) => { g.beginPath(); g.arc(64, 64, 38, 0.55 * Math.PI, 1.45 * Math.PI, true); g.arc(78, 64, 30, 1.35 * Math.PI, 0.65 * Math.PI, false); g.stroke(); },
+  sun: (g) => { g.beginPath(); g.arc(64, 64, 18, 0, 6.3); g.stroke(); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g.beginPath(); g.moveTo(64 + Math.cos(a) * 28, 64 + Math.sin(a) * 28); g.lineTo(64 + Math.cos(a) * 44, 64 + Math.sin(a) * 44); g.stroke(); } },
+  eye: (g) => { g.beginPath(); g.moveTo(14, 64); g.quadraticCurveTo(64, 14, 114, 64); g.quadraticCurveTo(64, 114, 14, 64); g.stroke(); g.beginPath(); g.arc(64, 64, 14, 0, 6.3); g.stroke(); },
+  key: (g) => { g.beginPath(); g.arc(40, 64, 16, 0, 6.3); g.moveTo(56, 64); g.lineTo(112, 64); g.moveTo(96, 64); g.lineTo(96, 82); g.moveTo(108, 64); g.lineTo(108, 78); g.stroke(); },
+  hand: (g) => { g.beginPath(); g.moveTo(40, 110); g.lineTo(40, 70); g.lineTo(30, 52); g.moveTo(40, 70); g.lineTo(52, 30); g.moveTo(52, 70); g.lineTo(64, 22); g.moveTo(64, 70); g.lineTo(78, 28); g.moveTo(76, 74); g.lineTo(98, 44); g.moveTo(40, 110); g.lineTo(84, 110); g.lineTo(84, 70); g.stroke(); },
+  flame: (g) => { g.beginPath(); g.moveTo(64, 14); g.quadraticCurveTo(100, 54, 88, 90); g.quadraticCurveTo(64, 120, 40, 90); g.quadraticCurveTo(30, 62, 56, 44); g.quadraticCurveTo(54, 66, 66, 72); g.quadraticCurveTo(76, 46, 64, 14); g.stroke(); },
+  drop: (g) => { g.beginPath(); g.moveTo(64, 14); g.quadraticCurveTo(100, 64, 94, 84); g.arc(64, 84, 30, 0, Math.PI, false); g.quadraticCurveTo(28, 64, 64, 14); g.stroke(); },
+  leaf: (g) => { g.beginPath(); g.moveTo(24, 104); g.quadraticCurveTo(24, 24, 104, 24); g.quadraticCurveTo(104, 104, 24, 104); g.moveTo(24, 104); g.lineTo(78, 50); g.stroke(); },
+  star: (g) => { g.beginPath(); for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + k * 4 * Math.PI / 5; g[k ? 'lineTo' : 'moveTo'](64 + Math.cos(a) * 46, 66 + Math.sin(a) * 46); } g.closePath(); g.stroke(); },
+  skull: (g) => { g.beginPath(); g.arc(64, 54, 34, Math.PI, 0); g.lineTo(98, 82); g.lineTo(80, 82); g.lineTo(80, 100); g.lineTo(48, 100); g.lineTo(48, 82); g.lineTo(30, 82); g.closePath(); g.moveTo(58, 62); g.arc(50, 62, 8, 0, 6.3); g.moveTo(86, 62); g.arc(78, 62, 8, 0, 6.3); g.stroke(); },
+  crown: (g) => { g.beginPath(); g.moveTo(20, 96); g.lineTo(20, 44); g.lineTo(44, 70); g.lineTo(64, 32); g.lineTo(84, 70); g.lineTo(108, 44); g.lineTo(108, 96); g.closePath(); g.stroke(); },
+  bell: (g) => { g.beginPath(); g.moveTo(24, 92); g.quadraticCurveTo(30, 90, 34, 60); g.quadraticCurveTo(40, 22, 64, 22); g.quadraticCurveTo(88, 22, 94, 60); g.quadraticCurveTo(98, 90, 104, 92); g.closePath(); g.moveTo(56, 100); g.arc(64, 100, 8, Math.PI, 0, true); g.stroke(); },
+  tower: (g) => { g.beginPath(); g.moveTo(40, 112); g.lineTo(40, 36); g.lineTo(34, 36); g.lineTo(34, 22); g.lineTo(46, 22); g.lineTo(46, 30); g.lineTo(58, 30); g.lineTo(58, 22); g.lineTo(70, 22); g.lineTo(70, 30); g.lineTo(82, 30); g.lineTo(82, 22); g.lineTo(94, 22); g.lineTo(94, 36); g.lineTo(88, 36); g.lineTo(88, 112); g.stroke(); g.beginPath(); g.moveTo(56, 112); g.lineTo(56, 88); g.arc(64, 88, 8, Math.PI, 0); g.lineTo(72, 112); g.stroke(); },
+  wave: (g) => { for (const y of [48, 74]) { g.beginPath(); g.moveTo(12, y); for (let k = 0; k < 4; k++) g.quadraticCurveTo(12 + 26 * k + 13, y - 22, 12 + 26 * (k + 1), y); g.stroke(); } },
+  bird: (g) => { g.beginPath(); g.moveTo(14, 70); g.quadraticCurveTo(40, 20, 64, 64); g.quadraticCurveTo(88, 20, 114, 70); g.stroke(); g.beginPath(); g.moveTo(64, 64); g.lineTo(64, 100); g.stroke(); },
+  serpent: (g) => { g.beginPath(); g.moveTo(24, 100); g.bezierCurveTo(24, 70, 64, 90, 64, 64); g.bezierCurveTo(64, 38, 104, 58, 104, 28); g.stroke(); g.beginPath(); g.arc(104, 22, 6, 0, 6.3); g.stroke(); },
+};
+/** A button's glyph (one of 16 runes, R-BTN-1) as a square canvas: pale strokes on dark stone. */
+function makeGlyph(name) {
+  const c = cv(128), g = c.getContext('2d');
+  g.fillStyle = '#2a2622'; g.fillRect(0, 0, 128, 128);
+  g.strokeStyle = '#d8cfae'; g.lineWidth = 7; g.lineCap = 'round'; g.lineJoin = 'round';
+  (GLYPH_DRAW[name] ?? GLYPH_DRAW.star)(g);
+  return c;
+}
+
+export { makeGlyph, cv, makeBrick, makeFlag, makeCobble, makeCeil, makeShelf, makeGrate, makeGrateGlow, makeGlow, makePlanks,
   makeStoneDoor, makeGrateDoor, makeMask, makeEye, makeCarving, makeScrawl, makeMark, makeX, makeGhost, makeWater, ART, ICON, mulberry32, clamp };

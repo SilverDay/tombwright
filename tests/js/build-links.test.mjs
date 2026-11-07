@@ -15,7 +15,18 @@ E.setBestiary(JSON.parse(readFileSync(ROOT + 'public/js/sim/data/bestiary.v1.jso
 const gloam = () => M.fromBytes(new Uint8Array(readFileSync(ROOT + 'dungeons/gloamhollow.gdf.json')));
 const ok = (doc) => { const v = validate(doc); assert.equal(v.ok, true, v.error); };
 /** Gloamhollow with its own links cleared, so a test adds just the one it studies. */
-function bare() { const doc = gloam(); doc.gdf.links = []; return doc; }
+function bare() {
+  const doc = gloam(); doc.gdf.links = [];
+  // a button and a lever in free spots against a wall, for the triggers and effects that point at them
+  let placed = 0;
+  for (let j = 1; j < doc.h - 1 && placed < 2; j++) for (let i = 1; i < doc.w - 1 && placed < 2; i++) {
+    if (!M.isFloor(M.cellAt(doc, i, j)) || E.entitiesAt(doc, i, j).length || E.wallSide(doc, i, j) === null || (doc.gdf.start.cell[0] === i && doc.gdf.start.cell[1] === j)) continue;
+    const r = E.place(doc, E.PALETTE.find((p) => p.id === (placed === 0 ? 'button' : 'lever')), i, j);
+    if (typeof r === 'object' && validate(doc).ok) placed++; else if (typeof r === 'object') E.removeEntity(doc, r.id);
+  }
+  assert.equal(placed, 2);
+  return doc;
+}
 
 test('every trigger the builder can make loads', () => {
   const doc = bare();

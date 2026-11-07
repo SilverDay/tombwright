@@ -326,3 +326,53 @@ test('wiring view: a hand-edited, malformed link is shown as such and can be rem
   await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
   expect(errors).toEqual([]);
 });
+
+test('builder: a button opens a door and a lever turns, in the playtest', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.route(/^https?:\/\/(?!127\.0\.0\.1:8765)/, (r) => r.abort());
+  await page.addInitScript(() => { window.__twTest = true; window.__twNoRender = true; });
+  await page.goto(BASE + '/build');
+  await page.waitForFunction(() => !!window.__twBuild);
+  const Z = 20, box = await page.locator('#grid').boundingBox();
+  const click = async (i, j) => { const x = box.x + (i + 0.5) * Z, y = box.y + (j + 0.5) * Z; await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.up(); };
+  const radio = (n) => page.getByRole('radio', { name: n });
+
+  await radio('Door').click(); await click(8, 6);
+  await page.getByRole('radio', { name: 'Select / move' }).click(); await click(8, 6);
+  await page.getByLabel('Opens on').selectOption('trigger');
+  await radio('Button (on a pedestal)').click(); await click(4, 6);
+  await page.getByLabel('Rune').selectOption('eye');
+  await radio('Lever').click(); await click(10, 1);
+  await expect(page.locator('#inspector')).toContainText('Lever');
+  await page.getByLabel('Mode').selectOption('once');
+  expect(await page.evaluate(() => window.__twBuild.doc.gdf.entities.map((e) => e.type))).toEqual(['door', 'button', 'lever']);
+  await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
+
+  await page.locator('#viewWiring').click();
+  await page.getByRole('button', { name: 'Add a link' }).click();
+  const card = page.locator('article.link[data-link="1"]');
+  await card.locator('.term select').first().selectOption('buttonPressed');
+  await expect(card.locator('.lsum')).toContainText('button “button1” is pressed');
+  await expect(card.locator('.lsum')).toContainText('open door “door1”');
+  await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
+  await expect(page.locator('#problems')).not.toContainText('no link opens it');
+
+  await page.locator('#playBtn').click();
+  await page.waitForURL(BASE + '/play/test');
+  await page.waitForFunction(() => !!window.__tw);
+  await page.evaluate(readFileSync(ROOT + 'tests/e2e/lib/tombwright-driver.js', 'utf8'));
+  await page.evaluate(() => window.__tw.start(11));
+  const S = 2.4, cx = (i) => (i + 0.5) * S;
+  expect(await page.evaluate(([x, z]) => window.__wt.walkTo(x, z, { tol: 0.3 }), [cx(4) - 1.5, cx(6)])).toBe('arrived');
+  expect(await page.evaluate(([x, z]) => window.__wt.use(x, z), [cx(4), cx(6)])).toBe('Press the eye button');
+  await page.evaluate(() => window.__wt.tick(40));
+  expect(await page.evaluate(() => [window.__wt.st().buttons[0].down, window.__wt.st().doors[0].open])).toEqual([false, true]);   // it sprang back, the door stayed open
+  expect(await page.evaluate(() => window.__wt.walkTo(10 * 2.4 + 1.2, 1.5 * 2.4 + 0.3, { tol: 0.3 }))).toBe('arrived');
+  expect(await page.evaluate(([x, z]) => window.__wt.use(x, z), [cx(10), cx(1) - 1.1])).toBe('Pull the lever');
+  await page.evaluate(() => window.__wt.tick(3));
+  expect(await page.evaluate(() => window.__wt.st().levers[0])).toEqual({ on: true, used: true });
+  expect(await page.evaluate(([x, z]) => window.__wt.use(x, z), [cx(10), cx(1) - 1.1])).toBe('The lever is stuck');
+  expect(errors).toEqual([]);
+});

@@ -13,6 +13,8 @@ export const PROP_KINDS = ['statue', 'stele', 'tree', 'post', 'plinth', 'lectern
 export const DECOR_KINDS = ['bones', 'burnt', 'scorch', 'candles', 'stair'];
 export const INSCRIPTION_STYLES = ['plaque', 'carving', 'scrawl', 'stele', 'book', 'look'];
 export const ITEM_KINDS = ['flask', 'rubble', 'treasure', 'key'];
+export const GLYPHS = ['moon', 'sun', 'eye', 'key', 'hand', 'flame', 'drop', 'leaf', 'star', 'skull', 'crown', 'bell', 'tower', 'wave', 'bird', 'serpent'];
+export const BUTTON_BEHAVIOURS = ['press', 'latch', 'toggle', 'timed'], PRESSED_BY = ['hand', 'pebble', 'both'];
 const MAX_PAGES = 8;
 
 /** What the palette offers. `type` is the entity type, `kind` a preset for it. */
@@ -32,6 +34,9 @@ export const PALETTE = [
   { id: 'prop', label: 'Statue, stele, tree…', type: 'prop', group: 'Text and dressing' },
   { id: 'decor', label: 'Bones, scorch…', type: 'decor', group: 'Text and dressing' },
   { id: 'brazier', label: 'Brazier', type: 'brazier', group: 'Light and puzzles' },
+  { id: 'button', label: 'Button (set in a wall)', type: 'button', mount: 'wall', group: 'Light and puzzles' },
+  { id: 'pedestal', label: 'Button (on a pedestal)', type: 'button', mount: 'pedestal', group: 'Light and puzzles' },
+  { id: 'lever', label: 'Lever', type: 'lever', group: 'Light and puzzles' },
   { id: 'bell', label: 'Bell (joins the selected set)', type: 'bell', group: 'Light and puzzles' },
   { id: 'lampHook', label: 'Lamp hook', type: 'lampHook', group: 'Light and puzzles' },
   { id: 'mirror', label: 'Mirror', type: 'mirror', group: 'Light and puzzles' },
@@ -213,6 +218,25 @@ export function place(doc, entry, i, j) {
       set.bells.push(bell.id); set.order.push(set.bells.length - 1);
       return bell;
     }
+    case 'button': {
+      if (!isFloor(code)) return 'A button goes on a room or corridor cell.';
+      if (ofType(doc, 'button').length >= 32) return 'At most 32 buttons.';
+      const base = { id: freeId(doc, 'button'), type: 'button' }, rest = { behaviour: 'press', pressedBy: 'hand', glyph: 'moon' };
+      if (entry.mount === 'pedestal') {
+        if (cellTaken(doc, i, j)) return 'That cell already holds a door or a slab.';
+        return add({ ...base, cell: [i, j], ...rest });
+      }
+      const side = wallSide(doc, i, j);
+      if (!side) return 'A wall button is set in a wall: pick a cell next to one.';
+      return add({ ...base, wall: [[i, j], side], ...rest });
+    }
+    case 'lever': {
+      if (!isFloor(code)) return 'A lever goes on a room or corridor cell.';
+      if (ofType(doc, 'lever').length >= 32) return 'At most 32 levers.';
+      const side = wallSide(doc, i, j);
+      if (!side) return 'A lever is set in a wall: pick a cell next to one.';
+      return add({ id: freeId(doc, 'lever'), type: 'lever', wall: [[i, j], side], mode: 'toggle', on: false });
+    }
     case 'lampHook': {
       if (!isFloor(code) || cellTaken(doc, i, j)) return 'A lamp hook goes on a free room or corridor cell.';
       const behind = wallSide(doc, i, j);
@@ -308,6 +332,13 @@ export function move(doc, e, i, j) {
     case 'brazier': case 'bell': case 'mirror': case 'lampHook':
       if (!isFloor(code) || cellTaken(doc, i, j)) return 'This goes on a free room or corridor cell.';
       e.cell = [i, j]; return true;
+    case 'button': case 'lever': {
+      if (!isFloor(code)) return 'This goes on a room or corridor cell.';
+      if ('cell' in e) { if (cellTaken(doc, i, j)) return 'That cell already holds a door or a slab.'; e.cell = [i, j]; return true; }
+      const side = wallSide(doc, i, j, sideOf(e));
+      if (!side) return 'This is set in a wall: pick a cell next to one.';
+      e.wall = [[i, j], side]; return true;
+    }
     case 'crystal': {
       if (!isFloor(code) || cellTaken(doc, i, j)) return 'This goes on a free room or corridor cell.';
       const side = wallSide(doc, i, j, e.wall);
@@ -375,6 +406,20 @@ export const FIELDS = {
     { k: 'note', label: 'Note (Hz)', t: 'int', min: 20, max: 20000 },
   ],
   bellSet: [{ k: 'order', label: 'Ring in this order', t: 'order' }],
+  button: [
+    { k: 'mount', label: 'Mounted', t: 'select', o: ['wall', 'pedestal'] },
+    { k: 'side', label: 'Set in the wall to the', t: 'select', o: SIDES, show: (e) => 'wall' in e },
+    { k: 'glyph', label: 'Rune', t: 'select', o: GLYPHS },
+    { k: 'behaviour', label: 'Behaviour', t: 'select', o: BUTTON_BEHAVIOURS, labels: { press: 'press (springs back)', latch: 'latch (stays down)', toggle: 'toggle (down, up, down…)', timed: 'timed (springs back later)' } },
+    { k: 'downTicks', label: 'Stays down (ticks)', t: 'int', min: 1, max: 1800, show: (e) => e.behaviour === 'timed' },
+    { k: 'pressedBy', label: 'Pressed by', t: 'select', o: PRESSED_BY, labels: { hand: 'hand', pebble: 'a thrown pebble', both: 'hand or pebble' } },
+    { k: 'concealed', label: 'Hidden until found with the pole', t: 'bool' },
+  ],
+  lever: [
+    { k: 'side', label: 'Set in the wall to the', t: 'select', o: SIDES },
+    { k: 'mode', label: 'Mode', t: 'select', o: ['toggle', 'once'], labels: { toggle: 'toggle (any number of pulls)', once: 'once (one pull only)' } },
+    { k: 'on', label: 'Starts on', t: 'bool' },
+  ],
   lampHook: [{ k: 'dir', label: 'Beam shines to the', t: 'select', o: SIDES }],
   mirror: [{ k: 'start', label: 'Starts as', t: 'select', o: ['/', '\\'] }],
   crystal: [{ k: 'wall', label: 'Set in the wall to the', t: 'select', o: SIDES }],
@@ -399,6 +444,9 @@ export function getField(e, k) {
     if (k === 'where') return 'wall' in e ? 'wall' : 'pos' in e ? 'pos' : 'on';
     if (k === 'side') return sideOf(e);
   }
+  if (e.type === 'button' && k === 'mount') return 'wall' in e ? 'wall' : 'pedestal';
+  if ((e.type === 'button' || e.type === 'lever') && k === 'side') return sideOf(e);
+  if (e.type === 'button' && k === 'concealed') return e.concealed === true;
   if (e.type === 'boss' && k === 'summons') return typeof e.summons === 'string' ? e.summons : '';
   if (e.type === 'foe' && k === 'disguise') return typeof e.disguise === 'string' ? e.disguise : '';
   if (e.type === 'item' && k === 'in') return 'in' in e ? e.in : '';
@@ -501,6 +549,31 @@ export function setField(doc, e, k, v) {
       break;
     case 'lampHook':
       if (k === 'dir' && SIDES.includes(v)) { e.dir = v; return true; }
+      break;
+    case 'button':
+      if (k === 'glyph') { if (!GLYPHS.includes(v)) return 'Unknown rune.'; e.glyph = v; return true; }
+      if (k === 'pressedBy') { if (!PRESSED_BY.includes(v)) return 'Unknown way of pressing.'; e.pressedBy = v; return true; }
+      if (k === 'behaviour') {
+        if (!BUTTON_BEHAVIOURS.includes(v)) return 'Unknown behaviour.';
+        e.behaviour = v; if (v === 'timed') e.downTicks = Number.isInteger(e.downTicks) ? e.downTicks : 60; else dropKey(e, 'downTicks'); return true;
+      }
+      if (k === 'downTicks') { if (!Number.isInteger(v) || v < 1 || v > 1800) return 'Between 1 and 1800 ticks (30 ticks = 1 s).'; e.downTicks = v; return true; }
+      if (k === 'concealed') { if (v) e.concealed = true; else dropKey(e, 'concealed'); return true; }
+      if (k === 'side') return setSide(doc, e, v);
+      if (k === 'mount') {
+        if (v === 'pedestal' && 'wall' in e) { e.cell = [...e.wall[0]]; dropKey(e, 'wall'); return true; }
+        if (v === 'wall' && 'cell' in e) {
+          const [i, j] = e.cell, side = wallSide(doc, i, j);
+          if (!side) return 'There is no wall beside this spot; move the button next to one first.';
+          e.wall = [[i, j], side]; dropKey(e, 'cell'); return true;
+        }
+        return true;
+      }
+      break;
+    case 'lever':
+      if (k === 'mode' && (v === 'once' || v === 'toggle')) { e.mode = v; return true; }
+      if (k === 'on') { e.on = Boolean(v); return true; }
+      if (k === 'side') return setSide(doc, e, v);
       break;
     case 'mirror':
       if (k === 'start' && (v === '/' || v === '\\')) { e.start = v; return true; }

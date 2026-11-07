@@ -65,6 +65,9 @@ export class UI {
         case 'bellsWrong': setTimeout(() => { sfx.clash(); sfx.dart(); }, 650); break;
         case 'bellsSolved': setTimeout(() => sfx.solve(), 900); break;
         case 'mirror': sfx.mirror(); break;
+        case 'button': sfx.click(); break;                  // R-BTN-2
+        case 'lever': sfx.lever(); break;                   // R-LEVER-2
+        case 'find': sfx.find(); this.toast('A hidden button', 'The pole finds something set in the stone.'); break; // R-BTN-4
         case 'eyes': sfx.wake(); break;
         case 'alcove': { const a = ents.find((e) => e.id === ev.id); if (a.kind === 'drown') sfx.water(); else sfx.laugh(); break; }
         case 'brazier': if (ev.lit) sfx.ignite(); else sfx.gulp(); break;

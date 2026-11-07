@@ -400,6 +400,33 @@ export class TombView {
       const f = new THREE.Sprite(M.flame.clone()); f.position.set(0, 1.55, 0); f.scale.set(1.2, 1.6, 1); f.material.opacity = 0; g.add(f);
       E.braziers.push({ def: b, f, x: cx(i), z: cx(j) });
     }
+    // buttons and levers (R-BTN-1, R-LEVER-1): a stone face with a rune that sinks when pressed; a handle that swings
+    E.buttons = this.byType('button').map((b) => {
+      const glyphMat = new THREE.MeshPhongMaterial({ map: this.tex(TX.makeGlyph(b.glyph)), emissive: 0x16110a, shininess: 8 });
+      let g, face;
+      if (b.cell) {                                                   // a pedestal
+        const [i, j] = b.cell; g = new THREE.Group(); g.position.set(cx(i), 0, cx(j)); this.world.add(g);
+        mesh(new THREE.CylinderGeometry(0.28, 0.36, 0.9, 12), M.stone, 0, 0.45, 0, g);
+        face = new THREE.Group(); face.position.y = 0.92; g.add(face);
+        mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.08, 14), M.iron, 0, 0, 0, face);
+        const gl = mesh(new THREE.PlaneGeometry(0.36, 0.36), glyphMat, 0, 0.045, 0, face); gl.rotation.x = -Math.PI / 2;
+        return { def: b, g, face, k: 0, pedestal: true };
+      }
+      g = this.wallMount(new THREE.Group(), b.wall[0][0], b.wall[0][1], b.wall[1], 1.5, 0.02);
+      mesh(new THREE.BoxGeometry(0.46, 0.46, 0.06), M.iron, 0, 0, 0.03, g);
+      face = new THREE.Group(); g.add(face);
+      mesh(new THREE.BoxGeometry(0.36, 0.36, 0.08), M.stone, 0, 0, 0.07, face);
+      mesh(new THREE.PlaneGeometry(0.3, 0.3), glyphMat, 0, 0, 0.115, face);
+      return { def: b, g, face, k: 0, pedestal: false };
+    });
+    E.levers = this.byType('lever').map((l) => {
+      const g = this.wallMount(new THREE.Group(), l.wall[0][0], l.wall[0][1], l.wall[1], 1.4, 0.02);
+      mesh(new THREE.BoxGeometry(0.3, 0.55, 0.05), M.iron, 0, 0, 0.025, g);
+      const piv = new THREE.Group(); piv.position.set(0, 0, 0.07); g.add(piv);
+      mesh(new THREE.BoxGeometry(0.06, 0.5, 0.06), M.wood, 0, 0.25, 0, piv);
+      mesh(new THREE.SphereGeometry(0.075, 8, 6), M.iron, 0, 0.52, 0, piv);
+      return { def: l, g, piv, k: null };
+    });
     // the daylight shaft over the exit
     const ex = this.T.gdf.exit;
     if (ex) {
@@ -552,6 +579,12 @@ export class TombView {
     E.mirrors.forEach((m, n) => { const goal = st.mirrors[n] === 0 ? Math.PI / 4 : -Math.PI / 4; m.ang = m.ang === null || info.fresh ? goal : m.ang + (goal - m.ang) * Math.min(1, dt * 10); m.piv.rotation.y = m.ang; });
     E.hooks.forEach((h, n) => { h.lam.visible = P.hung === n; });
     E.chests.forEach((c, n) => { const open = st.chests[n].open; c.anim = open ? (info.fresh ? 1 : Math.min(1, c.anim + dt / 0.5)) : 0; c.lid.rotation.x = -1.9 * easeOut(c.anim); });
+    E.buttons.forEach((b, n) => {
+      const s = st.buttons[n]; b.g.visible = !b.def.concealed || st.found.includes(n);
+      b.k += ((s.down ? 1 : 0) - b.k) * Math.min(1, info.fresh ? 1 : dt * 20);
+      if (b.pedestal) b.face.position.y = 0.92 - 0.05 * b.k; else b.face.position.z = -0.035 * b.k;
+    });
+    E.levers.forEach((l, n) => { const goal = st.levers[n].on ? 0.75 : -0.75; l.k = l.k === null || info.fresh ? goal : l.k + (goal - l.k) * Math.min(1, dt * 12); l.piv.rotation.x = -l.k; });
     E.braziers.forEach((b, n) => { b.f.material.opacity = st.braziers[n] ? 1 : 0; if (st.braziers[n]) { const s = red ? 1 : 1 + 0.1 * Math.sin(t * 12 + b.def.cell[0]); b.f.scale.set(1.2 * s, 1.6 * s, 1); } });
     for (const [id, it] of E.items) {
       const num = this.num.get(id), taken = st.taken.includes(num) || st.foes.some((f) => f.loot === num) || st.loot.some((l) => l.n === num), hidden = it.def.hidden && !st.revealed.includes(num);
