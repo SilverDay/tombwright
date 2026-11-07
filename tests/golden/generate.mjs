@@ -594,9 +594,10 @@ export function dragonRoom(start = [6, 4]) {
 
 // The Warden of the Deep (R-WARDEN-*, step 7d): she stands in a one-cell chamber, so her box pins her down and the
 // player can strike her from outside her reach; four dormant zombies in group `crypt` are hers to call.
-export function wardenRoom(start = [4, 4]) {
+export function wardenRoom(start = [4, 4], walls = []) {
   const w = 14, h = 9, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
   for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  for (const [i, j] of walls) set(i, j, 0);
   return JSON.stringify({
     gdf: 1, bestiary: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: start },
     zones: [{ id: 'c', name: 'C', rects: [[1, 1, 6, 7], [8, 1, 5, 7]], ceil: 5200, checkpoint: { cell: [2, 4], yaw: 1024 } },
@@ -607,6 +608,25 @@ export function wardenRoom(start = [4, 4]) {
     ],
     links: [{ id: 1, when: { inZone: 'c' }, do: [{ wakeBoss: 'wd' }] }],
   });
+}
+
+// The Warden's call at its edges (R-WARDEN-3, decisions #77, #78). 'cap': three zombies (so the second call brings one:
+// summon 1) and eight idle crawlers shut in a walled pen, so 8 foes are awake and the called zombies are queued
+// (R-FOE-4). 'ring': walls on the eight cells around her chamber (her ring spots lie in them), so there is never a free
+// spot and nobody comes.
+export function wardenCallRoom(mode, start = [4, 4]) {
+  const pen = [[1, 3], [2, 3], [3, 3], [4, 3], [5, 3], [5, 1], [5, 2]];
+  const base = JSON.parse(wardenRoom(start, mode === 'cap' ? pen : [[6, 3], [7, 3], [8, 3], [6, 4], [8, 4], [6, 5], [7, 5], [8, 5]]));
+  const crawler = (id, [i, j], st) => ({ id, type: 'foe', kind: 'crawler', cell: [i, j], start: st });
+  const zombies = base.entities.filter((e) => e.kind === 'zombie');
+  base.entities = base.entities.filter((e) => e.kind !== 'zombie');
+  if (mode === 'cap') {
+    base.entities.push(...zombies.filter((e) => e.cell[1] !== 2 || e.cell[0] !== 3));
+    for (let k = 0; k < 8; k++) base.entities.push(crawler('c' + k, [1 + (k % 4), 1 + (k >> 2)], 'idle'));
+  } else {
+    base.entities.push(...zombies);
+  }
+  return JSON.stringify(base);
 }
 
 // Inputs chosen while the case plays (tests/fuzz/driver.mjs), recorded in the vector like any other.
@@ -761,6 +781,9 @@ const VECTORS = {
   '0050-warden-kill': { gdf: wardenRoom(), seed: 50, mode: 'practice', inputs: [[38, I([127, 0], 3072)], [900, I([0, 0], 3072, B.strike)],
     [1, I([0, 0], 3072, B.rise)], [300, I([127, 0], 3072, B.strike)]] },
   '0051-warden-driven': { gdf: wardenRoom(), seed: 51, mode: 'practice', inputs: driven(wardenRoom(), 51, 'practice', 6000, 0x7A2D) },
+  // Standing still in her chamber's zone: she calls on her own clock; see wardenCallRoom for what each room tests.
+  '0053-warden-cap': { gdf: wardenCallRoom('cap'), seed: 53, mode: 'practice', inputs: [[1800, I([0, 0], 3072)]] },
+  '0054-warden-ring': { gdf: wardenCallRoom('ring'), seed: 54, mode: 'practice', inputs: [[1800, I([0, 0], 3072)]] },
   '0052-warden-fuzz': { gdf: wardenRoom([6, 4]), seed: 52, mode: 'delve', inputs: fuzz(0x7A2E, 9000, 8, 60) },
   '0022-mirrors-practice-fuzz': { gdf: mirrorRoom([1, 3]), seed: 22, mode: 'practice', inputs: fuzz(0x3171, 9000, 4, 30) }, // slow, near the hook
 };

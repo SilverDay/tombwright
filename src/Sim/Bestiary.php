@@ -16,6 +16,9 @@ final class Bestiary
     /** R-BREATH-1: the ranged block a kind may carry, and the shots the cores know (R-SHOT-1). */
     private const RANGED_FIELDS = ['cd', 'dmg', 'speed', 'range', 'min', 'r', 'off'];
     public const SHOT_KINDS = ['fire', 'bolt'];
+    /** mm/s; the R-INT-2 comments in Sim.php rely on them. */
+    private const MAX_SHOT_SPEED = 11000;
+    private const MAX_VOLLEY_SPEED = 8000;
     /** R-BOSS-1: the fields every boss kind has, then the ones its behaviour adds. */
     private const BOSS_FIELDS = ['strikes', 'damage', 'radius', 'speed', 'wakeAtk', 'wind', 'hitRange', 'windRange', 'stop', 'atk'];
     private const BOSS_BEHAVIOURS = [
@@ -60,6 +63,9 @@ final class Bestiary
                 if (!in_array($f['ranged']['kind'] ?? null, self::SHOT_KINDS, true)) {
                     throw new \RuntimeException("bestiary: $kind.ranged.kind");
                 }
+                if ($f['ranged']['speed'] < 1 || $f['ranged']['speed'] > self::MAX_SHOT_SPEED) {   // R-INT-2 bound in updateShots
+                    throw new \RuntimeException("bestiary: $kind.ranged.speed");
+                }
                 $ranged = $f['ranged'];
             }
             $m[(string) $kind] = ['ranged' => $ranged, 'fly' => $f['mover'] === 'fly'] + $f;
@@ -74,6 +80,14 @@ final class Bestiary
             foreach ([...self::BOSS_FIELDS, ...$extra] as $k) {
                 if (!is_int($f[$k] ?? null)) {
                     throw new \RuntimeException("bestiary: boss $kind.$k");
+                }
+            }
+            if ($f['behaviour'] === 'warden') {   // R-INT-2 bounds assumed in the volley and the ring
+                if ($f['volleySpeed'] < 1 || $f['volleySpeed'] > self::MAX_VOLLEY_SPEED) {
+                    throw new \RuntimeException("bestiary: boss $kind.volleySpeed");
+                }
+                if ($f['ring'] < 0 || $f['ring'] >= 4096) {
+                    throw new \RuntimeException("bestiary: boss $kind.ring");
                 }
             }
             $bm[(string) $kind] = $f;

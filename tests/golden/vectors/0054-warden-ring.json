@@ -1,0 +1,267 @@
+{
+ "name": "0054-warden-ring",
+ "core": "m0.15",
+ "seed": 54,
+ "mode": "practice",
+ "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIADAECAAUBAwAEAQIABQEBAAEBAQAEAQIABQEDAAQBAgAMAQIADAEPAA==\"},\"start\":{\"cell\":[4,4]},\"zones\":[{\"id\":\"c\",\"name\":\"C\",\"rects\":[[1,1,6,7],[8,1,5,7]],\"ceil\":5200,\"checkpoint\":{\"cell\":[2,4],\"yaw\":1024}},{\"id\":\"d\",\"name\":\"D\",\"rects\":[[7,4,1,1]],\"ceil\":5200}],\"entities\":[{\"id\":\"wd\",\"type\":\"boss\",\"kind\":\"deepWarden\",\"pos\":[18000,10800],\"zone\":\"d\",\"summons\":\"crypt\"},{\"id\":\"z0\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z1\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[11,5],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z2\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z3\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,6],\"start\":\"dormant\",\"group\":\"crypt\"}],\"links\":[{\"id\":1,\"when\":{\"inZone\":\"c\"},\"do\":[{\"wakeBoss\":\"wd\"}]}]}",
+ "inputs": [
+  [
+   1800,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 3072,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ]
+ ],
+ "ticks": 1800,
+ "hashEvery": 300,
+ "hashes": {
+  "0": "707ec03d0c294b9b31ae3ee34351552d",
+  "300": "637598dbb079d48538bc96d47d9c53a1",
+  "600": "623cbcf43f072a78849e0aae9ce96ea6",
+  "900": "0945696767caa57f2413dd1fb39b9164",
+  "1200": "c0b27d65469b8907206bc7a14ba22f5e",
+  "1500": "3648a0cfb152e7b935b39803c8ef5ab5",
+  "1800": "4785d2fc22f42334bd2ec11a4fe27084"
+ },
+ "final": "4785d2fc22f42334bd2ec11a4fe27084",
+ "finalState": {
+  "v": 1,
+  "core": "m0.15",
+  "world": "249a4ee25d3e717a97df8c5c3c38224c",
+  "mode": "practice",
+  "tick": 1800,
+  "rng": [
+   3464591427,
+   2597280189,
+   2984858302,
+   1905204144
+  ],
+  "player": {
+   "x": 10800,
+   "z": 10800,
+   "vx": 0,
+   "vz": 0,
+   "rx": 0,
+   "rz": 0,
+   "yaw": 3072,
+   "pitch": 0,
+   "hp": 3000,
+   "calm": 151,
+   "oil": 2856000,
+   "hooded": false,
+   "hung": -1,
+   "flasks": 1,
+   "pebbles": 10,
+   "probeCd": 0,
+   "pebbleCd": 0,
+   "strikeCd": 0,
+   "busy": 0,
+   "busyOn": -1,
+   "doused": false,
+   "frozen": 0,
+   "freezeImm": 0,
+   "held": -1,
+   "heldT": 0,
+   "holdImm": 0,
+   "confused": 0,
+   "poison": 0,
+   "maxHp": 3000
+  },
+  "doors": [],
+  "deaths": 0,
+  "dead": null,
+  "sprung": [],
+  "pits": [],
+  "marked": [],
+  "bridge": [],
+  "floor": [],
+  "loot": [],
+  "flying": [],
+  "taken": [],
+  "eyes": [],
+  "zone": 0,
+  "sealed": [],
+  "revealed": [],
+  "mirrors": [],
+  "chests": [],
+  "sealing": [],
+  "foes": [
+   {
+    "st": "dormant",
+    "x": 25200,
+    "z": 6000,
+    "hp": 2,
+    "t": 0,
+    "atk": 15,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0,
+    "sc": 15,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
+   },
+   {
+    "st": "dormant",
+    "x": 27600,
+    "z": 13200,
+    "hp": 2,
+    "t": 0,
+    "atk": 15,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0,
+    "sc": 15,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
+   },
+   {
+    "st": "dormant",
+    "x": 8400,
+    "z": 6000,
+    "hp": 2,
+    "t": 0,
+    "atk": 15,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0,
+    "sc": 15,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
+   },
+   {
+    "st": "dormant",
+    "x": 8400,
+    "z": 15600,
+    "hp": 2,
+    "t": 0,
+    "atk": 15,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0,
+    "sc": 15,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
+   }
+  ],
+  "groups": [
+   "dormant"
+  ],
+  "blows": [],
+  "shots": [],
+  "braziers": [],
+  "boss": {
+   "st": "stalk",
+   "x": 17600,
+   "z": 10800,
+   "hp": 30,
+   "phase": 1,
+   "t": 0,
+   "atk": 0,
+   "feedCd": 0,
+   "target": -1,
+   "feedHits": 0,
+   "sum": 61,
+   "vol": 120
+  },
+  "won": null,
+  "bellSets": [],
+  "links": [
+   {
+    "val": true,
+    "active": true,
+    "spent": true,
+    "pend": [],
+    "m": []
+   }
+  ],
+  "checkpoints": [
+   {
+    "zone": 0,
+    "x": 10800,
+    "z": 10800,
+    "yaw": 0,
+    "life": {
+     "hp": 3000,
+     "oil": 3000000,
+     "hooded": false,
+     "hung": -1,
+     "flasks": 1,
+     "pebbles": 10,
+     "revealed": [],
+     "mirrors": [],
+     "chests": [],
+     "groups": [
+      "dormant"
+     ],
+     "braziers": [],
+     "boss": "asleep",
+     "doors": [],
+     "floor": [],
+     "loot": [],
+     "taken": [],
+     "bellSets": [],
+     "links": [
+      {
+       "val": false,
+       "active": false,
+       "spent": false,
+       "pend": [],
+       "m": []
+      }
+     ],
+     "foes": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ]
+    }
+   }
+  ],
+  "cp": 0,
+  "prevButtons": 0
+ }
+}

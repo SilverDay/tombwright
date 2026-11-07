@@ -29,22 +29,14 @@ This file says where the work stands and what to do next.
   The owner has uploaded the social-preview image (`public/assets/images/tombwright-og-1200x630.jpg`) in the repo
   settings.
 
-## Follow-ups from the 7d review (do these before M2)
+## Closed after 7d
 
-The `sim-parity-reviewer` found **no desync between the cores**; two findings were left open on purpose:
-
-- **The fuzzer barely reaches R-WARDEN-3/4.** Over 600 generated cases it produced 13 `deepWarden` tombs, 0 calls
-  and 0 volleys: a random tomb rarely has a `wakeBoss` link, and the volley needs 16 blows on a 30-strike boss.
-  Make `tests/fuzz/gen.mjs` always emit a `wakeBoss` link for a `deepWarden`, raise the boss chance (~45 %, so the
-  Candle-Eater keeps her share), and add a golden vector that volleys for several hundred ticks. `summon: 1`, the
-  "no free ring spot" break and the over-the-cap wake queue are exercised nowhere today.
-- **The new R-INT-2 bound comments hold only because the bestiary is pinned by SHA-256** (they assume
-  `ranged.speed <= 11000`, `volleySpeed <= 8000`, `ring < 4096`). A range check on those fields in both bestiary
-  loaders would make the comments self-enforcing before a v2 bestiary exists.
-
-Checks at the 7d commit, all green: purity lint, `npm test` (103), `vendor/bin/phpunit` (69, 1 skipped),
-`composer lint`, the fuzzer (10,000 cases, 0 mismatches), `npm run e2e`. Don't run the fuzzer beside the e2e: the
-walkthrough then hits its 10-minute timeout (alone ~2 minutes).
+The 7d review's two open findings are done: the fuzzer now gives every `deepWarden` a `wakeBoss` link and a dormant
+`wd` group to call, and also starts from the golden Warden rooms (calls, `summon: 1` and a few volleys now happen in
+a few hundred cases); vectors 0053 (call at the awake cap, `summon: 1`) and 0054 (no free ring spot) cover the call's
+edges; both bestiary loaders range-check `ranged.speed`, `volleySpeed` and `ring`. The fuzzer still rarely reaches the
+volley (it needs 16 blows); vectors 0049/0050 cover it.
+Don't run the fuzzer beside the e2e walkthroughs: the walkthrough then hits its 10-minute timeout (alone ~2 minutes).
 
 ## Next: M2, the builder
 

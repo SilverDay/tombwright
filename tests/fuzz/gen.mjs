@@ -7,7 +7,7 @@ import { rngSeed, rngBelow } from '../../public/js/sim/rng.js';
 import { b64encode, rleEncode, CELL } from '../../public/js/sim/world.js';
 import { makeDriver } from './driver.mjs';
 import {
-  GLOAMHOLLOW, trapRoom, toolRoom, bellRoom, linkRoom, mirrorRoom, maskRoom, foeRoom, propRoom, crowdRoom, delveRoom, powerRoom, thiefRoom,
+  GLOAMHOLLOW, trapRoom, toolRoom, bellRoom, linkRoom, mirrorRoom, maskRoom, foeRoom, propRoom, crowdRoom, delveRoom, powerRoom, thiefRoom, wardenRoom, wardenCallRoom,
 } from '../golden/generate.mjs';
 
 const utf8 = (s) => new TextEncoder().encode(s);
@@ -103,11 +103,14 @@ function randomTomb(r) {
     add(e); if (ents.at(-1)?.id === e.id && e.group && !groups.includes(e.group)) groups.push(e.group);
   }
   let boss = null;
-  if (g.zones.length && chance(30)) {
+  if (g.zones.length && chance(45)) {
     const z = pick(g.zones), [x, y, zw, zh] = z.rects[0];
-    const kind = chance(50) ? 'eater' : 'deepWarden';   // R-BOSS-1, R-WARDEN-*
+    const kind = chance(50) ? 'deepWarden' : 'eater';   // R-BOSS-1, R-WARDEN-*
     const b = { id: id('boss'), type: 'boss', kind, pos: [x * 2400 + below(zw * 2400 + 1), y * 2400 + below(zh * 2400 + 1)], zone: z.id };
-    if (kind === 'deepWarden' && groups.length && chance(70)) b.summons = pick(groups); // R-WARDEN-3
+    if (kind === 'deepWarden' && chance(80)) { // R-WARDEN-3: a group of her own, dormant, for her to call
+      b.summons = 'wd';
+      for (let n = 2 + below(3); n > 0; n--) add({ id: id('wz'), type: 'foe', kind: pick(FOE_KINDS), cell: floor(), start: 'dormant', group: 'wd' });
+    }
     add(b); if (ents.at(-1)?.id === b.id) boss = b.id;
   }
   if (chance(50)) { const ex = { cell: floor(), ...(chance(50) && itemIds.length ? { requires: pick(itemIds) } : boss && chance(50) ? { requires: 'bossDefeated' } : {}) }; keep(() => { g.exit = ex; }, () => { delete g.exit; }); }
@@ -139,6 +142,9 @@ function randomTomb(r) {
     if (kind === 1 && chance(40)) link.undo = [effect()];
     keep(() => g.links.push(link), () => g.links.pop());
   }
+  // A Warden is useless asleep: wake her when the player enters her zone (or any zone), so R-WARDEN-3/4 get exercised.
+  const wd = ents.find((e) => e.type === 'boss' && e.kind === 'deepWarden');
+  if (wd) { const wl = { id: 9, when: { inZone: pick(chance(50) ? [wd.zone] : zoneIds()) }, do: [{ wakeBoss: wd.id }] }; keep(() => g.links.push(wl), () => g.links.pop()); }
   void chest;
   return text();
 }
@@ -159,6 +165,7 @@ const BASES = [
   (r) => gloamhollowFrom(r), (r) => gloamhollowFrom(r), (r) => linkRoom(1 + rngBelow(r, 65536) * 16384 + rngBelow(r, 16384)),
   () => trapRoom(), () => toolRoom([2, 4]), () => toolRoom([10, 4], false), () => bellRoom(), () => mirrorRoom(),
   () => maskRoom(), () => maskRoom([6, 5], true), () => foeRoom(), () => crowdRoom(), () => propRoom(), () => delveRoom(), () => delveRoom([12, 4]), () => powerRoom(), () => powerRoom([11, 4]), () => thiefRoom(), () => thiefRoom([12, 4]),
+  () => wardenRoom(), () => wardenRoom([6, 4]), () => wardenCallRoom('cap'), () => wardenCallRoom('ring'),
 ];
 
 /** Case n: { n, gdf (exact text, R-GDF-0), seed, mode, ticks, driver } — the driver picks inputs while it plays. */
