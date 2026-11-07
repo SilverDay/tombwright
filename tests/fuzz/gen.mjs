@@ -7,7 +7,7 @@ import { rngSeed, rngBelow } from '../../public/js/sim/rng.js';
 import { b64encode, rleEncode, CELL } from '../../public/js/sim/world.js';
 import { makeDriver } from './driver.mjs';
 import {
-  GLOAMHOLLOW, trapRoom, toolRoom, bellRoom, linkRoom, mirrorRoom, maskRoom, foeRoom, propRoom, crowdRoom, delveRoom, powerRoom, thiefRoom, wardenRoom, wardenCallRoom,
+  GLOAMHOLLOW, trapRoom, toolRoom, bellRoom, linkRoom, mirrorRoom, maskRoom, foeRoom, propRoom, crowdRoom, delveRoom, powerRoom, thiefRoom, wardenRoom, wardenCallRoom, buttonRoom,
 } from '../golden/generate.mjs';
 
 const utf8 = (s) => new TextEncoder().encode(s);
@@ -95,6 +95,23 @@ function randomTomb(r) {
   }
   for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) if (at(i, j) === CELL.ALCOVE && doorIds.length && chance(60)) add({ id: id('a'), type: 'alcove', cell: [i, j], kind: pick(['drown', 'tip']), door: pick(doorIds) });
   for (let n = below(4); n > 0; n--) add({ id: id('br'), type: 'brazier', cell: floor(), lit: chance(30) });
+  // Buttons and levers (R-BTN-1, R-LEVER-1): pedestals and wall spots (a floor cell next to a wall).
+  const wallSpot = () => { for (let t = 0; t < 60; t++) { const [i, j] = floor(), sides = ['n', 'e', 's', 'w'].filter((d) => at(i + (d === 'e') - (d === 'w'), j + (d === 's') - (d === 'n')) === CELL.WALL); if (sides.length) return [[i, j], pick(sides)]; } return null; };
+  const GL = ['moon', 'sun', 'eye', 'key', 'hand', 'flame', 'drop', 'leaf', 'star', 'skull', 'crown', 'bell', 'tower', 'wave', 'bird', 'serpent'];
+  const buttonIds = [], leverIds = [];
+  for (let n = below(5); n > 0; n--) {
+    const behaviour = pick(['press', 'latch', 'toggle', 'timed']), e = { id: id('bt'), type: 'button', behaviour, pressedBy: pick(['hand', 'pebble', 'both', 'both']), glyph: pick(GL) };
+    if (behaviour === 'timed') e.downTicks = 1 + below(240);
+    const spot = chance(40) ? null : wallSpot();
+    if (spot) e.wall = spot; else e.cell = floor();
+    if (chance(30)) e.concealed = true;
+    add(e); if (ents.at(-1)?.id === e.id) buttonIds.push(e.id);
+  }
+  for (let n = below(4); n > 0; n--) {
+    const spot = wallSpot(); if (!spot) break;
+    const e = { id: id('lv'), type: 'lever', wall: spot, mode: pick(['once', 'toggle']), on: chance(40) };
+    add(e); if (ents.at(-1)?.id === e.id) leverIds.push(e.id);
+  }
   // Foes and at most one boss.
   const groups = [];
   for (let n = below(7); n > 0; n--) {
@@ -123,17 +140,20 @@ function randomTomb(r) {
       () => ({ interact: pick([...doorIds, ...itemIds]) }), () => ({ itemTaken: pick(itemIds) }),
       () => ({ enterZone: pick(zoneIds()) }), () => ({ leaveZone: pick(zoneIds()) }), () => ({ bellsWrong: bs }),
       () => ({ foesDefeated: pick(groups) }), () => ({ bossDefeated: true }), () => ({ linkFired: 1 + below(8) }),
+      () => ({ buttonPressed: pick(buttonIds) }), () => ({ pebbleHit: pick(buttonIds) }), () => ({ interact: pick(leverIds) }),
     ];
     return pick(opts)();
   };
   const conds = () => pick([
     () => ({ doorOpen: pick(doorIds) }), () => ({ inZone: pick(zoneIds()) }), () => ({ hasItem: pick(itemIds) }), () => ({ lanternHooded: true }),
     () => ({ bellsSolved: bs }), () => ({ beamHits: crystal }), () => ({ lightLit: pick(brz) }), () => ({ foesAlive: pick(groups) }), () => ({ lanternHung: true }), () => ({ bossAwake: true }),
+    () => ({ buttonDown: pick(buttonIds) }), () => ({ leverOn: pick(leverIds) }),
   ])();
   const effect = () => pick([
     () => ({ openDoor: pick(doorIds) }), () => ({ closeDoor: pick(doorIds) }), () => ({ sealDoor: pick(doorIds) }), () => ({ damage: 1 + below(40) }),
     () => ({ message: 'm' + below(100) }), () => ({ reveal: pick(itemIds) }), () => ({ hide: pick(itemIds) }), () => ({ spawnFoes: pick(groups) }),
     () => ({ lightOn: pick(brz) }), () => ({ lightOff: pick(brz) }), () => ({ wakeBoss: boss }), () => ({ setCheckpoint: pick(zoneIds()) }),
+    () => ({ grantItem: pick(itemIds) }), () => ({ resetButton: pick(buttonIds) }), () => ({ setLeverOn: pick(leverIds) }), () => ({ setLeverOff: pick(leverIds) }),
   ])();
   for (let n = 1; n <= 8; n++) {
     const kind = below(4);
@@ -165,6 +185,7 @@ const BASES = [
   (r) => gloamhollowFrom(r), (r) => gloamhollowFrom(r), (r) => linkRoom(1 + rngBelow(r, 65536) * 16384 + rngBelow(r, 16384)),
   () => trapRoom(), () => toolRoom([2, 4]), () => toolRoom([10, 4], false), () => bellRoom(), () => mirrorRoom(),
   () => maskRoom(), () => maskRoom([6, 5], true), () => foeRoom(), () => crowdRoom(), () => propRoom(), () => delveRoom(), () => delveRoom([12, 4]), () => powerRoom(), () => powerRoom([11, 4]), () => thiefRoom(), () => thiefRoom([12, 4]),
+  () => buttonRoom(), () => buttonRoom([8, 4]), () => buttonRoom([10, 4]),
   () => wardenRoom(), () => wardenRoom([6, 4]), () => wardenCallRoom('cap'), () => wardenCallRoom('ring'),
 ];
 

@@ -1,6 +1,6 @@
 {
  "name": "0049-warden",
- "core": "m0.16",
+ "core": "m0.17",
  "seed": 49,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIADAECAAwBAgAMAQIADAECAAwBAgAMAQ8A\"},\"start\":{\"cell\":[4,4]},\"zones\":[{\"id\":\"c\",\"name\":\"C\",\"rects\":[[1,1,6,7],[8,1,5,7]],\"ceil\":5200,\"checkpoint\":{\"cell\":[2,4],\"yaw\":1024}},{\"id\":\"d\",\"name\":\"D\",\"rects\":[[7,4,1,1]],\"ceil\":5200}],\"entities\":[{\"id\":\"wd\",\"type\":\"boss\",\"kind\":\"deepWarden\",\"pos\":[18000,10800],\"zone\":\"d\",\"summons\":\"crypt\"},{\"id\":\"z0\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z1\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[11,5],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z2\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z3\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,6],\"start\":\"dormant\",\"group\":\"crypt\"}],\"links\":[{\"id\":1,\"when\":{\"inZone\":\"c\"},\"do\":[{\"wakeBoss\":\"wd\"}]}]}",
@@ -87,17 +87,17 @@
  "ticks": 1599,
  "hashEvery": 300,
  "hashes": {
-  "0": "56d01c56ec15e1893baa48fa9c7e6e62",
-  "300": "505bd5222bc8d173bdfccb236a18d418",
-  "600": "43869918625c6ba8d0437bd103fd7f2f",
-  "900": "9e687475a08c1fe7a4521865e95aa236",
-  "1200": "92f9ae304fb81e761115b0ba49fd8612",
-  "1500": "e22d2511acc08f2b21c0138f0f18a1bb"
+  "0": "7105bc42cec4f13ada6964d1ef073b0d",
+  "300": "c5d579ffa0d30ea26de4527ebf75ea8c",
+  "600": "d9f9af001ab0253be461d5eb6d426184",
+  "900": "6846efca6bad8e846a96df2932aa1361",
+  "1200": "3c0f128f0f98fc7a06cdbb356a54c61a",
+  "1500": "d14e59939c6cecb1ef61574f5c06deee"
  },
- "final": "db2215aa1f7a569ad4848d845db5e205",
+ "final": "c09defbc0716d1c7b43af6a7bdc9654d",
  "finalState": {
   "v": 1,
-  "core": "m0.16",
+  "core": "m0.17",
   "world": "e3a157d41022bd092faf8f1be2ce82bf",
   "mode": "practice",
   "tick": 1599,
@@ -240,6 +240,9 @@
   "blows": [],
   "shots": [],
   "braziers": [],
+  "buttons": [],
+  "levers": [],
+  "found": [],
   "boss": {
    "st": "stalk",
    "x": 17500,
@@ -285,6 +288,8 @@
       "dormant"
      ],
      "braziers": [],
+     "buttons": [],
+     "levers": [],
      "boss": "asleep",
      "doors": [],
      "floor": [],

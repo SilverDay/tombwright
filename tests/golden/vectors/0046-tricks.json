@@ -1,6 +1,6 @@
 {
  "name": "0046-tricks",
- "core": "m0.16",
+ "core": "m0.17",
  "seed": 46,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":8,\"h\":8,\"cells\":\"CQAGAQIAAgECAwIBAgAGAQIABAEBAwEBAgAEAQEGAQECAAYBCQA=\"},\"start\":{\"cell\":[2,2]},\"zones\":[{\"id\":\"r\",\"name\":\"R\",\"rects\":[[1,1,6,6]],\"ceil\":4200}],\"entities\":[{\"id\":\"xe\",\"type\":\"foe\",\"kind\":\"xeroc\",\"cell\":[2,3],\"start\":\"asleep\",\"disguise\":\"flask\"},{\"id\":\"wr\",\"type\":\"foe\",\"kind\":\"wraith\",\"cell\":[2,6],\"start\":\"hunting\"}]}",
@@ -126,17 +126,17 @@
  "ticks": 1584,
  "hashEvery": 300,
  "hashes": {
-  "0": "1f25d5d248322ef6f663b570c5b571fe",
-  "300": "0cf368a2d17fc4d86ef7c4843b35b5c5",
-  "600": "62e3b1d8c1678eaa74bf2f09979dc048",
-  "900": "c8d341580307ec7414739ea265ec41ab",
-  "1200": "8b5ccbb36eb39837130956f7a97ec32f",
-  "1500": "98c2f1b1eec9cecf698800859a7ff498"
+  "0": "9a6a87b22eb1bca6d421f0fcfab9b82d",
+  "300": "593ec777ff3a3c0b64d2bed5d15cdcbe",
+  "600": "b624e4d91328af7ddc5c2cfda2e80e5b",
+  "900": "9ba3bb181b745a5fc6e498fa7ca50790",
+  "1200": "0992f51af414a1eac1b7f7c6940a508f",
+  "1500": "005fdc182545f3875e41e7663e7b6bf2"
  },
- "final": "70dda5f61f436e6b3987a6ffbbfef216",
+ "final": "3e65f107364a63d54ad06a116daa79cd",
  "finalState": {
   "v": 1,
-  "core": "m0.16",
+  "core": "m0.17",
   "world": "968efc8ce7c113984bed9957ddb08c80",
   "mode": "practice",
   "tick": 1584,
@@ -245,6 +245,9 @@
   "blows": [],
   "shots": [],
   "braziers": [],
+  "buttons": [],
+  "levers": [],
+  "found": [],
   "boss": null,
   "won": null,
   "bellSets": [],
@@ -270,6 +273,8 @@
       "awake"
      ],
      "braziers": [],
+     "buttons": [],
+     "levers": [],
      "boss": null,
      "doors": [],
      "floor": [],

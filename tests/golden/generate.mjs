@@ -629,6 +629,54 @@ export function wardenCallRoom(mode, start = [4, 4]) {
   return JSON.stringify(base);
 }
 
+// Buttons and levers (R-BTN-*, R-LEVER-*, decisions #92-#96): a pedestal button (press) and a wall button (timed, pebble
+// only) for an ALL within 120; a latch pedestal and a toggle lever for a strict SEQUENCE; a concealed wall button found
+// with the pole; a once lever; links that grant, reset and set levers. Entities, in order (numbers 1...): b1 b2 b3 b4 l1 l2 d1 d2 t1 t2.
+export function buttonRoom(start = [3, 1]) {
+  const w = 14, h = 9, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  return JSON.stringify({
+    gdf: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: start },
+    zones: [{ id: 'c', name: 'C', rects: [[1, 1, 12, 7]], ceil: 4200, checkpoint: { cell: [3, 1], yaw: 3072 } }],
+    entities: [
+      { id: 'b1', type: 'button', cell: [10, 3], behaviour: 'press', pressedBy: 'hand', glyph: 'moon' },
+      { id: 'b2', type: 'button', cell: [4, 1], behaviour: 'latch', pressedBy: 'both', glyph: 'eye' },
+      { id: 'b3', type: 'button', wall: [[12, 4], 'e'], behaviour: 'timed', downTicks: 60, pressedBy: 'pebble', glyph: 'key' },
+      { id: 'b4', type: 'button', wall: [[7, 7], 's'], behaviour: 'toggle', pressedBy: 'hand', glyph: 'star', concealed: true },
+      { id: 'l1', type: 'lever', wall: [[1, 3], 'w'], mode: 'toggle', on: false },
+      { id: 'l2', type: 'lever', wall: [[1, 5], 'w'], mode: 'once', on: true },
+      { id: 'd1', type: 'door', cell: [9, 2], style: 'stone', opens: 'trigger' },
+      { id: 'd2', type: 'door', cell: [9, 6], style: 'stone', opens: 'trigger' },
+      { id: 't1', type: 'item', kind: 'treasure', cell: [11, 1], value: 5 },
+      { id: 't2', type: 'item', kind: 'treasure', cell: [11, 7], value: 7 },
+    ],
+    links: [
+      { id: 1, when: { all: [{ buttonPressed: 'b1' }, { pebbleHit: 'b3' }], within: 120 }, do: [{ openDoor: 'd1' }, { message: 'Stone grinds.' }] },
+      { id: 2, when: { leverOn: 'l1' }, do: [{ openDoor: 'd2' }], undo: [{ closeDoor: 'd2' }] },
+      { id: 3, when: { sequence: [{ buttonPressed: 'b2' }, { interact: 'l1' }], strict: true, within: 300, onWrong: [{ damage: 5 }] }, do: [{ grantItem: 't1' }] },
+      { id: 4, when: { buttonDown: 'b4' }, do: [{ resetButton: 'b2' }, { setLeverOff: 'l2' }], undo: [{ setLeverOn: 'l2' }] },
+      { id: 5, when: { interact: 'l2' }, do: [{ grantItem: 't2' }] },
+    ],
+  });
+}
+
+
+// The button room by hand (see buttonRoom): latch b2, pull l1 within 300 ticks (the SEQUENCE grants t1, the lever opens d2), pull it
+// back (d2 shuts, the strict sequence resets and hurts), pull the once lever l2 twice, walk to b1, press it and throw a pebble at b3
+// (the ALL opens d1), then find the concealed b4 with the pole (pressing it unfound does nothing) and press it twice (it resets b2).
+const BTN = (id) => 1 + ['b1', 'b2', 'b3', 'b4', 'l1', 'l2', 'd1', 'd2', 't1', 't2'].indexOf(id);
+const buttonsScript = [
+  [4, I()], [6, I([127, 0], 3072)], [4, I()], [1, I([0, 0], 3072, B.interact, 0, BTN('b2'))], [4, I()],
+  [45, I([127, 0], 1024)], [45, I([127, 0], 2048)], [3, I()], [1, I([0, 0], 1024, B.interact, 0, BTN('l1'))], [40, I()],
+  [1, I([0, 0], 1024, B.interact, 0, BTN('l1'))], [40, I()],
+  [8, I([127, 0], 1024)], [44, I([127, 0], 2048)], [3, I()], [1, I([0, 0], 1024, B.interact, 0, BTN('l2'))], [4, I()], [1, I([0, 0], 1024, B.interact, 0, BTN('l2'))], [4, I()],
+  [30, I([127, 0], 0)], [204, I([127, 0], 3072)], [4, I()],
+  [1, I([0, 0], 3072, B.interact, 0, BTN('b1'))], [10, I()], [1, I([0, 0], 3072, B.pebble, 0, 0)], [60, I()],
+  [67, I([127, 0], 1024)], [76, I([127, 0], 2048)], [4, I()],
+  [1, I([0, 0], 2048, B.interact, 0, BTN('b4'))], [4, I()], [1, I([0, 0], 2048, B.probe)], [30, I()],
+  [1, I([0, 0], 2048, B.interact, 0, BTN('b4'))], [10, I()], [1, I([0, 0], 2048, B.interact, 0, BTN('b4'))], [10, I()],
+];
+
 // Inputs chosen while the case plays (tests/fuzz/driver.mjs), recorded in the vector like any other.
 function driven(gdf, seed, mode, ticks, rseed) {
   const world = Sim.load(utf8(gdf)), st = Sim.init(world, seed, mode), drive = makeDriver(rngSeed(rseed), gdf), rle = [];
@@ -784,6 +832,9 @@ const VECTORS = {
   // Standing still in her chamber's zone: she calls on her own clock; see wardenCallRoom for what each room tests.
   '0053-warden-cap': { gdf: wardenCallRoom('cap'), seed: 53, mode: 'practice', inputs: [[1800, I([0, 0], 3072)]] },
   '0054-warden-ring': { gdf: wardenCallRoom('ring'), seed: 54, mode: 'practice', inputs: [[1800, I([0, 0], 3072)]] },
+  '0055-buttons': { gdf: buttonRoom(), seed: 55, mode: 'practice', inputs: buttonsScript },
+  '0056-buttons-driven': { gdf: buttonRoom(), seed: 56, mode: 'practice', inputs: driven(buttonRoom(), 56, 'practice', 6000, 0xB07A) },
+  '0057-buttons-fuzz': { gdf: buttonRoom([8, 4]), seed: 57, mode: 'delve', inputs: fuzz(0xB07B, 9000, 12, 60) },
   '0052-warden-fuzz': { gdf: wardenRoom([6, 4]), seed: 52, mode: 'delve', inputs: fuzz(0x7A2E, 9000, 8, 60) },
   '0022-mirrors-practice-fuzz': { gdf: mirrorRoom([1, 3]), seed: 22, mode: 'practice', inputs: fuzz(0x3171, 9000, 4, 30) }, // slow, near the hook
 };
@@ -837,7 +888,7 @@ function gdfCases() {
     raw('not an object', utf8('[1,2]')), raw('null', utf8('null')), raw('trailing garbage', utf8(text(r) + 'x')),
     raw('too large', utf8(text(r).replace('"gdf":1', '"gdf":1,"pad":"' + 'a'.repeat(262144) + '"'))),
   ];
-  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw), ...mirrorCases(raw), ...chestCases(raw), ...foeCases(raw), ...bossCases(raw), ...dressCases(raw));
+  cases.push(...entityCases(raw), ...zoneCases(raw), ...itemCases(raw), ...linkCases(raw), ...mirrorCases(raw), ...chestCases(raw), ...foeCases(raw), ...buttonCases(raw), ...bossCases(raw), ...dressCases(raw));
   return cases.map((c) => { try { return { ...c, ok: true, id: Sim.load(b64decodeBytes(c.bytes)).id }; } catch { return { ...c, ok: false }; } });
 }
 
@@ -1090,6 +1141,44 @@ function chestCases(raw) {
     one('alcoves: links interact chest ok', (g) => { g.links.push({ id: 9, when: { interact: 'c1' }, do: [{ message: 'x' }] }); }),
     one('alcoves: links interact alcove', (g) => { g.links.push({ id: 9, when: { interact: 'al1' }, do: [{ message: 'x' }] }); }),
     one('alcoves: hasItem key ok', (g) => { g.links.push({ id: 9, when: { hasItem: 'k1' }, do: [{ message: 'x' }] }); }),
+  ];
+}
+
+
+// Buttons and levers (R-BTN-1, R-LEVER-1, links): edits of the button room.
+function buttonCases(raw) {
+  const base = JSON.parse(buttonRoom());
+  const one = (name, f) => { const g = structuredClone(base); f(g); return raw(name, utf8(JSON.stringify(g))); };
+  const ent = (id) => (g) => g.entities.find((e) => e.id === id);
+  const set = (id, o) => (g) => Object.assign(ent(id)(g), o);
+  const del = (id, k) => (g) => { delete ent(id)(g)[k]; };
+  const add = (e) => (g) => { g.entities.push(e); };
+  const link = (when, doo = [{ message: 'x' }]) => (g) => { g.links.push({ id: 9, when, do: doo }); };
+  return [
+    one('buttons: room', () => {}),
+    one('buttons: wall and cell', set('b1', { wall: [[10, 3], 'n'] })), one('buttons: neither', del('b1', 'cell')),
+    one('buttons: behaviour bad', set('b1', { behaviour: 'hold' })), one('buttons: pressedBy bad', set('b1', { pressedBy: 'foot' })),
+    one('buttons: glyph bad', set('b1', { glyph: 'cat' })), one('buttons: glyph serpent ok', set('b1', { glyph: 'serpent' })),
+    one('buttons: timed without downTicks', del('b3', 'downTicks')), one('buttons: downTicks on press', set('b1', { downTicks: 5 })),
+    one('buttons: downTicks 0', set('b3', { downTicks: 0 })), one('buttons: downTicks 1800 ok', set('b3', { downTicks: 1800 })), one('buttons: downTicks 1801', set('b3', { downTicks: 1801 })),
+    one('buttons: concealed false', set('b1', { concealed: false })), one('buttons: concealed ok', set('b1', { concealed: true })),
+    one('buttons: wall not facing a wall', set('b3', { wall: [[11, 4], 'e'] })), one('buttons: wall side bad', set('b3', { wall: [[12, 4], 'x'] })),
+    one('buttons: wall cell is wall', set('b3', { wall: [[13, 4], 'e'] })), one('buttons: wall shape', set('b3', { wall: [12, 4] })),
+    one('buttons: pedestal on a wall', set('b1', { cell: [0, 0] })), one('buttons: pedestal on a door', set('b1', { cell: [9, 2] })),
+    one('buttons: pedestal on the start', set('b1', { cell: [3, 1] })), one('buttons: extra key', set('b1', { size: 2 })),
+    one('buttons: 33 buttons', (g) => { for (let n = 0; n < 29; n++) g.entities.push({ id: 'q' + n, type: 'button', wall: [[1 + (n % 12), 1], 'n'], behaviour: 'latch', pressedBy: 'hand', glyph: 'sun' }); }),
+    one('buttons: 32 buttons ok', (g) => { for (let n = 0; n < 28; n++) g.entities.push({ id: 'q' + n, type: 'button', wall: [[1 + (n % 12), 1], 'n'], behaviour: 'latch', pressedBy: 'hand', glyph: 'sun' }); }),
+    one('levers: mode bad', set('l1', { mode: 'twice' })), one('levers: on not bool', set('l1', { on: 1 })), one('levers: cell not wall', set('l1', { wall: [[2, 3], 'w'] })),
+    one('levers: cell placement', (g) => { const l = ent('l1')(g); delete l.wall; l.cell = [2, 3]; }), one('levers: missing mode', del('l1', 'mode')),
+    one('levers: 33 levers', (g) => { for (let n = 0; n < 31; n++) g.entities.push({ id: 'q' + n, type: 'lever', wall: [[1 + (n % 12), 1], 'n'], mode: 'toggle', on: false }); }),
+    one('buttonlinks: buttonPressed a lever', link({ buttonPressed: 'l1' })), one('buttonlinks: leverOn a button', link({ leverOn: 'b1' })),
+    one('buttonlinks: pebbleHit ok', link({ pebbleHit: 'b3' })), one('buttonlinks: buttonDown ok', link({ buttonDown: 'b2' })),
+    one('buttonlinks: interact lever ok', link({ interact: 'l2' })), one('buttonlinks: interact button', link({ interact: 'b1' })),
+    one('buttonlinks: buttonDown in a not', link({ not: { buttonDown: 'b2' } })), one('buttonlinks: buttonPressed in a not', link({ not: { buttonPressed: 'b2' } })),
+    one('buttonlinks: grantItem ok', link({ interact: 'l2' }, [{ grantItem: 't2' }])), one('buttonlinks: grantItem rubble', (g) => { g.entities.push({ id: 'r1', type: 'item', kind: 'rubble', cell: [2, 2] }); link({ interact: 'l2' }, [{ grantItem: 'r1' }])(g); }),
+    one('buttonlinks: grantItem a door', link({ interact: 'l2' }, [{ grantItem: 'd1' }])), one('buttonlinks: resetButton ok', link({ interact: 'l2' }, [{ resetButton: 'b2' }])),
+    one('buttonlinks: resetButton a lever', link({ interact: 'l2' }, [{ resetButton: 'l1' }])), one('buttonlinks: setLeverOn ok', link({ interact: 'l2' }, [{ setLeverOn: 'l1' }])),
+    one('buttonlinks: setLeverOff a button', link({ interact: 'l2' }, [{ setLeverOff: 'b1' }])), one('buttonlinks: setLeverOn value', link({ interact: 'l2' }, [{ setLeverOn: true }])),
   ];
 }
 

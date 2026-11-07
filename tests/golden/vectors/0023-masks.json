@@ -1,6 +1,6 @@
 {
  "name": "0023-masks",
- "core": "m0.16",
+ "core": "m0.17",
  "seed": 23,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":10,\"cells\":\"DwAMAQIADAECAAwBAgAMAQIADAEDAAECAwABAgMAAQIFAAEBAwABCAMAAQgFAAEBGQA=\"},\"start\":{\"cell\":[6,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,12,5]],\"ceil\":4200},{\"id\":\"b\",\"name\":\"B\",\"rects\":[[2,7,1,2]],\"ceil\":3000,\"checkpoint\":{\"cell\":[2,8],\"yaw\":0}}],\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[2,6],\"style\":\"mask\",\"opens\":\"key\",\"key\":\"k1\",\"face\":\"sleep\"},{\"id\":\"d2\",\"type\":\"door\",\"cell\":[6,6],\"style\":\"mask\",\"opens\":\"interact\",\"face\":\"weep\"},{\"id\":\"d3\",\"type\":\"door\",\"cell\":[10,6],\"style\":\"mask\",\"opens\":\"interact\",\"face\":\"laugh\"},{\"id\":\"c1\",\"type\":\"chest\",\"cell\":[3,1],\"wall\":\"n\",\"style\":\"gilded\",\"trap\":\"needles\"},{\"id\":\"c2\",\"type\":\"chest\",\"cell\":[9,1],\"wall\":\"n\",\"style\":\"plain\",\"trap\":\"none\"},{\"id\":\"t1\",\"type\":\"item\",\"kind\":\"treasure\",\"in\":\"c1\",\"value\":400},{\"id\":\"k1\",\"type\":\"item\",\"kind\":\"key\",\"in\":\"c2\"},{\"id\":\"f1\",\"type\":\"item\",\"kind\":\"flask\",\"in\":\"c2\"},{\"id\":\"al1\",\"type\":\"alcove\",\"cell\":[6,7],\"kind\":\"drown\",\"door\":\"d2\"},{\"id\":\"al2\",\"type\":\"alcove\",\"cell\":[10,7],\"kind\":\"tip\",\"door\":\"d3\"}],\"links\":[{\"id\":1,\"when\":{\"all\":[{\"interact\":\"d1\"},{\"not\":{\"hasItem\":\"k1\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"keyhole\"}]},{\"id\":2,\"when\":{\"all\":[{\"interact\":\"d2\"},{\"not\":{\"doorOpen\":\"d2\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"sealed\"}]},{\"id\":3,\"when\":{\"all\":[{\"interact\":\"d3\"},{\"not\":{\"doorOpen\":\"d3\"}}],\"within\":1},\"repeat\":true,\"do\":[{\"message\":\"sealed\"}]},{\"id\":4,\"when\":{\"itemTaken\":\"k1\"},\"do\":[{\"message\":\"a key\"}]}]}",
@@ -672,17 +672,17 @@
  "ticks": 1610,
  "hashEvery": 300,
  "hashes": {
-  "0": "fea2a905c403c9e9db743c860e8b6b02",
-  "300": "964b12084382d5b5b0118cf2cdf2d61b",
-  "600": "99549ee5134b0610719ee4fd09d52ff2",
-  "900": "bd53f5b0a9ceb9a4b52d45d65ed254e1",
-  "1200": "b7995dffed2eb885a0fc14b840fdec58",
-  "1500": "632ab9752dd2141af231e07baedbf183"
+  "0": "b8d8daa0a260420a8715e34951e05c4f",
+  "300": "b49d50f77e30cfbbc36e349c8d7251e4",
+  "600": "2ac44c0febf541d0977803eb463e528c",
+  "900": "36d592e0df785d6027a2c7d41cc22020",
+  "1200": "39b0387c653a06cafa7619110bdebab9",
+  "1500": "e3d474701a782148fdafc397118c08c1"
  },
- "final": "10a3fc038ea435e7023e8f7e74811734",
+ "final": "69fe8ddd2e3e45b3ea2ed67b1de4c468",
  "finalState": {
   "v": 1,
-  "core": "m0.16",
+  "core": "m0.17",
   "world": "6b3819309858490d89288aa34afa326f",
   "mode": "delve",
   "tick": 1610,
@@ -777,6 +777,9 @@
   "blows": [],
   "shots": [],
   "braziers": [],
+  "buttons": [],
+  "levers": [],
+  "found": [],
   "boss": null,
   "won": null,
   "bellSets": [],
@@ -847,6 +850,8 @@
      ],
      "groups": [],
      "braziers": [],
+     "buttons": [],
+     "levers": [],
      "boss": null,
      "doors": [
       false,
@@ -926,6 +931,8 @@
      ],
      "groups": [],
      "braziers": [],
+     "buttons": [],
+     "levers": [],
      "boss": null,
      "doors": [
       true,

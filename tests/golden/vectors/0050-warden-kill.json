@@ -1,6 +1,6 @@
 {
  "name": "0050-warden-kill",
- "core": "m0.16",
+ "core": "m0.17",
  "seed": 50,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIADAECAAwBAgAMAQIADAECAAwBAgAMAQ8A\"},\"start\":{\"cell\":[4,4]},\"zones\":[{\"id\":\"c\",\"name\":\"C\",\"rects\":[[1,1,6,7],[8,1,5,7]],\"ceil\":5200,\"checkpoint\":{\"cell\":[2,4],\"yaw\":1024}},{\"id\":\"d\",\"name\":\"D\",\"rects\":[[7,4,1,1]],\"ceil\":5200}],\"entities\":[{\"id\":\"wd\",\"type\":\"boss\",\"kind\":\"deepWarden\",\"pos\":[18000,10800],\"zone\":\"d\",\"summons\":\"crypt\"},{\"id\":\"z0\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z1\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[11,5],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z2\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z3\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,6],\"start\":\"dormant\",\"group\":\"crypt\"}],\"links\":[{\"id\":1,\"when\":{\"inZone\":\"c\"},\"do\":[{\"wakeBoss\":\"wd\"}]}]}",
@@ -61,16 +61,16 @@
  "ticks": 1239,
  "hashEvery": 300,
  "hashes": {
-  "0": "8a2a78bcd23a7395d3e846060663a068",
-  "300": "add0d83f7a308c6cc5cd22f78ec4b678",
-  "600": "daf006b6b6f2183b47d91eee238f3f28",
-  "900": "6f9e0c91c12575f74f03032889a5bb9e",
-  "1200": "64ecb994a5d72966edf34ca24597995f"
+  "0": "5e6bd36a2e4379fa66de83a5f404a0bc",
+  "300": "ff5d3e5df01b4db449aadac083c69412",
+  "600": "f04a415a832fab4f18a0b1f681c5ffbc",
+  "900": "c3b746bea86ab1fae1a7b7b5a910bed2",
+  "1200": "d7af3c0d353fa0a93422fd7c22764e54"
  },
- "final": "d245d18ea19c15a56ddacfc751183284",
+ "final": "e9787502e5f18409ad601dcb90790258",
  "finalState": {
   "v": 1,
-  "core": "m0.16",
+  "core": "m0.17",
   "world": "e3a157d41022bd092faf8f1be2ce82bf",
   "mode": "practice",
   "tick": 1239,
@@ -213,6 +213,9 @@
   "blows": [],
   "shots": [],
   "braziers": [],
+  "buttons": [],
+  "levers": [],
+  "found": [],
   "boss": {
    "st": "dead",
    "x": 17500,
@@ -258,6 +261,8 @@
       "dormant"
      ],
      "braziers": [],
+     "buttons": [],
+     "levers": [],
      "boss": "asleep",
      "doors": [],
      "floor": [],

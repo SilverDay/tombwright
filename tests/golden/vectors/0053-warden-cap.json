@@ -1,6 +1,6 @@
 {
  "name": "0053-warden-cap",
- "core": "m0.16",
+ "core": "m0.17",
  "seed": 53,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAEAQEABwECAAQBAQAHAQcABwECAAwBAgAMAQIADAECAAwBDwA=\"},\"start\":{\"cell\":[4,4]},\"zones\":[{\"id\":\"c\",\"name\":\"C\",\"rects\":[[1,1,6,7],[8,1,5,7]],\"ceil\":5200,\"checkpoint\":{\"cell\":[2,4],\"yaw\":1024}},{\"id\":\"d\",\"name\":\"D\",\"rects\":[[7,4,1,1]],\"ceil\":5200}],\"entities\":[{\"id\":\"wd\",\"type\":\"boss\",\"kind\":\"deepWarden\",\"pos\":[18000,10800],\"zone\":\"d\",\"summons\":\"crypt\"},{\"id\":\"z0\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z1\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[11,5],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z3\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,6],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"c0\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[1,1],\"start\":\"idle\"},{\"id\":\"c1\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[2,1],\"start\":\"idle\"},{\"id\":\"c2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[3,1],\"start\":\"idle\"},{\"id\":\"c3\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[4,1],\"start\":\"idle\"},{\"id\":\"c4\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[1,2],\"start\":\"idle\"},{\"id\":\"c5\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[2,2],\"start\":\"idle\"},{\"id\":\"c6\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[3,2],\"start\":\"idle\"},{\"id\":\"c7\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[4,2],\"start\":\"idle\"}],\"links\":[{\"id\":1,\"when\":{\"inZone\":\"c\"},\"do\":[{\"wakeBoss\":\"wd\"}]}]}",
@@ -22,18 +22,18 @@
  "ticks": 1800,
  "hashEvery": 300,
  "hashes": {
-  "0": "205c98311028b51fbc099615a7bd591f",
-  "300": "800855fe5258a609de8c69df6f15be72",
-  "600": "4651918986d2cc133e637c572e375d37",
-  "900": "fe8dd84230706815acfde65ed847ffca",
-  "1200": "36e5057fe28dd1c3a92553454b16f095",
-  "1500": "d13f4bad94cac3587b79a29fed6cc488",
-  "1800": "6c1e957fd17d80795cfa8793f76a6930"
+  "0": "0346ef8f81f185ce90d3e6a3e4325245",
+  "300": "7a95c9ba89e0f25ef8862bbc90b3ec8a",
+  "600": "9d930a3f9bba51852a181d90aeb466ad",
+  "900": "005cfb36223d78b838ece1c43f2d9049",
+  "1200": "c925182e9a5cdda9fe91de76f3c8082d",
+  "1500": "f2d3d5f0a038acdb3340cab5c97f9682",
+  "1800": "b73f0978dc9ac688769bb1595808ba0b"
  },
- "final": "6c1e957fd17d80795cfa8793f76a6930",
+ "final": "b73f0978dc9ac688769bb1595808ba0b",
  "finalState": {
   "v": 1,
-  "core": "m0.16",
+  "core": "m0.17",
   "world": "dbe38cc9868687f339f53cb8bd3fb50d",
   "mode": "practice",
   "tick": 1800,
@@ -317,6 +317,9 @@
   "blows": [],
   "shots": [],
   "braziers": [],
+  "buttons": [],
+  "levers": [],
+  "found": [],
   "boss": {
    "st": "stalk",
    "x": 17500,
@@ -370,6 +373,8 @@
       "awake"
      ],
      "braziers": [],
+     "buttons": [],
+     "levers": [],
      "boss": "asleep",
      "doors": [],
      "floor": [],

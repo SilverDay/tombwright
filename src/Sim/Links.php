@@ -17,11 +17,11 @@ final class Links
     private const MAX_DEPTH = 4;
     private const MAX_TRIGGERS = 16;
     private const MAX_MESSAGE_BYTES = 1000;
-    private const EVENTS = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired', 'foesDefeated', 'bossDefeated'];
-    private const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'lanternHung', 'bellsSolved', 'beamHits', 'linkActive', 'foesAlive', 'bossAwake', 'lightLit'];
+    private const EVENTS = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired', 'foesDefeated', 'bossDefeated', 'buttonPressed', 'pebbleHit'];
+    private const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'lanternHung', 'bellsSolved', 'beamHits', 'linkActive', 'foesAlive', 'bossAwake', 'lightLit', 'buttonDown', 'leverOn'];
     private const GATES = ['all', 'any', 'atLeast', 'sequence', 'not'];
     private const GATE_OPTS = ['all' => ['within'], 'any' => ['within'], 'atLeast' => ['k', 'within'], 'sequence' => ['within', 'strict', 'onWrong'], 'not' => []];
-    private const EFFECTS = ['wakeBoss', 'lightOn', 'lightOff', 'setCheckpoint', 'spawnFoes', 'openDoor', 'closeDoor', 'sealDoor', 'reveal', 'hide', 'damage', 'message'];
+    private const EFFECTS = ['wakeBoss', 'lightOn', 'lightOff', 'setCheckpoint', 'spawnFoes', 'openDoor', 'closeDoor', 'sealDoor', 'reveal', 'hide', 'damage', 'message', 'grantItem', 'resetButton', 'setLeverOn', 'setLeverOff'];
     private const LINK_KEYS = ['id', 'when', 'do', 'undo', 'repeat', 'delay'];
 
     private static function bad(string $what): never
@@ -134,6 +134,12 @@ final class Links
                     self::bad('setCheckpoint zone');
                 }
                 $out[] = ['kind' => $kind, 'zone' => $z];
+            } elseif ($kind === 'grantItem') {
+                $out[] = ['kind' => $kind, 'item' => self::entity($v, $ctx, static fn (array $r): bool => $r['type'] === 'item' && $r['kind'] !== 'rubble')['n']];
+            } elseif ($kind === 'resetButton') {
+                $out[] = ['kind' => $kind, 'button' => self::entity($v, $ctx, static fn (array $r): bool => $r['type'] === 'button')['button']];
+            } elseif ($kind === 'setLeverOn' || $kind === 'setLeverOff') {
+                $out[] = ['kind' => $kind, 'lever' => self::entity($v, $ctx, static fn (array $r): bool => $r['type'] === 'lever')['lever']];
             } elseif ($kind === 'reveal' || $kind === 'hide') {
                 $out[] = ['kind' => $kind, 'item' => self::entity($v, $ctx, static fn (array $r): bool => $r['type'] === 'item' && $r['hidden'])['n']];
             } else {
@@ -192,7 +198,7 @@ final class Links
         $takeable = static fn (array $r): bool => $r['type'] === 'item' && $r['kind'] !== 'rubble';
         switch ($kind) {
             case 'interact':
-                return self::entity($v, $c['ctx'], static fn (array $r): bool => in_array($r['type'], ['door', 'item', 'bell', 'lampHook', 'mirror', 'chest', 'brazier'], true))['n'];
+                return self::entity($v, $c['ctx'], static fn (array $r): bool => in_array($r['type'], ['door', 'item', 'bell', 'lampHook', 'mirror', 'chest', 'brazier', 'lever'], true))['n'];
             case 'itemTaken':
             case 'hasItem':
                 return self::entity($v, $c['ctx'], $takeable)['n'];
@@ -225,6 +231,12 @@ final class Links
                 return 0;
             case 'lightLit':
                 return self::entity($v, $c['ctx'], static fn (array $r): bool => $r['type'] === 'brazier')['brazier'];
+            case 'buttonPressed':
+            case 'pebbleHit':
+            case 'buttonDown':
+                return self::entity($v, $c['ctx'], static fn (array $r): bool => $r['type'] === 'button')['button'];
+            case 'leverOn':
+                return self::entity($v, $c['ctx'], static fn (array $r): bool => $r['type'] === 'lever')['lever'];
             case 'beamHits':
                 return self::entity($v, $c['ctx'], static fn (array $r): bool => $r['type'] === 'crystal')['crystal'];
             case 'lanternHooded':

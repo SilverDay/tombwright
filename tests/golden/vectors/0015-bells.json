@@ -1,6 +1,6 @@
 {
  "name": "0015-bells",
- "core": "m0.16",
+ "core": "m0.17",
  "seed": 15,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":12,\"h\":8,\"cells\":\"DQAHAQEAAgECAAcBAQACAQIABwEBAAIBAgAHAQECAgECAAcBAQACAQIABwEBAAIBDQA=\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"w\",\"name\":\"W\",\"rects\":[[1,1,7,6]],\"ceil\":5400},{\"id\":\"e\",\"name\":\"E\",\"rects\":[[9,1,2,6]],\"ceil\":4200,\"checkpoint\":{\"cell\":[9,4],\"yaw\":3072}}],\"entities\":[{\"id\":\"grate\",\"type\":\"door\",\"cell\":[8,4],\"style\":\"grate\",\"opens\":\"trigger\"},{\"id\":\"b1\",\"type\":\"bell\",\"cell\":[3,2],\"size\":1,\"patina\":2,\"note\":330},{\"id\":\"b2\",\"type\":\"bell\",\"cell\":[5,2],\"size\":2,\"patina\":1,\"note\":196},{\"id\":\"b3\",\"type\":\"bell\",\"cell\":[7,2],\"size\":3,\"patina\":0,\"note\":98},{\"id\":\"set\",\"type\":\"bellSet\",\"bells\":[\"b1\",\"b2\",\"b3\"],\"order\":[2,0,1]}],\"links\":[{\"id\":1,\"when\":{\"bellsSolved\":\"set\"},\"delay\":27,\"do\":[{\"openDoor\":\"grate\"},{\"message\":\"The grate rises.\"}]},{\"id\":2,\"when\":{\"bellsWrong\":\"set\"},\"repeat\":true,\"delay\":20,\"do\":[{\"damage\":28}]},{\"id\":3,\"when\":{\"sequence\":[{\"bellsWrong\":\"set\"},{\"bellsWrong\":\"set\"}]},\"do\":[{\"message\":\"Two wrongs.\"}]},{\"id\":4,\"when\":{\"enterZone\":\"e\"},\"delay\":30,\"do\":[{\"sealDoor\":\"grate\"}]},{\"id\":5,\"when\":{\"interact\":\"grate\"},\"repeat\":true,\"do\":[{\"message\":\"It will not move.\"}]}]}",
@@ -308,14 +308,14 @@
  "ticks": 600,
  "hashEvery": 300,
  "hashes": {
-  "0": "984c6b45147f8ba7789b50046b36caf7",
-  "300": "2611e81c6e12815d8f0bd20c30aa93a7",
-  "600": "20f821e2e65633847e80085c2384501a"
+  "0": "77057a422abb20c7e06dee951d2d97b8",
+  "300": "cf8ab3be9987cea387e340b2da6789f1",
+  "600": "b7f85556c00938e7ae6795bcd5d99ca2"
  },
- "final": "20f821e2e65633847e80085c2384501a",
+ "final": "b7f85556c00938e7ae6795bcd5d99ca2",
  "finalState": {
   "v": 1,
-  "core": "m0.16",
+  "core": "m0.17",
   "world": "9b1ad0a2d813d0de3a03eda4eed8b5d0",
   "mode": "delve",
   "tick": 600,
@@ -386,6 +386,9 @@
   "blows": [],
   "shots": [],
   "braziers": [],
+  "buttons": [],
+  "levers": [],
+  "found": [],
   "boss": null,
   "won": null,
   "bellSets": [
@@ -463,6 +466,8 @@
      "chests": [],
      "groups": [],
      "braziers": [],
+     "buttons": [],
+     "levers": [],
      "boss": null,
      "doors": [
       false
@@ -543,6 +548,8 @@
      "chests": [],
      "groups": [],
      "braziers": [],
+     "buttons": [],
+     "levers": [],
      "boss": null,
      "doors": [
       true

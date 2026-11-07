@@ -64,6 +64,10 @@ function dressWall(cell, side, grid, w, h) {
   if (grid[k + d[1] * w + d[0]] !== CELL.WALL) throw new RangeError('dressing not on a wall');
 }
 const ITEM_KINDS = ['flask', 'rubble', 'treasure', 'key'];
+// R-BTN-1, R-LEVER-1: buttons and levers (decisions #92, #94-#96).
+export const GLYPHS = Object.freeze(['moon', 'sun', 'eye', 'key', 'hand', 'flame', 'drop', 'leaf', 'star', 'skull', 'crown', 'bell', 'tower', 'wave', 'bird', 'serpent']);
+const BUTTON_BEHAVIOURS = ['press', 'latch', 'toggle', 'timed'], PRESSED_BY = ['hand', 'pebble', 'both'], LEVER_MODES = ['once', 'toggle'];
+export const MAX_BUTTONS = 32, MAX_LEVERS = 32;
 const FOE_STARTS = ['asleep', 'idle', 'hunting', 'dormant'];
 export const MAX_FOES = 24, MAX_AWAKE = 8, THREAT_BUDGET = 100; // spec §7.2, §4.9.2
 // R-BELL-1, R-BELL-3: by size 1..3, the footprint radius and the extra reach (Gloamhollow r + 0.05 m and 2 m + r).
@@ -297,7 +301,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
   if (!Array.isArray(list) || list.length > MAX_ENTITIES) throw new RangeError('entities');
   const ids = new Set(), doorAt = new Int16Array(w * h).fill(-1), slab = new Uint8Array(w * h);
   const doors = [], props = [], refs = [], vents = [], ventAt = new Int16Array(w * h).fill(-1), items = [], eyes = [];
-  const bells = [], bellSets = [], byId = new Map(), hooks = [], mirrors = [], crystals = [];
+  const bells = [], bellSets = [], byId = new Map(), hooks = [], mirrors = [], crystals = [], buttons = [], levers = [];
   let inscriptions = 0;
   const chests = [], alcoves = [], alcoveAt = new Int16Array(w * h).fill(-1), foes = [], groups = [], groupIds = new Map(), braziers = [], bosses = [];
   for (const e of list) {
@@ -481,6 +485,42 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       for (let x = 0; x < e.order.length; x++) if (!e.order.includes(x)) throw new RangeError('bellSet order');
       refs.push({ type: 'bellSet', set: bellSets.length });
       bellSets.push({ id: e.id, names: e.bells.slice(), order: Object.freeze(e.order.slice()) });
+    } else if (e.type === 'button') {
+      // R-BTN-1
+      const pedestal = Object.hasOwn(e, 'cell'), place = pedestal ? 'cell' : 'wall';
+      if (pedestal === Object.hasOwn(e, 'wall')) throw new RangeError('button placement');
+      const timed = e.behaviour === 'timed';
+      const keys = ['id', 'type', place, 'behaviour', 'pressedBy', 'glyph'].concat(timed ? ['downTicks'] : [], Object.hasOwn(e, 'concealed') ? ['concealed'] : []);
+      if (!hasExactKeys(e, keys)) throw new RangeError('button keys');
+      if (!BUTTON_BEHAVIOURS.includes(e.behaviour) || !PRESSED_BY.includes(e.pressedBy) || !GLYPHS.includes(e.glyph)) throw new RangeError('button options');
+      if (timed && (!isInt(e.downTicks) || e.downTicks < 1 || e.downTicks > 1800)) throw new RangeError('button downTicks');
+      if (Object.hasOwn(e, 'concealed') && e.concealed !== true) throw new RangeError('button concealed');
+      if (buttons.length >= MAX_BUTTONS) throw new RangeError('too many buttons');
+      let k, wk = -1, x, z, reach;
+      if (pedestal) {
+        k = cellIndex(e.cell, w, h);
+        if (grid[k] !== CELL.ROOM && grid[k] !== CELL.CORR) throw new RangeError('button cell');
+        const [ci, cj] = e.cell; x = ci * CELL_MM + CELL_MM / 2; z = cj * CELL_MM + CELL_MM / 2; reach = 1900;
+        props.push(Object.freeze({ circle: true, x, z, r: 420, x0: x - 420, x1: x + 420, z0: z - 420, z1: z + 420 }));
+      } else {
+        if (!Array.isArray(e.wall) || e.wall.length !== 2) throw new RangeError('button wall');
+        dressWall(e.wall[0], e.wall[1], grid, w, h);
+        const d = dirOf(e.wall[1]), [ci, cj] = e.wall[0];
+        k = cellIndex(e.wall[0], w, h); wk = (cj + d[1]) * w + ci + d[0];
+        x = ci * CELL_MM + CELL_MM / 2 + 1100 * d[0]; z = cj * CELL_MM + CELL_MM / 2 + 1100 * d[1]; reach = 2000;
+      }
+      refs.push({ type: 'button', button: buttons.length });
+      buttons.push({ id: e.id, n: refs.length, k, wk, x, z, reach, pedestal, hand: e.pressedBy !== 'pebble', pebble: e.pressedBy !== 'hand', behaviour: e.behaviour, downTicks: timed ? e.downTicks : 0, concealed: e.concealed === true, glyph: e.glyph });
+    } else if (e.type === 'lever') {
+      // R-LEVER-1
+      if (!hasExactKeys(e, ['id', 'type', 'wall', 'mode', 'on'])) throw new RangeError('lever keys');
+      if (!LEVER_MODES.includes(e.mode) || typeof e.on !== 'boolean') throw new RangeError('lever options');
+      if (levers.length >= MAX_LEVERS) throw new RangeError('too many levers');
+      if (!Array.isArray(e.wall) || e.wall.length !== 2) throw new RangeError('lever wall');
+      dressWall(e.wall[0], e.wall[1], grid, w, h);
+      const d = dirOf(e.wall[1]), [ci, cj] = e.wall[0];
+      refs.push({ type: 'lever', lever: levers.length });
+      levers.push({ id: e.id, n: refs.length, k: cellIndex(e.wall[0], w, h), x: ci * CELL_MM + CELL_MM / 2 + 1100 * d[0], z: cj * CELL_MM + CELL_MM / 2 + 1100 * d[1], reach: 2000, once: e.mode === 'once', on: e.on });
     } else if (e.type === 'torch') {
       if (!hasExactKeys(e, KEYS.torch)) throw new RangeError('torch keys');
       dressWall(e.cell, e.wall, grid, w, h); // R-DRESS-1
@@ -566,6 +606,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
   }
   for (const c of chests) if (doorAt[c.k] >= 0 || slab[c.k]) throw new RangeError('chest cell taken');
   for (const b of braziers) if (doorAt[b.k] >= 0 || slab[b.k]) throw new RangeError('brazier cell taken');
+  for (const b of buttons) if (b.pedestal && (doorAt[b.k] >= 0 || slab[b.k])) throw new RangeError('button cell taken');
   // R-FOE-2: foes on free cells (walkers not on lethal ones), the caps and the threat budget.
   let threat = 0, awake = 0;
   for (const f of foes) {
@@ -593,6 +634,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
     hooks: Object.freeze(hooks), mirrors: Object.freeze(mirrors), crystals: Object.freeze(crystals),
     chests: Object.freeze(chests.map((c) => Object.freeze({ ...c, contents: Object.freeze(c.contents) }))),
     alcoves: Object.freeze(alcoves.map((a) => Object.freeze({ id: a.id, k: a.k, drown: a.drown, door: a.door }))), alcoveAt,
+    buttons: Object.freeze(buttons.map(Object.freeze)), levers: Object.freeze(levers.map(Object.freeze)),
     braziers: Object.freeze(braziers.map(Object.freeze)), boss: bosses.length > 0 ? Object.freeze({ id: bosses[0].id, kind: bosses[0].kind, x: bosses[0].x, z: bosses[0].z, zone: bosses[0].zone, summons: bosses[0].summons }) : null,
     foes: Object.freeze(foes.map(Object.freeze)), groups: Object.freeze(groups.map((g) => Object.freeze({ id: g.id, foes: Object.freeze(g.foes), dormant: g.dormant }))), groupIds,
     bellSets: Object.freeze(bellSets.map((b) => Object.freeze({ id: b.id, bells: Object.freeze(b.bells), order: b.order }))),
@@ -639,6 +681,8 @@ export function startZone(world) { return GRIDS.get(world).startZone; }
 
 /** R-BRAZIER-*, R-BOSS-*, R-EXIT-1 (frozen; boss and exit may be null). */
 export function worldBraziers(world) { return GRIDS.get(world).braziers; }
+export function worldButtons(world) { return GRIDS.get(world).buttons; }
+export function worldLevers(world) { return GRIDS.get(world).levers; }
 export function worldBoss(world) { return GRIDS.get(world).boss; }
 export function worldBossBox(world) { return GRIDS.get(world).bossBox; }
 export function worldExit(world) { return GRIDS.get(world).exit; }

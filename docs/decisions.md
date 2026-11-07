@@ -98,6 +98,10 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 91 | 2026-11-07 | **Wiring view V1 is a structured editor:** each link a card with its `when` as a nested tree built from dropdowns, then Do / Undo effect lists and options. The node-graph canvas (spec M2 wording) moves to V2. | Owner |
 | 92 | 2026-11-07 | **Buttons, levers, `pebbleHit` and the effects that go with them** (spec §4.3) are added to both cores as their own step (4b) after slice 4, before slice 5 (the exit test: Gloamhollow rebuilt and the four §4.3.6 examples). Slice 4 wires what the core supports today. | Owner |
 | 93 | 2026-11-07 | **Live wiring during a playtest:** a Wiring panel inside the playtest page (`/play/test`) shows each link's state read from the sim state (when true, active, spent, pending delay, when each event last fired); the editor stays on `/build`. | Owner |
+| 94 | 2026-11-07 | **Pebbles press buttons:** a wall button is hit when a pebble's flight is stopped by the wall cell it is mounted on, coming from the cell in front of it; a pedestal button when a pebble lands within 0.6 m of it. No finer aiming. | Owner |
+| 95 | 2026-11-07 | **Button glyphs:** 16 runes - moon, sun, eye, key, hand, flame, drop, leaf, star, skull, crown, bell, tower, wave, bird, serpent - drawn by the client. | Owner |
+| 96 | 2026-11-07 | **Concealed buttons:** probing the wall a concealed wall button is set in (from the cell in front of it), or a concealed pedestal's cell, finds it for the rest of the life; until then it can't be seen or pressed. | Owner |
+| 97 | 2026-11-07 | **`plateStepped` is deferred.** Step 4b adds buttons, levers, `buttonPressed`, `pebbleHit`, `buttonDown`, `leverOn`, `grantItem`, `resetButton` and `setLever`. | Owner |
 
 ## Still open (spec §17)
 

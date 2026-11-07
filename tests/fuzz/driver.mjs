@@ -8,6 +8,7 @@ function placeOf(e) {
   if (Array.isArray(e.cell)) return [e.cell[0] * 2400 + 1200, e.cell[1] * 2400 + 1200];
   if (Array.isArray(e.pos)) return [e.pos[0], e.pos[1]];
   if (Array.isArray(e.cells)) return [e.cells[0][0] * 2400 + 1200, e.cells[0][1] * 2400 + 1200];
+  if (Array.isArray(e.wall) && Array.isArray(e.wall[0])) return [e.wall[0][0] * 2400 + 1200, e.wall[0][1] * 2400 + 1200]; // wall buttons and levers
   return null;
 }
 /** The yaw (R-TRIG-1: 0 north, counter-clockwise) that faces from (x, z) towards (tx, tz). Test-side float, then a whole unit. */

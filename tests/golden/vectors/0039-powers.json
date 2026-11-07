@@ -1,6 +1,6 @@
 {
  "name": "0039-powers",
- "core": "m0.16",
+ "core": "m0.17",
  "seed": 39,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIADAECAAwBAgAMAQIADAECAAwBAgAMAQ8A\"},\"start\":{\"cell\":[4,4]},\"zones\":[{\"id\":\"p\",\"name\":\"P\",\"rects\":[[1,1,8,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[2,2],\"yaw\":0}},{\"id\":\"q\",\"name\":\"Q\",\"rects\":[[9,1,4,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[11,4],\"yaw\":0}}],\"entities\":[{\"id\":\"aqu\",\"type\":\"foe\",\"kind\":\"aquator\",\"cell\":[6,4],\"start\":\"hunting\"},{\"id\":\"ice\",\"type\":\"foe\",\"kind\":\"ice\",\"cell\":[4,6],\"start\":\"hunting\"},{\"id\":\"fly\",\"type\":\"foe\",\"kind\":\"flytrap\",\"cell\":[5,3],\"start\":\"idle\"},{\"id\":\"med\",\"type\":\"foe\",\"kind\":\"medusa\",\"cell\":[2,6],\"start\":\"hunting\"},{\"id\":\"rat\",\"type\":\"foe\",\"kind\":\"rattlesnake\",\"cell\":[7,2],\"start\":\"hunting\"},{\"id\":\"vam\",\"type\":\"foe\",\"kind\":\"vampire\",\"cell\":[11,6],\"start\":\"asleep\"},{\"id\":\"br\",\"type\":\"brazier\",\"cell\":[3,2],\"lit\":false},{\"id\":\"eye\",\"type\":\"eyes\",\"zone\":\"q\",\"wake\":60}]}",
@@ -139,16 +139,16 @@
  "ticks": 1303,
  "hashEvery": 300,
  "hashes": {
-  "0": "a9503c7d1e06b6bc17062d3645d2b563",
-  "300": "f36013e501fd82bbd3b9ef15ccf6a44c",
-  "600": "9104a31163a035b3746b10f72bb3063d",
-  "900": "7652ab76b8ac71935769cafc61b19359",
-  "1200": "ac445895583ea8eaef1a775635628e1c"
+  "0": "bc343b2ab14d2ab40397d588b1ffee93",
+  "300": "c610c3aab0cf0551f358f327bfc60b38",
+  "600": "3b4fe21dd01ab58f68164dc3005399dc",
+  "900": "e16375204cbbf000ecb5b74e898309f2",
+  "1200": "4254fe31d1df5d9c844ae3d4d93b9ba9"
  },
- "final": "c6deca8736d4106a95c8fa2db6faabbc",
+ "final": "af796edce8627ae2e66f16477d9d4003",
  "finalState": {
   "v": 1,
-  "core": "m0.16",
+  "core": "m0.17",
   "world": "33fa41360a2431760f4ab42e04b20fe9",
   "mode": "practice",
   "tick": 1303,
@@ -341,6 +341,9 @@
   "braziers": [
    false
   ],
+  "buttons": [],
+  "levers": [],
+  "found": [],
   "boss": null,
   "won": null,
   "bellSets": [],
@@ -372,6 +375,8 @@
      "braziers": [
       false
      ],
+     "buttons": [],
+     "levers": [],
      "boss": null,
      "doors": [],
      "floor": [],
@@ -439,6 +444,8 @@
      "braziers": [
       false
      ],
+     "buttons": [],
+     "levers": [],
      "boss": null,
      "doors": [],
      "floor": [],

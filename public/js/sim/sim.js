@@ -8,12 +8,12 @@ import { canonicalBytes } from './canon.js';
 import { sha256, toHex } from './sha256.js';
 import {
   loadWorld, solidCell, assertWorld, worldProps, worldDoors, entityRef, cellCode, slabAt, ventAt, zoneAt, worldZones, startZone,
-  worldItems, worldEyes, sightBlocked, worldBells, worldBellSets, worldLinks, worldHooks, worldMirrors, worldCrystals, worldChests, alcoveAt, worldFoes, worldGroups, MAX_AWAKE, worldBraziers, worldBoss, worldBossBox, worldExit,
+  worldItems, worldEyes, sightBlocked, worldBells, worldBellSets, worldLinks, worldHooks, worldMirrors, worldCrystals, worldChests, alcoveAt, worldFoes, worldGroups, MAX_AWAKE, worldBraziers, worldButtons, worldLevers, worldBoss, worldBossBox, worldExit,
   CELL, DOOR_FULL, DOOR_STEP, DOOR_CLOSE_STEP,
 } from './world.js';
 import { runLinks, initLinkState, copyLinkState } from './links.js';
 
-export const CORE_VERSION = 'm0.16';
+export const CORE_VERSION = 'm0.17';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -36,6 +36,7 @@ export const RISE_TICKS = 51;
 export const RISE_OIL = 50 * 30000;
 // R-TOOL-2 cooldowns in ticks (Gloamhollow 0.7 s and 0.5 s). R-PEB-1: pouch. R-PEB-4: pick-up radius.
 export const PROBE_CD = 21, PEBBLE_CD = 15, PEBBLE_MAX = 12, PICKUP_MM = 750;
+const PRESS_TICKS = 15;                                 // R-BTN-2: a `press` button stays down half a second
 // R-HP-1: hp in 1/30-hp units; regeneration +4 a tick once calm > 150 (Gloamhollow 4 hp/s after 5 s).
 export const HP_UNIT = 30, HP_FULL = 100 * HP_UNIT, HP_REGEN = 4, CALM_MAX = 151;
 // R-STRIKE-*: swing cooldown and blow delay (Gloamhollow 0.45 s, 110 ms), reach, knock-back, stun. R-FOE-7: ranges.
@@ -109,6 +110,9 @@ export function init(world, seed, mode) {
     blows: [],               // R-STRIKE-1: { foe, at } (foe -1: the boss)
     shots: [],               // R-SHOT-1: projectiles in flight, { x, z, dx, dz, sp, dmg, r, t, k }
     braziers: worldBraziers(world).map((b) => b.lit),         // R-BRAZIER-1
+    buttons: worldButtons(world).map(() => ({ down: false, t: 0 })), // R-BTN-1
+    levers: worldLevers(world).map((l) => ({ on: l.on, used: false })), // R-LEVER-1
+    found: [],               // R-BTN-4 (a lesson): concealed buttons found
     boss: worldBoss(world) === null ? null : freshBoss(worldBoss(world)), // R-BOSS-2
     won: null,               // R-EXIT-1: the tick the run was won
     bellSets: worldBellSets(world).map(() => ({ seq: [], solved: false })), // R-BELL-2
@@ -133,7 +137,8 @@ function lifeOf(state) {
     hp: p.hp, oil: p.oil, hooded: p.hooded, hung: p.hung, flasks: p.flasks, pebbles: p.pebbles,
     revealed: state.revealed.slice(), mirrors: state.mirrors.slice(),
     chests: state.chests.map((c) => ({ look: c.look, sprung: c.sprung, open: c.open })), groups: state.groups.slice(),
-    braziers: state.braziers.slice(), boss: state.boss === null ? null : state.boss.st === 'asleep' ? 'asleep' : state.boss.st === 'dead' ? 'dead' : 'awake',
+    braziers: state.braziers.slice(), buttons: state.buttons.map((b) => [b.down, b.t]), levers: state.levers.map((l) => [l.on, l.used]),
+    boss: state.boss === null ? null : state.boss.st === 'asleep' ? 'asleep' : state.boss.st === 'dead' ? 'dead' : 'awake',
     doors: state.doors.map((d) => d.open), floor: state.floor.map((f) => ({ x: f.x, z: f.z })), loot: state.loot.map((l) => ({ ...l })), taken: state.taken.slice(),
     bellSets: copyBellSets(state.bellSets), links: copyLinkState(state.links),
     foes: state.foes.map((f) => [f.loot, f.lf, f.lp]),  // R-CP-3: carried loot (decision #70)
@@ -168,7 +173,7 @@ export function step(world, state, input) {
     // R-DEATH-2: while dead only rising and the doors go on.
     if ((pressed & BTN.rise) && state.tick >= state.dead.at + RISE_TICKS) rise(world, state, input.target, events);
     moveDoors(state);
-    landPebbles(world, state, events);
+    landPebbles(world, state, events, []);            // R-BTN-5: a dead player's link events are never delivered
   } else {
     const batch = [];                                 // R-LINK-5: batch 0
     const P0 = state.player, wasBusy = P0.busy > 0 || P0.frozen > 0 || P0.held >= 0; // R-FOE-7: no running noise while busy or rooted (R-POW-8)
@@ -177,7 +182,7 @@ export function step(world, state, input) {
     if (on()) updateFoes(world, state, input, events, batch, wasBusy); // R-FOE-6
     if (on()) updateBoss(world, state, events, batch);       // R-BOSS-4
     if (on()) updateShots(world, state, events);            // R-SHOT-2
-    landPebbles(world, state, events);
+    landPebbles(world, state, events, batch);
     if (on()) links(world, state, batch, events); // R-LINK-7
     if (on()) regenerate(state.player);             // R-HP-1
   }
@@ -214,6 +219,8 @@ function links(world, state, batch, events) {
         case 'beamHits': return beamHits(world, state, arg);
         case 'bossAwake': return state.boss.st !== 'asleep' && state.boss.st !== 'dead';
         case 'lightLit': return state.braziers[arg];
+        case 'buttonDown': return state.buttons[arg].down;
+        case 'leverOn': return state.levers[arg].on;
         case 'foesAlive': return worldGroups(world)[arg].foes.some((n) => { const st = state.foes[n].st; return st !== 'dormant' && st !== 'dead'; });
         case 'linkActive': return state.links[worldLinks(world).findIndex((l) => l.id === arg)].active;
       }
@@ -246,6 +253,24 @@ function links(world, state, batch, events) {
           continue;
         }
         if (fx.kind === 'damage') { hurt(state, fx.n, events); changed = true; if (state.dead !== null) return true; continue; }
+        if (fx.kind === 'grantItem') {                     // R-LINK-8
+          if (!state.taken.includes(fx.item)) {
+            const it = worldItems(world)[entityRef(world, fx.item).item];
+            state.taken.push(fx.item); if (it.kind === 'flask') state.player.flasks += 1;
+            changed = true; events.push({ e: 'item', id: it.id, kind: it.kind, granted: true });
+          }
+          continue;
+        }
+        if (fx.kind === 'resetButton') {
+          const b = state.buttons[fx.button];
+          if (b.down || b.t > 0) { b.down = false; b.t = 0; changed = true; events.push({ e: 'button', id: worldButtons(world)[fx.button].id, down: false, by: 'link' }); }
+          continue;
+        }
+        if (fx.kind === 'setLeverOn' || fx.kind === 'setLeverOff') {
+          const l = state.levers[fx.lever], on = fx.kind === 'setLeverOn';
+          if (l.on !== on) { l.on = on; changed = true; events.push({ e: 'lever', id: worldLevers(world)[fx.lever].id, on }); }
+          continue;
+        }
         if (fx.kind === 'reveal') { if (!state.revealed.includes(fx.item)) { state.revealed.push(fx.item); changed = true; } continue; }
         if (fx.kind === 'hide') { const at = state.revealed.indexOf(fx.item); if (at >= 0) { state.revealed.splice(at, 1); changed = true; } continue; }
         const d = state.doors[fx.door], id = doors[fx.door].id, sealed = state.sealed.includes(fx.door);
@@ -301,6 +326,13 @@ function live(world, state, input, pressed, events, batch) {
     }
     state.sealing = keep;
   }
+
+  // R-BTN-3: pressed buttons count down.
+  state.buttons.forEach((b, bi) => {
+    if (b.t <= 0) return;
+    b.t -= 1;
+    if (b.t === 0 && b.down) { b.down = false; events.push({ e: 'button', id: worldButtons(world)[bi].id, down: false, by: 'time' }); }
+  });
 
   // R-TOOL-1: tool presses, in button order, from where the player stood before moving (none while busy, R-BRAZIER-2).
   const busy = p.busy > 0 || p.frozen > 0;            // R-POW-8: frozen counts as busy
@@ -409,7 +441,11 @@ function probe(world, state, events) {
   for (let s = 1; s <= 8; s++) {
     // r·s <= 2600·8
     const [qx, qz] = ahead(p, sy, cy, idiv(r * s, 8)), a = fdiv(qx, CELL_MM), b = fdiv(qz, CELL_MM);
-    if (solidCell(world, state, a, b) && !slabOrSprung(world, state, a, b)) { events.push({ e: 'probe', k: 'wall' }); return; }
+    if (solidCell(world, state, a, b) && !slabOrSprung(world, state, a, b)) {
+      const fi = s === 1 ? pi : fdiv(ahead(p, sy, cy, idiv(r * (s - 1), 8))[0], CELL_MM), fj = s === 1 ? pj : fdiv(ahead(p, sy, cy, idiv(r * (s - 1), 8))[1], CELL_MM);
+      findButtons(world, state, (d) => !d.pedestal && d.wk === b * world.w + a && d.k === fj * world.w + fi, events); // R-BTN-4
+      events.push({ e: 'probe', k: 'wall' }); return;
+    }
   }
   const i = fdiv(tx, CELL_MM), j = fdiv(tz, CELL_MM), k = j * world.w + i, code = cellCode(world, i, j);
   const mimic = state.foes.findIndex((f) => f.st === 'disguised' && fdiv(f.x, CELL_MM) === i && fdiv(f.z, CELL_MM) === j);
@@ -418,6 +454,7 @@ function probe(world, state, events) {
     events.push({ e: 'probe', k: 'mimic' }, { e: 'reveal', id: worldFoes(world)[mimic].id, safe: true });
     return;
   }
+  findButtons(world, state, (d) => d.pedestal && d.k === k, events);  // R-BTN-4
   let what = 'stone';
   if (code === CELL.PLATE) {
     if (slabOrSprung(world, state, i, j)) what = 'slab';
@@ -435,6 +472,13 @@ function probe(world, state, events) {
   events.push({ e: 'probe', k: what });
 }
 
+/** R-BTN-4: concealed buttons the probe finds, in entity order. */
+function findButtons(world, state, hit, events) {
+  worldButtons(world).forEach((d, bi) => {
+    if (d.concealed && !state.found.includes(bi) && hit(d)) { state.found.push(bi); events.push({ e: 'find', id: d.id }); }
+  });
+}
+
 /** R-PEB-1, R-PEB-2 */
 function throwPebble(world, state, events) {
   const p = state.player;
@@ -444,20 +488,20 @@ function throwPebble(world, state, events) {
   p.pebbleCd = PEBBLE_CD;
   const want = clamp(6200 + idiv(6000 * p.pitch, 127), 1600, 8500);
   const sy = isin(p.yaw), cy = icos(p.yaw);
-  let d = 400, lx = p.x, lz = p.z;
+  let d = 400, lx = p.x, lz = p.z, wall = -1;
   while (d < want) {
     const [nx, nz] = ahead(p, sy, cy, d), i = fdiv(nx, CELL_MM), j = fdiv(nz, CELL_MM);
     if (slabOrSprung(world, state, i, j)) { lx = nx; lz = nz; break; }
-    if (solidCell(world, state, i, j)) break;
+    if (solidCell(world, state, i, j)) { if (cellCode(world, i, j) === CELL.WALL) wall = j * world.w + i; break; } // R-BTN-5
     lx = nx; lz = nz; d += 120;
   }
   const flight = idiv(21000 + 3 * d + 1999, 2000);
-  state.flying.push({ x: lx, z: lz, at: state.tick + flight - 1 });
+  state.flying.push({ x: lx, z: lz, at: state.tick + flight - 1, w: wall });
   events.push({ e: 'throw' });
 }
 
 /** R-PEB-3: pebbles due this tick land, in list order. */
-function landPebbles(world, state, events) {
+function landPebbles(world, state, events, batch) {
   if (state.flying.length === 0) return;
   const keep = [];
   for (const f of state.flying) {
@@ -473,9 +517,22 @@ function landPebbles(world, state, events) {
     else if (code === CELL.BRIDGE) { if (!state.bridge.includes(k)) state.bridge.push(k); what = 'bridge'; }
     if (rests) state.floor.push({ x: f.x, z: f.z });
     events.push({ e: 'land', k: what });
+    hitButtons(world, state, f, events, batch);        // R-BTN-5
     if (state.dead === null) noise(world, state, f.x, f.z, NOISE_PEBBLE, 'pebble', events); // R-FOE-7
   }
   state.flying = keep;
+}
+
+/** R-BTN-5: the buttons a landing pebble hits, in entity order. */
+function hitButtons(world, state, f, events, batch) {
+  const i = fdiv(f.x, CELL_MM), j = fdiv(f.z, CELL_MM), k = j * world.w + i;
+  worldButtons(world).forEach((d, bi) => {
+    if (!d.pebble || (d.concealed && !state.found.includes(bi))) return;
+    const dx = f.x - d.x, dz = f.z - d.z;               // squares < 2^36
+    if (d.pedestal ? dx * dx + dz * dz > 600 * 600 : f.w !== d.wk || k !== d.k) return;
+    batch.push(['pebbleHit', bi]);
+    pressButton(world, state, bi, 'pebble', events, batch);
+  });
 }
 
 /** R-PEB-4 */
@@ -952,6 +1009,8 @@ function rise(world, state, target, events) {
   state.blows = [];
   state.shots = [];                                     // R-SHOT-1
   state.braziers = life.braziers.slice();
+  state.buttons = life.buttons.map(([down, t]) => ({ down, t }));      // R-CP-3
+  state.levers = life.levers.map(([on, used]) => ({ on, used }));
   if (state.boss !== null && life.boss !== 'dead') state.boss = freshBoss(worldBoss(world)); // R-BOSS-6
   else if (state.boss !== null) state.boss.st = 'dead';
   p.busy = 0; p.busyOn = -1;
@@ -990,6 +1049,8 @@ function interact(world, state, n, events, batch) {
   if (ref && ref.type === 'mirror') { turnMirror(world, state, n, ref.mirror, events, batch); return; }
   if (ref && ref.type === 'chest') { openChest(world, state, n, ref.chest, events, batch); return; }
   if (ref && ref.type === 'brazier') { useBrazier(world, state, n, ref.brazier, events, batch); return; }
+  if (ref && ref.type === 'button') { handPress(world, state, ref.button, events, batch); return; }  // R-BTN-2
+  if (ref && ref.type === 'lever') { pullLever(world, state, n, ref.lever, events, batch); return; }  // R-LEVER-2
   if (!ref || ref.type !== 'door') return;
   const def = worldDoors(world)[ref.door], d = state.doors[ref.door], p = state.player;
   if (d.open) return;
@@ -1280,6 +1341,37 @@ function useHook(world, state, n, h, events, batch) {
   else if (p.oil > 0 && !p.doused) { p.hung = h; p.hooded = false; } // R-POW-2
   else { events.push({ e: 'msg', k: 'lanternOut' }); return; }
   events.push({ e: 'hook', id: hook.id, hung: p.hung === h });
+}
+
+/** R-BTN-2: a press of button bi by `by`; true if the button changed. */
+function pressButton(world, state, bi, by, events, batch) {
+  const def = worldButtons(world)[bi], b = state.buttons[bi];
+  if (def.concealed && !state.found.includes(bi)) return false;
+  if (by === 'hand' ? !def.hand : !def.pebble) return false;
+  if (def.behaviour === 'toggle') b.down = !b.down;
+  else if (b.down) return false;
+  else if (def.behaviour === 'latch') b.down = true;
+  else { b.down = true; b.t = def.behaviour === 'timed' ? def.downTicks : PRESS_TICKS; }
+  batch.push(['buttonPressed', bi]);
+  events.push({ e: 'button', id: def.id, down: b.down, by });
+  return true;
+}
+
+/** R-BTN-2: Interact with a button. */
+function handPress(world, state, bi, events, batch) {
+  const p = state.player, def = worldButtons(world)[bi], dx = p.x - def.x, dz = p.z - def.z; // squares < 2^36
+  if (dx * dx + dz * dz > def.reach * def.reach || !lineOfSight(world, state, def.x, def.z)) return;
+  pressButton(world, state, bi, 'hand', events, batch);
+}
+
+/** R-LEVER-2 */
+function pullLever(world, state, n, li, events, batch) {
+  const p = state.player, def = worldLevers(world)[li], l = state.levers[li], dx = p.x - def.x, dz = p.z - def.z; // squares < 2^36
+  if (dx * dx + dz * dz > def.reach * def.reach || !lineOfSight(world, state, def.x, def.z)) return;
+  batch.push(['interact', n]);
+  if (def.once && l.used) { events.push({ e: 'msg', k: 'leverStuck' }); return; }
+  l.on = !l.on; l.used = true;
+  events.push({ e: 'lever', id: def.id, on: l.on });
 }
 
 /** R-MIRROR-2 */

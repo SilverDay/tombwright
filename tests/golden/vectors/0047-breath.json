@@ -1,6 +1,6 @@
 {
  "name": "0047-breath",
- "core": "m0.16",
+ "core": "m0.17",
  "seed": 47,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":9,\"cells\":\"EQAHAQEFBgECAAcBAQUGAQIABwEBBQYBAgAHAQEFBgECAAcBAQUGAQIABwEBBQYBAgAHAQEFBgERAA==\"},\"start\":{\"cell\":[6,4]},\"zones\":[{\"id\":\"h\",\"name\":\"H\",\"rects\":[[1,1,14,7]],\"ceil\":6000,\"checkpoint\":{\"cell\":[2,4],\"yaw\":1024}}],\"entities\":[{\"id\":\"dra\",\"type\":\"foe\",\"kind\":\"dragon\",\"cell\":[10,4],\"start\":\"hunting\"},{\"id\":\"kes\",\"type\":\"foe\",\"kind\":\"kestrel\",\"cell\":[13,7],\"start\":\"asleep\"},{\"id\":\"st1\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[15600,8400],\"yaw\":0}]}",
@@ -152,15 +152,15 @@
  "ticks": 1037,
  "hashEvery": 300,
  "hashes": {
-  "0": "7a92b2be30f4ebd7f2ad6704a65b89a8",
-  "300": "a55658816b21f819cfcce8943d0d7f2f",
-  "600": "bf46a368e0fb5810c02c139b816b106c",
-  "900": "255a4f175376351603233a36c76ffb2e"
+  "0": "84942c3857c2af4957fe22942e11bac2",
+  "300": "78863246a6bd3314131539f5078c9f97",
+  "600": "f06c13cc600baed9f0304dfa39c9e5ff",
+  "900": "2217780507e1c5a2739113e97b4351be"
  },
- "final": "eec91ba05aa78993d0b8a7bd7d4561d8",
+ "final": "b58067135be5467f27cb66b2cb39e608",
  "finalState": {
   "v": 1,
-  "core": "m0.16",
+  "core": "m0.17",
   "world": "5f7c3b9f8485651ce90bbd0accb40d40",
   "mode": "practice",
   "tick": 1037,
@@ -269,6 +269,9 @@
   "blows": [],
   "shots": [],
   "braziers": [],
+  "buttons": [],
+  "levers": [],
+  "found": [],
   "boss": null,
   "won": null,
   "bellSets": [],
@@ -294,6 +297,8 @@
       "awake"
      ],
      "braziers": [],
+     "buttons": [],
+     "levers": [],
      "boss": null,
      "doors": [],
      "floor": [],

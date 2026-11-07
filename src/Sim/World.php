@@ -44,6 +44,13 @@ final class World
     private const KEYS_ALCOVE = ['id', 'type', 'cell', 'kind', 'door'];
     private const KEYS_FOE = ['id', 'type', 'kind', 'cell', 'start'];
     private const KEYS_BRAZIER = ['id', 'type', 'cell', 'lit'];
+    /** R-BTN-1, R-LEVER-1 (decisions #92, #94-#96). */
+    public const GLYPHS = ['moon', 'sun', 'eye', 'key', 'hand', 'flame', 'drop', 'leaf', 'star', 'skull', 'crown', 'bell', 'tower', 'wave', 'bird', 'serpent'];
+    private const BUTTON_BEHAVIOURS = ['press', 'latch', 'toggle', 'timed'];
+    private const PRESSED_BY = ['hand', 'pebble', 'both'];
+    private const LEVER_MODES = ['once', 'toggle'];
+    public const MAX_BUTTONS = 32;
+    public const MAX_LEVERS = 32;
     private const KEYS_BOSS = ['id', 'type', 'kind', 'pos', 'zone'];
     private const FOE_STARTS = ['asleep', 'idle', 'hunting', 'dormant'];
     public const MAX_FOES = 24;
@@ -134,6 +141,8 @@ final class World
         public readonly array $foes,
         public readonly array $groups,
         public readonly array $braziers,
+        public readonly array $buttons,
+        public readonly array $levers,
         public readonly ?array $boss,
         public readonly ?array $bossBox,
         public readonly ?array $exit,
@@ -388,7 +397,7 @@ final class World
             $ents['ventAt'], $ents['vents'], $zs['zoneOf'], $zs['zones'], $zs['zoneOf'][$startK] ?? -1,
             $ents['items'], $ents['eyes'], $ents['bells'], $ents['bellSets'], $links,
             $ents['hooks'], $ents['mirrors'], $ents['crystals'], $ents['chests'], $ents['alcoves'], $ents['alcoveAt'],
-            $ents['foes'], $ents['groups'], $ents['braziers'], $ents['boss'], $bossBox, $exit,
+            $ents['foes'], $ents['groups'], $ents['braziers'], $ents['buttons'], $ents['levers'], $ents['boss'], $bossBox, $exit,
         );
     }
 
@@ -594,6 +603,8 @@ final class World
         $groups = [];
         $groupIds = [];
         $braziers = [];
+        $buttons = [];
+        $levers = [];
         $bosses = [];
         $inscriptions = 0;
         foreach ($list as $e) {
@@ -972,6 +983,89 @@ final class World
                 }
                 $refs[] = ['type' => 'bellSet', 'set' => count($bellSets)];
                 $bellSets[] = ['id' => $e['id'], 'names' => $bl, 'order' => $order];
+            } elseif ($type === 'button') {
+                // R-BTN-1
+                $pedestal = array_key_exists('cell', $e);
+                if ($pedestal === array_key_exists('wall', $e)) {
+                    throw new \RangeException('button placement');
+                }
+                $timed = ($e['behaviour'] ?? null) === 'timed';
+                $keys = ['id', 'type', $pedestal ? 'cell' : 'wall', 'behaviour', 'pressedBy', 'glyph'];
+                if ($timed) {
+                    $keys[] = 'downTicks';
+                }
+                if (array_key_exists('concealed', $e)) {
+                    $keys[] = 'concealed';
+                }
+                if (!self::hasExactKeys($e, $keys)) {
+                    throw new \RangeException('button keys');
+                }
+                if (!in_array($e['behaviour'], self::BUTTON_BEHAVIOURS, true) || !in_array($e['pressedBy'], self::PRESSED_BY, true) || !in_array($e['glyph'], self::GLYPHS, true)) {
+                    throw new \RangeException('button options');
+                }
+                if ($timed && (!is_int($e['downTicks']) || $e['downTicks'] < 1 || $e['downTicks'] > 1800)) {
+                    throw new \RangeException('button downTicks');
+                }
+                if (array_key_exists('concealed', $e) && $e['concealed'] !== true) {
+                    throw new \RangeException('button concealed');
+                }
+                if (count($buttons) >= self::MAX_BUTTONS) {
+                    throw new \RangeException('too many buttons');
+                }
+                $wk = -1;
+                if ($pedestal) {
+                    $k = self::cellIndex($e['cell'], $w, $h);
+                    $code = ord($grid[$k]);
+                    if ($code !== self::ROOM && $code !== self::CORR) {
+                        throw new \RangeException('button cell');
+                    }
+                    [$ci, $cj] = $e['cell'];
+                    $x = $ci * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                    $z = $cj * self::CELL_MM + intdiv(self::CELL_MM, 2);
+                    $reach = 1900;
+                    $props[] = ['circle' => true, 'x' => $x, 'z' => $z, 'r' => 420, 'x0' => $x - 420, 'x1' => $x + 420, 'z0' => $z - 420, 'z1' => $z + 420];
+                } else {
+                    if (!is_array($e['wall']) || !array_is_list($e['wall']) || count($e['wall']) !== 2) {
+                        throw new \RangeException('button wall');
+                    }
+                    self::dressWall($e['wall'][0], $e['wall'][1], $grid, $w, $h);
+                    $d = self::DIRS[$e['wall'][1]];
+                    [$ci, $cj] = $e['wall'][0];
+                    $k = self::cellIndex($e['wall'][0], $w, $h);
+                    $wk = ($cj + $d[1]) * $w + $ci + $d[0];
+                    $x = $ci * self::CELL_MM + intdiv(self::CELL_MM, 2) + 1100 * $d[0];
+                    $z = $cj * self::CELL_MM + intdiv(self::CELL_MM, 2) + 1100 * $d[1];
+                    $reach = 2000;
+                }
+                $refs[] = ['type' => 'button', 'button' => count($buttons)];
+                $buttons[] = [
+                    'id' => $e['id'], 'n' => count($refs), 'k' => $k, 'wk' => $wk, 'x' => $x, 'z' => $z, 'reach' => $reach, 'pedestal' => $pedestal,
+                    'hand' => $e['pressedBy'] !== 'pebble', 'pebble' => $e['pressedBy'] !== 'hand', 'behaviour' => $e['behaviour'],
+                    'downTicks' => $timed ? $e['downTicks'] : 0, 'concealed' => ($e['concealed'] ?? false) === true, 'glyph' => $e['glyph'],
+                ];
+            } elseif ($type === 'lever') {
+                // R-LEVER-1
+                if (!self::hasExactKeys($e, ['id', 'type', 'wall', 'mode', 'on'])) {
+                    throw new \RangeException('lever keys');
+                }
+                if (!in_array($e['mode'], self::LEVER_MODES, true) || !is_bool($e['on'])) {
+                    throw new \RangeException('lever options');
+                }
+                if (count($levers) >= self::MAX_LEVERS) {
+                    throw new \RangeException('too many levers');
+                }
+                if (!is_array($e['wall']) || !array_is_list($e['wall']) || count($e['wall']) !== 2) {
+                    throw new \RangeException('lever wall');
+                }
+                self::dressWall($e['wall'][0], $e['wall'][1], $grid, $w, $h);
+                $d = self::DIRS[$e['wall'][1]];
+                [$ci, $cj] = $e['wall'][0];
+                $refs[] = ['type' => 'lever', 'lever' => count($levers)];
+                $levers[] = [
+                    'id' => $e['id'], 'n' => count($refs), 'k' => self::cellIndex($e['wall'][0], $w, $h),
+                    'x' => $ci * self::CELL_MM + intdiv(self::CELL_MM, 2) + 1100 * $d[0], 'z' => $cj * self::CELL_MM + intdiv(self::CELL_MM, 2) + 1100 * $d[1],
+                    'reach' => 2000, 'once' => $e['mode'] === 'once', 'on' => $e['on'],
+                ];
             } elseif ($type === 'torch') {
                 if (!self::hasExactKeys($e, self::KEYS_TORCH)) {
                     throw new \RangeException('torch keys');
@@ -1160,6 +1254,11 @@ final class World
                 throw new \RangeException('brazier cell taken');
             }
         }
+        foreach ($buttons as $b) {
+            if ($b['pedestal'] && (isset($doorAt[$b['k']]) || isset($slab[$b['k']]))) {
+                throw new \RangeException('button cell taken');
+            }
+        }
         // R-FOE-2: foes on free cells (walkers not on lethal ones), the caps and the threat budget.
         $threat = 0;
         $awake = 0;
@@ -1209,7 +1308,7 @@ final class World
             'hooks' => $hooks, 'mirrors' => $mirrors, 'crystals' => $crystals,
             'chests' => $chests, 'alcoves' => $alcoves, 'alcoveAt' => $alcoveAt,
             'foes' => $foes, 'groups' => $groups, 'groupIds' => $groupIds,
-            'braziers' => $braziers, 'boss' => $bosses[0] ?? null];
+            'braziers' => $braziers, 'buttons' => $buttons, 'levers' => $levers, 'boss' => $bosses[0] ?? null];
     }
 
     /**

@@ -4,11 +4,11 @@
 export const MAX_LINKS = 64;
 export const MAX_PASSES = 8;
 const MAX_EFFECTS = 16, MAX_TERMS = 8, MAX_DEPTH = 4, MAX_TRIGGERS = 16, MAX_MESSAGE_BYTES = 1000;
-const EVENTS = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired', 'foesDefeated', 'bossDefeated'];
-const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'lanternHung', 'bellsSolved', 'beamHits', 'linkActive', 'foesAlive', 'bossAwake', 'lightLit'];
+const EVENTS = ['interact', 'itemTaken', 'enterZone', 'leaveZone', 'bellsWrong', 'linkFired', 'foesDefeated', 'bossDefeated', 'buttonPressed', 'pebbleHit'];
+const CONDS = ['doorOpen', 'inZone', 'hasItem', 'lanternHooded', 'lanternHung', 'bellsSolved', 'beamHits', 'linkActive', 'foesAlive', 'bossAwake', 'lightLit', 'buttonDown', 'leverOn'];
 const GATES = ['all', 'any', 'atLeast', 'sequence', 'not'];
 const GATE_OPTS = { all: ['within'], any: ['within'], atLeast: ['k', 'within'], sequence: ['within', 'strict', 'onWrong'], not: [] };
-const EFFECTS = ['wakeBoss', 'lightOn', 'lightOff', 'setCheckpoint', 'spawnFoes', 'openDoor', 'closeDoor', 'sealDoor', 'reveal', 'hide', 'damage', 'message'];
+const EFFECTS = ['wakeBoss', 'lightOn', 'lightOff', 'setCheckpoint', 'spawnFoes', 'openDoor', 'closeDoor', 'sealDoor', 'reveal', 'hide', 'damage', 'message', 'grantItem', 'resetButton', 'setLeverOn', 'setLeverOff'];
 
 const isObj = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isInt = (v) => Number.isSafeInteger(v);
@@ -60,6 +60,9 @@ function effects(list, ctx) {
     if (kind === 'wakeBoss') { entity(v, ctx, (r) => r.type === 'boss'); return Object.freeze({ kind }); }
     if (kind === 'lightOn' || kind === 'lightOff') return Object.freeze({ kind, brazier: entity(v, ctx, (r) => r.type === 'brazier').brazier });
     if (kind === 'setCheckpoint') { const z = zone(v, ctx); if (!ctx.cpZones[z]) bad('setCheckpoint zone'); return Object.freeze({ kind, zone: z }); }
+    if (kind === 'grantItem') return Object.freeze({ kind, item: entity(v, ctx, takeable).n });
+    if (kind === 'resetButton') return Object.freeze({ kind, button: entity(v, ctx, (r) => r.type === 'button').button });
+    if (kind === 'setLeverOn' || kind === 'setLeverOff') return Object.freeze({ kind, lever: entity(v, ctx, (r) => r.type === 'lever').lever });
     if (kind === 'reveal' || kind === 'hide') return Object.freeze({ kind, item: entity(v, ctx, (r) => r.type === 'item' && r.hidden).n });
     return Object.freeze({ kind, door: entity(v, ctx, (r) => r.type === 'door').door });
   }));
@@ -94,7 +97,7 @@ const takeable = (r) => r.type === 'item' && r.kind !== 'rubble';
 /** A trigger's argument (R-LINK-2): entity number, zone index, bell set index, link id or boolean. */
 function triggerArg(kind, v, c) {
   switch (kind) {
-    case 'interact': return entity(v, c.ctx, (r) => ['door', 'item', 'bell', 'lampHook', 'mirror', 'chest', 'brazier'].includes(r.type)).n;
+    case 'interact': return entity(v, c.ctx, (r) => ['door', 'item', 'bell', 'lampHook', 'mirror', 'chest', 'brazier', 'lever'].includes(r.type)).n;
     case 'itemTaken': case 'hasItem': return entity(v, c.ctx, takeable).n;
     case 'enterZone': case 'leaveZone': case 'inZone': return zone(v, c.ctx);
     case 'bellsWrong': case 'bellsSolved': return entity(v, c.ctx, (r) => r.type === 'bellSet').set;
@@ -103,6 +106,8 @@ function triggerArg(kind, v, c) {
     case 'foesDefeated': case 'foesAlive': return group(v, c.ctx);
     case 'bossDefeated': case 'bossAwake': if (v !== true || !hasBoss(c.ctx)) bad(kind); return 0;
     case 'lightLit': return entity(v, c.ctx, (r) => r.type === 'brazier').brazier;
+    case 'buttonPressed': case 'pebbleHit': case 'buttonDown': return entity(v, c.ctx, (r) => r.type === 'button').button;
+    case 'leverOn': return entity(v, c.ctx, (r) => r.type === 'lever').lever;
     case 'beamHits': return entity(v, c.ctx, (r) => r.type === 'crystal').crystal;
     case 'lanternHooded': case 'lanternHung': if (typeof v !== 'boolean') bad(kind); return v;
   }

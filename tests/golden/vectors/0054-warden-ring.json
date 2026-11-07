@@ -1,6 +1,6 @@
 {
  "name": "0054-warden-ring",
- "core": "m0.16",
+ "core": "m0.17",
  "seed": 54,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIADAECAAUBAwAEAQIABQEBAAEBAQAEAQIABQEDAAQBAgAMAQIADAEPAA==\"},\"start\":{\"cell\":[4,4]},\"zones\":[{\"id\":\"c\",\"name\":\"C\",\"rects\":[[1,1,6,7],[8,1,5,7]],\"ceil\":5200,\"checkpoint\":{\"cell\":[2,4],\"yaw\":1024}},{\"id\":\"d\",\"name\":\"D\",\"rects\":[[7,4,1,1]],\"ceil\":5200}],\"entities\":[{\"id\":\"wd\",\"type\":\"boss\",\"kind\":\"deepWarden\",\"pos\":[18000,10800],\"zone\":\"d\",\"summons\":\"crypt\"},{\"id\":\"z0\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z1\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[11,5],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z2\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z3\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,6],\"start\":\"dormant\",\"group\":\"crypt\"}],\"links\":[{\"id\":1,\"when\":{\"inZone\":\"c\"},\"do\":[{\"wakeBoss\":\"wd\"}]}]}",
@@ -22,18 +22,18 @@
  "ticks": 1800,
  "hashEvery": 300,
  "hashes": {
-  "0": "e677e94648bbf0e8ed96f6153ca14b8a",
-  "300": "210b1478b1ba23b39e99b36e6947377c",
-  "600": "680fd777d12c64747c843e024e7d0f84",
-  "900": "45883199ddb6ee6bd2f9fbeedc1331b5",
-  "1200": "affb7ace52a9f126c2727689927ce8a9",
-  "1500": "feafec075f1124edbda13bf20eb03b92",
-  "1800": "adb228a951cb23818fcba93a997d6d3b"
+  "0": "10b2c609d8f379a919f30104b8dfade3",
+  "300": "2476eb4a25b138b9d4e9134f715bd555",
+  "600": "c3aab77df8243779cc9ac50ba4c496fe",
+  "900": "572dccdb7aa76dbcdb6e6377e3f725f0",
+  "1200": "982c3eefab8292ffac11deab6e1d6110",
+  "1500": "7b9a70737966140fd0650d59d18a280b",
+  "1800": "6358bbc980c31a77f28ba00a1da3b0f6"
  },
- "final": "adb228a951cb23818fcba93a997d6d3b",
+ "final": "6358bbc980c31a77f28ba00a1da3b0f6",
  "finalState": {
   "v": 1,
-  "core": "m0.16",
+  "core": "m0.17",
   "world": "249a4ee25d3e717a97df8c5c3c38224c",
   "mode": "practice",
   "tick": 1800,
@@ -176,6 +176,9 @@
   "blows": [],
   "shots": [],
   "braziers": [],
+  "buttons": [],
+  "levers": [],
+  "found": [],
   "boss": {
    "st": "stalk",
    "x": 17600,
@@ -221,6 +224,8 @@
       "dormant"
      ],
      "braziers": [],
+     "buttons": [],
+     "levers": [],
      "boss": "asleep",
      "doors": [],
      "floor": [],

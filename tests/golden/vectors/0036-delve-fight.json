@@ -1,6 +1,6 @@
 {
  "name": "0036-delve-fight",
- "core": "m0.16",
+ "core": "m0.17",
  "seed": 36,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAOAQIACgEBAwMBAgAOAQIADgECAAUBBAUFAQIADgECAAsBAQQCAQIADgERAA==\"},\"start\":{\"cell\":[3,4]},\"zones\":[{\"id\":\"d\",\"name\":\"D\",\"rects\":[[1,1,14,8]],\"ceil\":5000}],\"entities\":[{\"id\":\"bat\",\"type\":\"foe\",\"kind\":\"bat\",\"cell\":[8,2],\"start\":\"hunting\"},{\"id\":\"kes\",\"type\":\"foe\",\"kind\":\"kestrel\",\"cell\":[12,4],\"start\":\"idle\"},{\"id\":\"tro\",\"type\":\"foe\",\"kind\":\"troll\",\"cell\":[13,2],\"start\":\"asleep\"},{\"id\":\"gri\",\"type\":\"foe\",\"kind\":\"griffin\",\"cell\":[13,7],\"start\":\"idle\"},{\"id\":\"fly\",\"type\":\"foe\",\"kind\":\"flytrap\",\"cell\":[4,4],\"start\":\"idle\"},{\"id\":\"sna\",\"type\":\"foe\",\"kind\":\"snake\",\"cell\":[2,7],\"start\":\"asleep\"},{\"id\":\"zom\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,8],\"start\":\"dormant\",\"group\":\"dead\"},{\"id\":\"emu\",\"type\":\"foe\",\"kind\":\"emu\",\"cell\":[2,2],\"start\":\"idle\"}],\"links\":[{\"id\":1,\"when\":{\"foesDefeated\":\"fly\"},\"do\":[{\"spawnFoes\":\"dead\"},{\"message\":\"the flytrap falls\"}]}]}",
@@ -87,17 +87,17 @@
  "ticks": 1601,
  "hashEvery": 300,
  "hashes": {
-  "0": "b99b450359299a7055efec2fd691c849",
-  "300": "a1e31981279f954fb04c2947c8cd5c8d",
-  "600": "a990b8aef2c4e60d1bf42f48b55bca44",
-  "900": "c460f87bd5e1c8684ad6aed0a35b7751",
-  "1200": "84d37959d6c156f43ba85676b65c32f1",
-  "1500": "9e781b0f41003a3b0a87727edd9b0866"
+  "0": "a1f0cf5c6e813f2d979b5fb4eebede5e",
+  "300": "fe08705f32036e856e4fd563b8c73065",
+  "600": "7b4c09c5a1a42e5e3fd1f8ff6092822d",
+  "900": "2069cf805d4e7948f624c0f3c6cb2759",
+  "1200": "00829ea6f9aaeb4d730915b031d38c49",
+  "1500": "e2a88f275167f8485f9b9da3de086824"
  },
- "final": "b8b4ddbc524e422720574643f2bfba72",
+ "final": "eac758a534ce7522715adbddf8eb1cd0",
  "finalState": {
   "v": 1,
-  "core": "m0.16",
+  "core": "m0.17",
   "world": "fe93e81c67a5a6ec091b917b8c05f3f0",
   "mode": "practice",
   "tick": 1601,
@@ -326,6 +326,9 @@
   "blows": [],
   "shots": [],
   "braziers": [],
+  "buttons": [],
+  "levers": [],
+  "found": [],
   "boss": null,
   "won": null,
   "bellSets": [],
@@ -367,6 +370,8 @@
       "awake"
      ],
      "braziers": [],
+     "buttons": [],
+     "levers": [],
      "boss": null,
      "doors": [],
      "floor": [],

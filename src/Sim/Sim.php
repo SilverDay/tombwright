@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.16';
+    public const CORE_VERSION = 'm0.17';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -30,6 +30,7 @@ final class Sim
     /** R-TOOL-2 cooldowns (ticks), R-PEB-1 pouch, R-PEB-4 pick-up radius. */
     public const PROBE_CD = 21;
     public const PEBBLE_CD = 15;
+    private const PRESS_TICKS = 15;       // R-BTN-2: a `press` button stays down half a second
     public const PEBBLE_MAX = 12;
     public const PICKUP_MM = 750;
     /** R-HP-1: hp in 1/30-hp units; regeneration +4 a tick once calm > 150. */
@@ -146,6 +147,9 @@ final class Sim
             'blows' => [],        // R-STRIKE-1 (foe -1: the boss)
             'shots' => [],        // R-SHOT-1: projectiles in flight
             'braziers' => array_map(static fn (array $b): bool => $b['lit'], $world->braziers), // R-BRAZIER-1
+            'buttons' => array_map(static fn (): array => ['down' => false, 't' => 0], $world->buttons), // R-BTN-1
+            'levers' => array_map(static fn (array $l): array => ['on' => $l['on'], 'used' => false], $world->levers), // R-LEVER-1
+            'found' => [],        // R-BTN-4 (a lesson): concealed buttons found
             'boss' => $world->boss === null ? null : self::freshBoss($world->boss), // R-BOSS-2
             'won' => null,        // R-EXIT-1
             'bellSets' => array_map(static fn (): array => ['seq' => [], 'solved' => false], $world->bellSets), // R-BELL-2
@@ -173,6 +177,8 @@ final class Sim
             'hp' => $p['hp'], 'oil' => $p['oil'], 'hooded' => $p['hooded'], 'hung' => $p['hung'], 'flasks' => $p['flasks'], 'pebbles' => $p['pebbles'],
             'revealed' => $state['revealed'], 'mirrors' => $state['mirrors'], 'chests' => $state['chests'], 'groups' => $state['groups'],
             'braziers' => $state['braziers'],
+            'buttons' => array_map(static fn (array $b): array => [$b['down'], $b['t']], $state['buttons']),
+            'levers' => array_map(static fn (array $l): array => [$l['on'], $l['used']], $state['levers']),
             'boss' => $state['boss'] === null ? null : ($state['boss']['st'] === 'asleep' ? 'asleep' : ($state['boss']['st'] === 'dead' ? 'dead' : 'awake')),
             'doors' => array_map(static fn (array $d): bool => $d['open'], $state['doors']),
             'floor' => $state['floor'], 'loot' => $state['loot'], 'taken' => $state['taken'],
@@ -210,7 +216,8 @@ final class Sim
                 self::rise($world, $state, $input['target'], $events);
             }
             self::moveDoors($state);
-            self::landPebbles($world, $state, $events);
+            $none = [];
+            self::landPebbles($world, $state, $events, $none); // R-BTN-5: a dead player's link events are never delivered
         } else {
             $batch = [];                                  // R-LINK-5: batch 0
             $p0 = $state['player']; // R-FOE-7: no running noise while busy or rooted (R-POW-8)
@@ -225,7 +232,7 @@ final class Sim
             if ($state['dead'] === null && $state['won'] === null) {
                 self::updateShots($world, $state, $events); // R-SHOT-2
             }
-            self::landPebbles($world, $state, $events);
+            self::landPebbles($world, $state, $events, $batch);
             if ($state['dead'] === null && $state['won'] === null) {
                 self::links($world, $state, $batch, $events); // R-LINK-7
             }
@@ -353,6 +360,38 @@ final class Sim
                 }
                 continue;
             }
+            if ($fx['kind'] === 'grantItem') { // R-LINK-8
+                if (!in_array($fx['item'], $state['taken'], true)) {
+                    $it = $world->items[$world->entityRef($fx['item'])['item']];
+                    $state['taken'][] = $fx['item'];
+                    if ($it['kind'] === 'flask') {
+                        $state['player']['flasks'] += 1;
+                    }
+                    $changed = true;
+                    $events[] = ['e' => 'item', 'id' => $it['id'], 'kind' => $it['kind'], 'granted' => true];
+                }
+                continue;
+            }
+            if ($fx['kind'] === 'resetButton') {
+                $b = &$state['buttons'][$fx['button']];
+                if ($b['down'] || $b['t'] > 0) {
+                    $b['down'] = false;
+                    $b['t'] = 0;
+                    $changed = true;
+                    $events[] = ['e' => 'button', 'id' => $world->buttons[$fx['button']]['id'], 'down' => false, 'by' => 'link'];
+                }
+                unset($b);
+                continue;
+            }
+            if ($fx['kind'] === 'setLeverOn' || $fx['kind'] === 'setLeverOff') {
+                $on = $fx['kind'] === 'setLeverOn';
+                if ($state['levers'][$fx['lever']]['on'] !== $on) {
+                    $state['levers'][$fx['lever']]['on'] = $on;
+                    $changed = true;
+                    $events[] = ['e' => 'lever', 'id' => $world->levers[$fx['lever']]['id'], 'on' => $on];
+                }
+                continue;
+            }
             if ($fx['kind'] === 'reveal') {
                 if (!in_array($fx['item'], $state['revealed'], true)) {
                     $state['revealed'][] = $fx['item'];
@@ -428,6 +467,10 @@ final class Sim
                 return $state['boss']['st'] !== 'asleep' && $state['boss']['st'] !== 'dead';
             case 'lightLit':
                 return $state['braziers'][$arg];
+            case 'buttonDown':
+                return $state['buttons'][$arg]['down'];
+            case 'leverOn':
+                return $state['levers'][$arg]['on'];
             case 'foesAlive':
                 foreach ($world->groups[$arg]['foes'] as $n) {
                     if ($state['foes'][$n]['st'] !== 'dormant' && $state['foes'][$n]['st'] !== 'dead') {
@@ -485,6 +528,18 @@ final class Sim
             }
             $state['sealing'] = $keep;
         }
+        // R-BTN-3: pressed buttons count down.
+        foreach ($state['buttons'] as $bi => &$bt) {
+            if ($bt['t'] <= 0) {
+                continue;
+            }
+            $bt['t'] -= 1;
+            if ($bt['t'] === 0 && $bt['down']) {
+                $bt['down'] = false;
+                $events[] = ['e' => 'button', 'id' => $world->buttons[$bi]['id'], 'down' => false, 'by' => 'time'];
+            }
+        }
+        unset($bt);
         $p = &$state['player'];
         // R-TOOL-1: tool presses, in button order, from where the player stood before moving (none while busy, R-BRAZIER-2).
         $busy = $p['busy'] > 0 || $p['frozen'] > 0; // R-POW-8: frozen counts as busy
@@ -705,6 +760,17 @@ final class Sim
             $a = IntMath::fdiv($qx, self::CELL_MM);
             $b = IntMath::fdiv($qz, self::CELL_MM);
             if ($world->solidCell($state, $a, $b) && !self::slabOrSprung($world, $state, $a, $b)) {
+                if ($s === 1) {
+                    $fi = $pi;
+                    $fj = $pj;
+                } else {
+                    [$fx, $fz] = self::ahead($p, $sy, $cy, IntMath::idiv($r * ($s - 1), 8));
+                    $fi = IntMath::fdiv($fx, self::CELL_MM);
+                    $fj = IntMath::fdiv($fz, self::CELL_MM);
+                }
+                $wallK = $b * $world->w + $a;
+                $frontK = $fj * $world->w + $fi;
+                self::findButtons($world, $state, static fn (array $d): bool => !$d['pedestal'] && $d['wk'] === $wallK && $d['k'] === $frontK, $events); // R-BTN-4
                 $events[] = ['e' => 'probe', 'k' => 'wall'];
                 return;
             }
@@ -720,6 +786,7 @@ final class Sim
                 return;
             }
         }
+        self::findButtons($world, $state, static fn (array $d): bool => $d['pedestal'] && $d['k'] === $k, $events); // R-BTN-4
         $code = $world->cellCode($i, $j);
         $what = 'stone';
         if ($code === World::PLATE) {
@@ -783,6 +850,7 @@ final class Sim
         $d = 400;
         $lx = $p['x'];
         $lz = $p['z'];
+        $wall = -1;
         while ($d < $want) {
             [$nx, $nz] = self::ahead($p, $sy, $cy, $d);
             $i = IntMath::fdiv($nx, self::CELL_MM);
@@ -793,6 +861,9 @@ final class Sim
                 break;
             }
             if ($world->solidCell($state, $i, $j)) {
+                if ($world->cellCode($i, $j) === World::WALL) { // R-BTN-5
+                    $wall = $j * $world->w + $i;
+                }
                 break;
             }
             $lx = $nx;
@@ -800,7 +871,7 @@ final class Sim
             $d += 120;
         }
         $flight = IntMath::idiv(21000 + 3 * $d + 1999, 2000);
-        $state['flying'][] = ['x' => $lx, 'z' => $lz, 'at' => $state['tick'] + $flight - 1];
+        $state['flying'][] = ['x' => $lx, 'z' => $lz, 'at' => $state['tick'] + $flight - 1, 'w' => $wall];
         $events[] = ['e' => 'throw'];
     }
 
@@ -810,7 +881,7 @@ final class Sim
      * @param array<string,mixed> $state
      * @param list<array<string,mixed>> $events
      */
-    private static function landPebbles(World $world, array &$state, array &$events): void
+    private static function landPebbles(World $world, array &$state, array &$events, array &$batch): void
     {
         if ($state['flying'] === []) {
             return;
@@ -857,6 +928,7 @@ final class Sim
                 $state['floor'][] = ['x' => $f['x'], 'z' => $f['z']];
             }
             $events[] = ['e' => 'land', 'k' => $what];
+            self::hitButtons($world, $state, $f, $events, $batch); // R-BTN-5
             if ($state['dead'] === null) {
                 self::noise($world, $state, $f['x'], $f['z'], self::NOISE_PEBBLE, 'pebble', $events); // R-FOE-7
             }
@@ -1280,6 +1352,8 @@ final class Sim
         $state['blows'] = [];
         $state['shots'] = [];                             // R-SHOT-1
         $state['braziers'] = $life['braziers'];
+        $state['buttons'] = array_map(static fn (array $b): array => ['down' => $b[0], 't' => $b[1]], $life['buttons']); // R-CP-3
+        $state['levers'] = array_map(static fn (array $l): array => ['on' => $l[0], 'used' => $l[1]], $life['levers']);
         if ($state['boss'] !== null && $life['boss'] !== 'dead') { // R-BOSS-6
             $state['boss'] = self::freshBoss($world->boss);
         } elseif ($state['boss'] !== null) {
@@ -1357,6 +1431,14 @@ final class Sim
             self::useBrazier($world, $state, $n, $ref['brazier'], $events, $batch);
             return;
         }
+        if ($ref !== null && $ref['type'] === 'button') { // R-BTN-2
+            self::handPress($world, $state, $ref['button'], $events, $batch);
+            return;
+        }
+        if ($ref !== null && $ref['type'] === 'lever') { // R-LEVER-2
+            self::pullLever($world, $state, $n, $ref['lever'], $events, $batch);
+            return;
+        }
         if ($ref === null || $ref['type'] !== 'door') {
             return;
         }
@@ -1413,6 +1495,124 @@ final class Sim
         }
         $events[] = ['e' => 'hook', 'id' => $hook['id'], 'hung' => $p['hung'] === $h];
         unset($p);
+    }
+
+    /**
+     * R-BTN-2: a press of button bi by $by; true if the button changed.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     * @param list<array{0:string,1:int}> $batch
+     */
+    private static function pressButton(World $world, array &$state, int $bi, string $by, array &$events, array &$batch): bool
+    {
+        $def = $world->buttons[$bi];
+        if ($def['concealed'] && !in_array($bi, $state['found'], true)) {
+            return false;
+        }
+        if ($by === 'hand' ? !$def['hand'] : !$def['pebble']) {
+            return false;
+        }
+        $b = &$state['buttons'][$bi];
+        if ($def['behaviour'] === 'toggle') {
+            $b['down'] = !$b['down'];
+        } elseif ($b['down']) {
+            return false;
+        } elseif ($def['behaviour'] === 'latch') {
+            $b['down'] = true;
+        } else {
+            $b['down'] = true;
+            $b['t'] = $def['behaviour'] === 'timed' ? $def['downTicks'] : self::PRESS_TICKS;
+        }
+        $batch[] = ['buttonPressed', $bi];
+        $events[] = ['e' => 'button', 'id' => $def['id'], 'down' => $b['down'], 'by' => $by];
+        return true;
+    }
+
+    /**
+     * R-BTN-2: Interact with a button.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     * @param list<array{0:string,1:int}> $batch
+     */
+    private static function handPress(World $world, array &$state, int $bi, array &$events, array &$batch): void
+    {
+        $def = $world->buttons[$bi];
+        $dx = $state['player']['x'] - $def['x'];
+        $dz = $state['player']['z'] - $def['z'];
+        if ($dx * $dx + $dz * $dz > $def['reach'] * $def['reach'] || !self::lineOfSight($world, $state, $def['x'], $def['z'])) {
+            return;
+        }
+        self::pressButton($world, $state, $bi, 'hand', $events, $batch);
+    }
+
+    /**
+     * R-LEVER-2
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     * @param list<array{0:string,1:int}> $batch
+     */
+    private static function pullLever(World $world, array &$state, int $n, int $li, array &$events, array &$batch): void
+    {
+        $def = $world->levers[$li];
+        $dx = $state['player']['x'] - $def['x'];
+        $dz = $state['player']['z'] - $def['z'];
+        if ($dx * $dx + $dz * $dz > $def['reach'] * $def['reach'] || !self::lineOfSight($world, $state, $def['x'], $def['z'])) {
+            return;
+        }
+        $batch[] = ['interact', $n];
+        if ($def['once'] && $state['levers'][$li]['used']) {
+            $events[] = ['e' => 'msg', 'k' => 'leverStuck'];
+            return;
+        }
+        $state['levers'][$li]['on'] = !$state['levers'][$li]['on'];
+        $state['levers'][$li]['used'] = true;
+        $events[] = ['e' => 'lever', 'id' => $def['id'], 'on' => $state['levers'][$li]['on']];
+    }
+
+    /**
+     * R-BTN-4: concealed buttons the probe finds, in entity order.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function findButtons(World $world, array &$state, callable $hit, array &$events): void
+    {
+        foreach ($world->buttons as $bi => $d) {
+            if ($d['concealed'] && !in_array($bi, $state['found'], true) && $hit($d)) {
+                $state['found'][] = $bi;
+                $events[] = ['e' => 'find', 'id' => $d['id']];
+            }
+        }
+    }
+
+    /**
+     * R-BTN-5: the buttons a landing pebble hits, in entity order.
+     *
+     * @param array<string,mixed> $state
+     * @param array<string,mixed> $f
+     * @param list<array<string,mixed>> $events
+     * @param list<array{0:string,1:int}> $batch
+     */
+    private static function hitButtons(World $world, array &$state, array $f, array &$events, array &$batch): void
+    {
+        $i = IntMath::fdiv($f['x'], self::CELL_MM);
+        $j = IntMath::fdiv($f['z'], self::CELL_MM);
+        $k = $j * $world->w + $i;
+        foreach ($world->buttons as $bi => $d) {
+            if (!$d['pebble'] || ($d['concealed'] && !in_array($bi, $state['found'], true))) {
+                continue;
+            }
+            $dx = $f['x'] - $d['x'];
+            $dz = $f['z'] - $d['z'];
+            if ($d['pedestal'] ? $dx * $dx + $dz * $dz > 600 * 600 : ($f['w'] !== $d['wk'] || $k !== $d['k'])) {
+                continue;
+            }
+            $batch[] = ['pebbleHit', $bi];
+            self::pressButton($world, $state, $bi, 'pebble', $events, $batch);
+        }
     }
 
     /**
