@@ -90,6 +90,8 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 83 | 2026-11-07 | **Playtest mode:** Playtest from the builder runs the tomb in `practice` mode (a death doesn't end or score the run); the game client starts a game in the mode the page gives it. | Owner |
 | 84 | 2026-11-07 | **`/build` is public from slice 1,** marked as a preview; it only touches the visitor's own browser storage. | Owner |
 | 85 | 2026-11-07 | **Exit while building:** the editor follows the core loader (a tomb with no exit loads) and shows a warning; "exactly one start and one exit" (spec §7.3.4) is enforced by the publish validator in M3. | Owner |
+| 86 | 2026-11-07 | **Item names:** treasure and key items take an optional `name` (text, 1–40 code points, no control characters), display only, so a builder tomb can name its loot (spec §4.2). Core m0.16, R-ITEM-1. Flasks and rubble stay unnamed. | Owner |
+| 87 | 2026-11-07 | **Builder slices 2 and 3:** slice 2 places doors, slabs, vents, alcoves, eyes, chests, items, inscriptions, torches, props, decor and masons' marks; slice 3 braziers, bells, mirrors, the lamp hook, the crystal, foes, the boss and the threat budget. | Owner |
 
 ## Still open (spec §17)
 

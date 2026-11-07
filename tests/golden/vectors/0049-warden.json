@@ -1,6 +1,6 @@
 {
  "name": "0049-warden",
- "core": "m0.15",
+ "core": "m0.16",
  "seed": 49,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIADAECAAwBAgAMAQIADAECAAwBAgAMAQ8A\"},\"start\":{\"cell\":[4,4]},\"zones\":[{\"id\":\"c\",\"name\":\"C\",\"rects\":[[1,1,6,7],[8,1,5,7]],\"ceil\":5200,\"checkpoint\":{\"cell\":[2,4],\"yaw\":1024}},{\"id\":\"d\",\"name\":\"D\",\"rects\":[[7,4,1,1]],\"ceil\":5200}],\"entities\":[{\"id\":\"wd\",\"type\":\"boss\",\"kind\":\"deepWarden\",\"pos\":[18000,10800],\"zone\":\"d\",\"summons\":\"crypt\"},{\"id\":\"z0\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z1\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[11,5],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z2\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z3\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,6],\"start\":\"dormant\",\"group\":\"crypt\"}],\"links\":[{\"id\":1,\"when\":{\"inZone\":\"c\"},\"do\":[{\"wakeBoss\":\"wd\"}]}]}",
@@ -87,17 +87,17 @@
  "ticks": 1599,
  "hashEvery": 300,
  "hashes": {
-  "0": "89b59f35c65b15df3ea56e7460642c1b",
-  "300": "60a630029f5b56a65b0a560fe71e745c",
-  "600": "e68308c05224eaaf89407005ae950145",
-  "900": "bc9b7816e60bc065afe7e9e968450dc1",
-  "1200": "d80e682ec21de25505fc97d8884c35ac",
-  "1500": "768ad794b5db7731437395dfe9544a7c"
+  "0": "56d01c56ec15e1893baa48fa9c7e6e62",
+  "300": "505bd5222bc8d173bdfccb236a18d418",
+  "600": "43869918625c6ba8d0437bd103fd7f2f",
+  "900": "9e687475a08c1fe7a4521865e95aa236",
+  "1200": "92f9ae304fb81e761115b0ba49fd8612",
+  "1500": "e22d2511acc08f2b21c0138f0f18a1bb"
  },
- "final": "f91803282af30568cd3179f5c2dfc114",
+ "final": "db2215aa1f7a569ad4848d845db5e205",
  "finalState": {
   "v": 1,
-  "core": "m0.15",
+  "core": "m0.16",
   "world": "e3a157d41022bd092faf8f1be2ce82bf",
   "mode": "practice",
   "tick": 1599,

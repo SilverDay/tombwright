@@ -713,9 +713,13 @@ final class World
                 $hidden = array_key_exists('hidden', $e);
                 $inChest = array_key_exists('in', $e);
                 $base = array_values(array_filter($kind === 'treasure' ? self::KEYS_TREASURE : self::KEYS_ITEM, static fn (string $x): bool => !$inChest || $x !== 'cell'));
-                $keys = array_merge($base, $hidden ? ['hidden'] : [], $inChest ? ['in'] : []);
+                $named = array_key_exists('name', $e);
+                $keys = array_merge($base, $hidden ? ['hidden'] : [], $inChest ? ['in'] : [], $named ? ['name'] : []);
                 if (!self::hasExactKeys($e, $keys)) {
                     throw new \RangeException('item keys');
+                }
+                if ($named && (($kind !== 'treasure' && $kind !== 'key') || !self::dressText($e['name'], 40, false))) {
+                    throw new \RangeException('item name');   // R-ITEM-1
                 }
                 if (!in_array($kind, self::ITEM_KINDS, true)) {
                     throw new \RangeException('item kind');

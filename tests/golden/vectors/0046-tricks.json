@@ -1,6 +1,6 @@
 {
  "name": "0046-tricks",
- "core": "m0.15",
+ "core": "m0.16",
  "seed": 46,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":8,\"h\":8,\"cells\":\"CQAGAQIAAgECAwIBAgAGAQIABAEBAwEBAgAEAQEGAQECAAYBCQA=\"},\"start\":{\"cell\":[2,2]},\"zones\":[{\"id\":\"r\",\"name\":\"R\",\"rects\":[[1,1,6,6]],\"ceil\":4200}],\"entities\":[{\"id\":\"xe\",\"type\":\"foe\",\"kind\":\"xeroc\",\"cell\":[2,3],\"start\":\"asleep\",\"disguise\":\"flask\"},{\"id\":\"wr\",\"type\":\"foe\",\"kind\":\"wraith\",\"cell\":[2,6],\"start\":\"hunting\"}]}",
@@ -126,17 +126,17 @@
  "ticks": 1584,
  "hashEvery": 300,
  "hashes": {
-  "0": "c3194374f35a808110248b0e446dbdfa",
-  "300": "ddad4c717b2ccdff58893bace30d650b",
-  "600": "0b7b40e60d34b0f20cdc42a778b71b37",
-  "900": "28fbdf572d6fbeb74118b5feacf4970b",
-  "1200": "d121740f6afba232a33370c2649bdc54",
-  "1500": "7857096d09809583913d87b56d56c5ec"
+  "0": "1f25d5d248322ef6f663b570c5b571fe",
+  "300": "0cf368a2d17fc4d86ef7c4843b35b5c5",
+  "600": "62e3b1d8c1678eaa74bf2f09979dc048",
+  "900": "c8d341580307ec7414739ea265ec41ab",
+  "1200": "8b5ccbb36eb39837130956f7a97ec32f",
+  "1500": "98c2f1b1eec9cecf698800859a7ff498"
  },
- "final": "df688a35890689bb7ac6ac7df0be0389",
+ "final": "70dda5f61f436e6b3987a6ffbbfef216",
  "finalState": {
   "v": 1,
-  "core": "m0.15",
+  "core": "m0.16",
   "world": "968efc8ce7c113984bed9957ddb08c80",
   "mode": "practice",
   "tick": 1584,

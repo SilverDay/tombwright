@@ -1,6 +1,6 @@
 {
  "name": "0027-foes-fight",
- "core": "m0.15",
+ "core": "m0.16",
  "seed": 27,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAHAQEABgECAAcBAQAGAQIABwEBAAIBAQMDAQIABwEBAAYBAgAEAQIEAQEBAAYBAgAHAQEABgECAA4BAgAOAREA\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"w\",\"name\":\"W\",\"rects\":[[1,1,7,8]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[8,7,1,2]],\"ceil\":3000},{\"id\":\"e\",\"name\":\"E\",\"rects\":[[9,1,6,8]],\"ceil\":4200,\"checkpoint\":{\"cell\":[10,6],\"yaw\":1024}}],\"entities\":[{\"id\":\"f1\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[12,2],\"start\":\"hunting\",\"group\":\"east\"},{\"id\":\"f2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[13,7],\"start\":\"idle\",\"group\":\"east\"},{\"id\":\"f3\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[3,7],\"start\":\"asleep\",\"group\":\"sleepy\"},{\"id\":\"f4\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[2,2],\"start\":\"dormant\",\"group\":\"late\"}],\"links\":[{\"id\":1,\"when\":{\"enterZone\":\"e\"},\"do\":[{\"spawnFoes\":\"late\"},{\"message\":\"late\"}]},{\"id\":2,\"when\":{\"foesDefeated\":\"east\"},\"do\":[{\"message\":\"east clear\"}]},{\"id\":3,\"when\":{\"not\":{\"foesAlive\":\"sleepy\"}},\"repeat\":true,\"do\":[{\"message\":\"sleepy gone\"}]}]}",
@@ -48,17 +48,17 @@
  "ticks": 1500,
  "hashEvery": 300,
  "hashes": {
-  "0": "f33c1a0b4e2eaed630732680754d4fa8",
-  "300": "0a5f2a0035ac9f3b486829882f6fcdb5",
-  "600": "7a6751cd197ee9248219edfa47724e7a",
-  "900": "c153b533bf17c6ed304eea998403be38",
-  "1200": "c198b6d4abb3f62172c839b727a74c75",
-  "1500": "77f9c2c4d1ab8fb52b8587dd0b4c8d1b"
+  "0": "2449c07885c80b4d73197c0354cd6017",
+  "300": "7193d07e2a1933f79d5df858990dd0a5",
+  "600": "31a7a028306898f1b56c25d54ce9e6bb",
+  "900": "a09808f447ec4032d9a77222fbdad77f",
+  "1200": "48c53f03af23c31fa68c2e633ed1402a",
+  "1500": "098e8f5d314ef0b76b60cffb45888504"
  },
- "final": "77f9c2c4d1ab8fb52b8587dd0b4c8d1b",
+ "final": "098e8f5d314ef0b76b60cffb45888504",
  "finalState": {
   "v": 1,
-  "core": "m0.15",
+  "core": "m0.16",
   "world": "048035ae47f4729f40c65d9e91cfaca9",
   "mode": "delve",
   "tick": 1500,

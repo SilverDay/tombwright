@@ -355,10 +355,11 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       vents.push(Object.freeze({ period, phase, warn, fire }));
       refs.push({ type: 'vent' });
     } else if (e.type === 'item') {
-      const hidden = Object.hasOwn(e, 'hidden'), inChest = Object.hasOwn(e, 'in');
+      const hidden = Object.hasOwn(e, 'hidden'), inChest = Object.hasOwn(e, 'in'), named = Object.hasOwn(e, 'name');
       const keys = (e.kind === 'treasure' ? KEYS.treasure : KEYS.item).filter((x) => !inChest || x !== 'cell')
-        .concat(hidden ? ['hidden'] : [], inChest ? ['in'] : []);
+        .concat(hidden ? ['hidden'] : [], inChest ? ['in'] : [], named ? ['name'] : []);
       if (!hasExactKeys(e, keys)) throw new RangeError('item keys');
+      if (named && ((e.kind !== 'treasure' && e.kind !== 'key') || !dressText(e.name, 40, false))) throw new RangeError('item name'); // R-ITEM-1
       if (!ITEM_KINDS.includes(e.kind)) throw new RangeError('item kind');
       if (hidden && (e.hidden !== true || e.kind === 'rubble' || inChest)) throw new RangeError('item hidden');
       if (inChest && (typeof e.in !== 'string' || e.kind === 'rubble')) throw new RangeError('item in');

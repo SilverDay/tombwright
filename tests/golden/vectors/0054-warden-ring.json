@@ -1,6 +1,6 @@
 {
  "name": "0054-warden-ring",
- "core": "m0.15",
+ "core": "m0.16",
  "seed": 54,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIADAECAAUBAwAEAQIABQEBAAEBAQAEAQIABQEDAAQBAgAMAQIADAEPAA==\"},\"start\":{\"cell\":[4,4]},\"zones\":[{\"id\":\"c\",\"name\":\"C\",\"rects\":[[1,1,6,7],[8,1,5,7]],\"ceil\":5200,\"checkpoint\":{\"cell\":[2,4],\"yaw\":1024}},{\"id\":\"d\",\"name\":\"D\",\"rects\":[[7,4,1,1]],\"ceil\":5200}],\"entities\":[{\"id\":\"wd\",\"type\":\"boss\",\"kind\":\"deepWarden\",\"pos\":[18000,10800],\"zone\":\"d\",\"summons\":\"crypt\"},{\"id\":\"z0\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z1\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[11,5],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z2\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,2],\"start\":\"dormant\",\"group\":\"crypt\"},{\"id\":\"z3\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[3,6],\"start\":\"dormant\",\"group\":\"crypt\"}],\"links\":[{\"id\":1,\"when\":{\"inZone\":\"c\"},\"do\":[{\"wakeBoss\":\"wd\"}]}]}",
@@ -22,18 +22,18 @@
  "ticks": 1800,
  "hashEvery": 300,
  "hashes": {
-  "0": "707ec03d0c294b9b31ae3ee34351552d",
-  "300": "637598dbb079d48538bc96d47d9c53a1",
-  "600": "623cbcf43f072a78849e0aae9ce96ea6",
-  "900": "0945696767caa57f2413dd1fb39b9164",
-  "1200": "c0b27d65469b8907206bc7a14ba22f5e",
-  "1500": "3648a0cfb152e7b935b39803c8ef5ab5",
-  "1800": "4785d2fc22f42334bd2ec11a4fe27084"
+  "0": "e677e94648bbf0e8ed96f6153ca14b8a",
+  "300": "210b1478b1ba23b39e99b36e6947377c",
+  "600": "680fd777d12c64747c843e024e7d0f84",
+  "900": "45883199ddb6ee6bd2f9fbeedc1331b5",
+  "1200": "affb7ace52a9f126c2727689927ce8a9",
+  "1500": "feafec075f1124edbda13bf20eb03b92",
+  "1800": "adb228a951cb23818fcba93a997d6d3b"
  },
- "final": "4785d2fc22f42334bd2ec11a4fe27084",
+ "final": "adb228a951cb23818fcba93a997d6d3b",
  "finalState": {
   "v": 1,
-  "core": "m0.15",
+  "core": "m0.16",
   "world": "249a4ee25d3e717a97df8c5c3c38224c",
   "mode": "practice",
   "tick": 1800,

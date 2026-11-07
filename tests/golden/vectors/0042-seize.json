@@ -1,6 +1,6 @@
 {
  "name": "0042-seize",
- "core": "m0.15",
+ "core": "m0.16",
  "seed": 42,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIADAECAAwBAgAMAQIADAECAAwBAgAMAQ8A\"},\"start\":{\"cell\":[4,3]},\"zones\":[{\"id\":\"p\",\"name\":\"P\",\"rects\":[[1,1,8,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[2,2],\"yaw\":0}},{\"id\":\"q\",\"name\":\"Q\",\"rects\":[[9,1,4,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[11,4],\"yaw\":0}}],\"entities\":[{\"id\":\"fly\",\"type\":\"foe\",\"kind\":\"flytrap\",\"cell\":[5,3],\"start\":\"idle\"},{\"id\":\"br\",\"type\":\"brazier\",\"cell\":[3,2],\"lit\":false},{\"id\":\"eye\",\"type\":\"eyes\",\"zone\":\"q\",\"wake\":60}]}",
@@ -74,14 +74,14 @@
  "ticks": 757,
  "hashEvery": 300,
  "hashes": {
-  "0": "3b3bfbfbdaac9900c81ccf369cc0352b",
-  "300": "ed145a8d1b7d833e1a98f8895b68ccfa",
-  "600": "60e4f2542aeb27103dd16bc352aed403"
+  "0": "f0de122ec4e932d9bccb522101043a89",
+  "300": "c5338f5ba5629aad9b55e51fb4555363",
+  "600": "be6b6950e9841bd981576e2c95666dd6"
  },
- "final": "5d8a6bbe432f0169fabc0dca28497353",
+ "final": "abc0e3243bab00e4564766df3c1f2183",
  "finalState": {
   "v": 1,
-  "core": "m0.15",
+  "core": "m0.16",
   "world": "15c97c1761af33a7e78a1e6c86b73a45",
   "mode": "practice",
   "tick": 757,

@@ -1,6 +1,6 @@
 {
  "name": "0036-delve-fight",
- "core": "m0.15",
+ "core": "m0.16",
  "seed": 36,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAOAQIACgEBAwMBAgAOAQIADgECAAUBBAUFAQIADgECAAsBAQQCAQIADgERAA==\"},\"start\":{\"cell\":[3,4]},\"zones\":[{\"id\":\"d\",\"name\":\"D\",\"rects\":[[1,1,14,8]],\"ceil\":5000}],\"entities\":[{\"id\":\"bat\",\"type\":\"foe\",\"kind\":\"bat\",\"cell\":[8,2],\"start\":\"hunting\"},{\"id\":\"kes\",\"type\":\"foe\",\"kind\":\"kestrel\",\"cell\":[12,4],\"start\":\"idle\"},{\"id\":\"tro\",\"type\":\"foe\",\"kind\":\"troll\",\"cell\":[13,2],\"start\":\"asleep\"},{\"id\":\"gri\",\"type\":\"foe\",\"kind\":\"griffin\",\"cell\":[13,7],\"start\":\"idle\"},{\"id\":\"fly\",\"type\":\"foe\",\"kind\":\"flytrap\",\"cell\":[4,4],\"start\":\"idle\"},{\"id\":\"sna\",\"type\":\"foe\",\"kind\":\"snake\",\"cell\":[2,7],\"start\":\"asleep\"},{\"id\":\"zom\",\"type\":\"foe\",\"kind\":\"zombie\",\"cell\":[10,8],\"start\":\"dormant\",\"group\":\"dead\"},{\"id\":\"emu\",\"type\":\"foe\",\"kind\":\"emu\",\"cell\":[2,2],\"start\":\"idle\"}],\"links\":[{\"id\":1,\"when\":{\"foesDefeated\":\"fly\"},\"do\":[{\"spawnFoes\":\"dead\"},{\"message\":\"the flytrap falls\"}]}]}",
@@ -87,17 +87,17 @@
  "ticks": 1601,
  "hashEvery": 300,
  "hashes": {
-  "0": "4d133d35b7265eafb34d5f15bdcf3499",
-  "300": "9f2f34bc3995dddcd5bda9cb673d45de",
-  "600": "7725ce03d4ea7f987ae5f34e2b6115d3",
-  "900": "da07ec7309899420e5e19b3358ae3871",
-  "1200": "7d371e71c38c1ea324c93b64f2b63ab2",
-  "1500": "5e1c501abb843d81b5f34a9426793bd4"
+  "0": "b99b450359299a7055efec2fd691c849",
+  "300": "a1e31981279f954fb04c2947c8cd5c8d",
+  "600": "a990b8aef2c4e60d1bf42f48b55bca44",
+  "900": "c460f87bd5e1c8684ad6aed0a35b7751",
+  "1200": "84d37959d6c156f43ba85676b65c32f1",
+  "1500": "9e781b0f41003a3b0a87727edd9b0866"
  },
- "final": "291c095dd3a38ba52927fcb266d89155",
+ "final": "b8b4ddbc524e422720574643f2bfba72",
  "finalState": {
   "v": 1,
-  "core": "m0.15",
+  "core": "m0.16",
   "world": "fe93e81c67a5a6ec091b917b8c05f3f0",
   "mode": "practice",
   "tick": 1601,
