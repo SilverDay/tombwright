@@ -102,6 +102,7 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 95 | 2026-11-07 | **Button glyphs:** 16 runes - moon, sun, eye, key, hand, flame, drop, leaf, star, skull, crown, bell, tower, wave, bird, serpent - drawn by the client. | Owner |
 | 96 | 2026-11-07 | **Concealed buttons:** probing the wall a concealed wall button is set in (from the cell in front of it), or a concealed pedestal's cell, finds it for the rest of the life; until then it can't be seen or pressed. | Owner |
 | 97 | 2026-11-07 | **`plateStepped` is deferred.** Step 4b adds buttons, levers, `buttonPressed`, `pebbleHit`, `buttonDown`, `leverOn`, `grantItem`, `resetButton` and `setLever`. | Owner |
+| 98 | 2026-11-07 | **M2 exit test (implementation):** a test rebuilds Gloamhollow from an empty tomb using only the builder's operations and checks it equals the shipped file (links compared in id order, as the core visits them), and builds and plays the four §4.3.6 examples. To make that possible the builder gained id renaming (references follow), link renumbering, chamber tint/walls/checkpoint facing and reach, exact positions in millimetres, and what the exit needs; a chest no longer needs a wall behind it (the loader never did). | Implementation |
 
 ## Still open (spec §17)
 

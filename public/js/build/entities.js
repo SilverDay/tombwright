@@ -174,9 +174,7 @@ export function place(doc, entry, i, j) {
     }
     case 'chest': {
       if (!isFloor(code)) return 'A chest goes on a room or corridor cell.';
-      const side = wallSide(doc, i, j);
-      if (!side) return 'A chest stands against a wall: pick a cell next to one.';
-      return add({ id: freeId(doc, 'chest'), type: 'chest', cell: [i, j], wall: side, style: 'plain', trap: 'none' });
+      return add({ id: freeId(doc, 'chest'), type: 'chest', cell: [i, j], wall: wallSide(doc, i, j) ?? 'n', style: 'plain', trap: 'none' });   // the loader does not need a wall behind it
     }
     case 'torch': {
       if (!isFloor(code)) return 'A torch goes on a room or corridor cell.';
@@ -313,6 +311,7 @@ export function move(doc, e, i, j) {
       e.cell = [i, j]; return true;
     case 'chest': case 'torch': {
       if (!isFloor(code)) return 'This goes on a room or corridor cell.';
+      if (e.type === 'chest') { e.cell = [i, j]; e.wall = wallSide(doc, i, j, e.wall) ?? e.wall; return true; }
       const side = wallSide(doc, i, j, e.wall);
       if (!side) return 'This stands against a wall: pick a cell next to one.';
       e.cell = [i, j]; e.wall = side; return true;
@@ -360,6 +359,10 @@ export function move(doc, e, i, j) {
 
 // ------------------------------------------------------------------ the inspector: fields and their transitions
 /** Field descriptors per type. t: select | int | text | bool | ref | pages. `show` hides a field that does not apply. */
+const POS_FIELDS = [
+  { k: 'posX', label: 'Position x (mm)', t: 'int', min: 0, max: 153600, show: (e) => Array.isArray(e.pos) },
+  { k: 'posZ', label: 'Position z (mm)', t: 'int', min: 0, max: 153600, show: (e) => Array.isArray(e.pos) },
+];
 export const FIELDS = {
   door: [
     { k: 'style', label: 'Style', t: 'select', o: DOOR_STYLES },
@@ -397,6 +400,7 @@ export const FIELDS = {
     { k: 'title', label: 'Title', t: 'text', max: 80 },
     { k: 'sig', label: 'Signed (optional)', t: 'text', max: 80, optional: true },
     { k: 'pages', label: 'Pages', t: 'pages' },
+    ...POS_FIELDS,
   ],
   marks: [],
   brazier: [{ k: 'lit', label: 'Lit at the start', t: 'bool' }],
@@ -432,10 +436,11 @@ export const FIELDS = {
   boss: [
     { k: 'kind', label: 'Kind', t: 'select', o: () => bossKinds(), text: (k) => (k === 'eater' ? 'Ilvaris, the Candle-Eater' : k === 'deepWarden' ? 'The Warden of the Deep' : k) },
     { k: 'zone', label: 'Chamber', t: 'ref', refs: (doc) => doc.gdf.zones ?? [] },
+    ...POS_FIELDS,
     { k: 'summons', label: 'Calls up group', t: 'ref', refs: (doc) => groupIds(doc).map((id) => ({ id })), none: '(none)', show: (e) => e.kind === 'deepWarden' },
   ],
-  prop: [{ k: 'kind', label: 'Kind', t: 'select', o: PROP_KINDS }, { k: 'yaw', label: 'Facing (0-4095)', t: 'int', min: 0, max: 4095 }],
-  decor: [{ k: 'kind', label: 'Kind', t: 'select', o: DECOR_KINDS }, { k: 'yaw', label: 'Facing (0-4095)', t: 'int', min: 0, max: 4095 }],
+  prop: [{ k: 'kind', label: 'Kind', t: 'select', o: PROP_KINDS }, { k: 'yaw', label: 'Facing (0-4095)', t: 'int', min: 0, max: 4095 }, ...POS_FIELDS],
+  decor: [{ k: 'kind', label: 'Kind', t: 'select', o: DECOR_KINDS }, { k: 'yaw', label: 'Facing (0-4095)', t: 'int', min: 0, max: 4095 }, ...POS_FIELDS],
 };
 
 /** The current value of a field for the inspector (derived ones included). */
@@ -447,6 +452,8 @@ export function getField(e, k) {
   if (e.type === 'button' && k === 'mount') return 'wall' in e ? 'wall' : 'pedestal';
   if ((e.type === 'button' || e.type === 'lever') && k === 'side') return sideOf(e);
   if (e.type === 'button' && k === 'concealed') return e.concealed === true;
+  if (k === 'posX' && Array.isArray(e.pos)) return e.pos[0];
+  if (k === 'posZ' && Array.isArray(e.pos)) return e.pos[1];
   if (e.type === 'boss' && k === 'summons') return typeof e.summons === 'string' ? e.summons : '';
   if (e.type === 'foe' && k === 'disguise') return typeof e.disguise === 'string' ? e.disguise : '';
   if (e.type === 'item' && k === 'in') return 'in' in e ? e.in : '';
@@ -461,6 +468,11 @@ const dropKey = (e, ...ks) => { for (const k of ks) delete e[k]; };
  * Returns true, or a string saying why not.
  */
 export function setField(doc, e, k, v) {
+  if (k === 'posX' || k === 'posZ') {                           // exact placement in millimetres (props, decor, bosses, floor inscriptions)
+    if (!Array.isArray(e.pos)) return 'This is not placed by position.';
+    if (!Number.isInteger(v) || v < 0 || v > Math.max(doc.w, doc.h) * CELL_MM) return 'A whole number of millimetres inside the grid.';
+    e.pos = k === 'posX' ? [v, e.pos[1]] : [e.pos[0], v]; return true;
+  }
   switch (e.type) {
     case 'door':
       if (k === 'style') {
@@ -519,7 +531,7 @@ export function setField(doc, e, k, v) {
     case 'chest':
       if (k === 'style' && (v === 'plain' || v === 'gilded')) { e.style = v; return true; }
       if (k === 'trap' && (v === 'none' || v === 'needles')) { e.trap = v; return true; }
-      if (k === 'wall') return setSide(doc, e, v);
+      if (k === 'wall') { if (!SIDES.includes(v)) return 'Unknown side.'; e.wall = v; return true; }
       break;
     case 'torch':
       if (k === 'wall') return setSide(doc, e, v);

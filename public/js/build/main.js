@@ -8,6 +8,7 @@ import * as M from './model.js';
 import * as E from './entities.js';
 import { validate } from './validate.js';
 import { renderWiring } from './wiring.js';
+import { renameEntity, renameZone } from './rename.js';
 
 const $ = (id) => document.getElementById(id);
 const STORE = 'tw.build.v1', PLAYTEST = 'tw.playtest.v1';
@@ -152,6 +153,18 @@ function panels() {
   for (const w of v.warnings) { const li = document.createElement('li'); li.textContent = w; ul.appendChild(li); }
   $('playBtn').disabled = !v.ok || !S.core;
   const s = M.summary(S.doc);
+  { // what the exit needs (decision #50): nothing, the boss's death, or an item
+    const sel = $('exitReq'), ex = S.doc.gdf.exit;
+    if (document.activeElement !== sel) {
+      sel.replaceChildren(); sel.disabled = !ex;
+      const add = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
+      add('', 'nothing');
+      if (E.entities(S.doc).some((e) => e.type === 'boss')) add('bossDefeated', 'the boss is defeated');
+      for (const e of E.entities(S.doc)) if (e.type === 'item' && e.kind !== 'rubble' && e.kind !== 'flask') add(e.id, `you carry ${e.id}`);
+      const cur = ex?.requires ?? ''; if (![...sel.options].some((o) => o.value === cur)) add(cur, `${cur} (missing)`);
+      sel.value = cur;
+    }
+  }
   $('summary').textContent = `${s.w} × ${s.h} cells, ${s.floor} walkable, ${s.zones} chambers, ${s.entities} things placed, ${s.links} links.`;
   const t = E.threat(S.doc), tl = $('threat');
   tl.textContent = `Threat ${t.points} / ${E.THREAT_BUDGET} · foes ${t.foes} / ${E.MAX_FOES} · awake at the start ${t.awake} / ${E.MAX_AWAKE}`;
@@ -188,13 +201,33 @@ function zonesPanel() {
     }));
     cp.append(cpb, document.createTextNode(' checkpoint'));
     r2.append(document.createTextNode('Ceiling '), ceil, document.createTextNode(' m'), cp);
+    const r4 = document.createElement('div'); r4.className = 'zrow';
+    const zid = document.createElement('input'); zid.type = 'text'; zid.maxLength = 32; zid.value = z.id; zid.setAttribute('aria-label', 'Id of chamber ' + z.name);
+    zid.addEventListener('change', () => { let r; edit(() => { r = renameZone(S.doc, z.id, zid.value.trim()); if (r === true) S.sel = zid.value.trim(); }); if (r !== true) toast(r); });
+    const tint = document.createElement('input'); tint.type = 'color'; tint.setAttribute('aria-label', 'Tint of ' + z.name);
+    const tc = Array.isArray(z.tint) ? z.tint : [128, 128, 128]; tint.value = '#' + tc.map((c) => Math.max(0, Math.min(255, c)).toString(16).padStart(2, '0')).join('');
+    tint.addEventListener('change', () => edit(() => M.updateZone(S.doc, z.id, { tint: [1, 3, 5].map((o) => parseInt(tint.value.slice(o, o + 2), 16)) })));
+    const noTint = document.createElement('button'); noTint.type = 'button'; noTint.textContent = 'no tint'; noTint.disabled = !z.tint; noTint.addEventListener('click', () => edit(() => M.updateZone(S.doc, z.id, { tint: null })));
+    const walls = document.createElement('select'); walls.setAttribute('aria-label', 'Walls of ' + z.name);
+    for (const [v, t] of [['', 'plain walls'], ['brick', 'brick'], ['shelves', 'shelves']]) { const o = document.createElement('option'); o.value = v; o.textContent = t; walls.appendChild(o); }
+    walls.value = z.walls ?? ''; walls.addEventListener('change', () => edit(() => M.updateZone(S.doc, z.id, { walls: walls.value === '' ? null : walls.value })));
+    r4.append(document.createTextNode('Id '), zid, tint, noTint, walls);
+    const r5 = document.createElement('div'); r5.className = 'zrow';
+    if (z.checkpoint) {
+      const yaw = document.createElement('input'); yaw.type = 'number'; yaw.min = '0'; yaw.max = '4095'; yaw.value = String(z.checkpoint.yaw); yaw.setAttribute('aria-label', 'Facing at the checkpoint of ' + z.name);
+      yaw.addEventListener('change', () => edit(() => M.updateZone(S.doc, z.id, { checkpoint: { cell: z.checkpoint.cell, yaw: Number(yaw.value) } })));
+      const reach = document.createElement('select'); reach.setAttribute('aria-label', 'How the checkpoint of ' + z.name + ' is reached');
+      for (const [v, t] of [['', 'reached by entering'], ['effect', 'only by a link effect']]) { const o = document.createElement('option'); o.value = v; o.textContent = t; reach.appendChild(o); }
+      reach.value = z.checkpoint.reach === 'effect' ? 'effect' : ''; reach.addEventListener('change', () => edit(() => M.updateZone(S.doc, z.id, { reach: reach.value === '' ? null : 'effect' })));
+      r5.append(document.createTextNode('Facing (0-4095) '), yaw, reach);
+    }
     const r3 = document.createElement('div'); r3.className = 'zrow';
     const eyes = E.eyesOf(S.doc, z.id), eb = document.createElement('label'), ebox = document.createElement('input'); ebox.type = 'checkbox'; ebox.checked = Boolean(eyes);
     const wake = document.createElement('input'); wake.type = 'number'; wake.min = '18'; wake.max = '1800'; wake.value = String(eyes?.wake ?? 30); wake.disabled = !eyes; wake.setAttribute('aria-label', 'Ticks until the eyes wake');
     ebox.addEventListener('change', () => { let r; edit(() => { r = E.setEyes(S.doc, z.id, ebox.checked ? 30 : null); }); if (r !== true) toast(r); });
     wake.addEventListener('change', () => { let r; edit(() => { r = E.setEyes(S.doc, z.id, Number(wake.value)); }); if (r !== true) toast(r); });
     eb.append(ebox, document.createTextNode(' waking eyes, wake after ')); r3.append(eb, wake, document.createTextNode(' ticks'));
-    li.append(r1, r2, r3); ul.appendChild(li);
+    li.append(r1, r2, r3, r4, r5); ul.appendChild(li);
   });
   $('zoneHint').textContent = zs.length ? 'Move a checkpoint with the Checkpoint tool.' : 'Use the Chamber tool and drag over the floor.';
 }
@@ -242,6 +275,10 @@ function inspectorPanel() {
   const del = document.createElement('button'); del.type = 'button'; del.textContent = 'Remove'; del.setAttribute('aria-label', `Remove ${e.id}`);
   del.addEventListener('click', () => { edit(() => E.removeEntity(S.doc, e.id)); S.ent = null; refresh(); });
   host.append(head, del);
+  const idRow = document.createElement('label'); idRow.className = 'frow'; idRow.append(document.createTextNode('Id (links use it) '));
+  const idIn = document.createElement('input'); idIn.type = 'text'; idIn.maxLength = 32; idIn.value = e.id; idIn.setAttribute('aria-label', 'Id of ' + e.id);
+  idIn.addEventListener('change', () => { const to = idIn.value.trim(); let r; edit(() => { r = renameEntity(S.doc, e.id, to); if (r === true) S.ent = to; }); if (r !== true) toast(r); });
+  idRow.appendChild(idIn); host.appendChild(idRow);
   for (const f of E.FIELDS[e.type] ?? []) {
     if (f.show && !f.show(e)) continue;
     const row = document.createElement('label'); row.className = 'frow'; row.append(document.createTextNode(f.label + ' '));
@@ -390,6 +427,7 @@ $('newDlg').addEventListener('close', () => {
   try { const doc = M.newTomb(Number($('newW').value), Number($('newH').value)); const before = snap(); S.doc = doc; pushUndo(before); S.sel = null; S.ent = null; refresh(); }
   catch { toast('The size must be between 6 and 64 cells each way.'); }
 });
+$('exitReq').addEventListener('change', () => edit(() => M.setExitRequires(S.doc, $('exitReq').value)));
 $('undoBtn').addEventListener('click', undo);
 $('redoBtn').addEventListener('click', redo);
 $('playBtn').addEventListener('click', () => {

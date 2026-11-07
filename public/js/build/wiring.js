@@ -3,6 +3,7 @@
 // so they undo with everything else. Text from the tomb (ids, zone names, messages) is only ever set with
 // textContent / .value.
 import * as L from './links.js';
+import { renameLink } from './rename.js';
 
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 const opt = (value, text) => { const o = document.createElement('option'); o.value = String(value); o.textContent = text; return o; };
@@ -45,6 +46,9 @@ function card(doc, link, api) {
   const art = el('article', 'link'); art.dataset.link = String(link.id);
   const head = el('div', 'lhead');
   head.append(el('h3', null, `Link ${link.id}`));
+  const num = el('input'); num.type = 'number'; num.min = '1'; num.max = '65535'; num.value = String(link.id); num.className = 'lnum'; num.setAttribute('aria-label', `Number of link ${link.id}`);
+  num.addEventListener('change', () => act(api, () => renameLink(doc, link.id, Number(num.value))));
+  head.appendChild(num);
   const sum = el('p', 'lsum', L.describeLink(link)); head.appendChild(sum);
   const rm = el('button', null, 'Remove'); rm.type = 'button'; rm.setAttribute('aria-label', `Remove link ${link.id}`);
   rm.addEventListener('click', () => act(api, () => { L.removeLink(doc, link.id); return true; }));

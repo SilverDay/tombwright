@@ -81,11 +81,15 @@ Playwright runs with one worker (the single-threaded `php -S` can't serve parall
   inspector, wiring tables); the game draws them (runes in `game/textures.js`, `makeGlyph`), prompts "Press the moon
   button" / "Pull the lever", and the live panel reads them. Vectors 0055-0057 and the `buttons:` load cases cover them;
   the fuzzer generates them (and the button room).
-  **Next: slice 5, the exit test:** rebuild Gloamhollow in the editor (every piece it uses is now placeable and
-  wireable; check what the builder still can't do, e.g. its text tables and the boss/bell names) and make the four spec
-  §4.3.6 examples work: (1) ALL(buttonPressed, pebbleHit) within 120 → open the grate; (2) ALL(leverOn, lightLit) with an
-  undo; (3) a strict SEQUENCE of rune buttons with onWrong damage; (4) AT LEAST 2 of (hasItem, hasItem, leverOn). Then M2
-  is done; M3 (server MVP) starts with questions Q1, Q3, Q5, Q7.
+  **Slice 5 is done: M2 (the builder) is complete** (decision #98): `tests/js/build-rebuild.test.mjs` rebuilds Gloamhollow
+  from an empty tomb with only the builder's operations (paint, chambers, palette, inspector setters, renames, the wiring
+  model) and checks it equals `dungeons/gloamhollow.gdf.json`; and builds and plays the four spec §4.3.6 examples. New for
+  that: `public/js/build/rename.js` (ids and link numbers, references follow), chamber tint / walls / checkpoint facing and
+  reach, exact millimetre positions, the exit's requirement. Known V2 items: the node-graph wiring canvas (#91),
+  `plateStepped` (#97), per-vent cell editing, reordering entities (only the sim's numbering sees it), a 3D preview.
+  **Next: M3, the server MVP** (spec §16, §5, §8-§11): accounts (NIST 800-63B-4), drafts, proof runs, publishing, verified
+  runs, leaderboards. **Ask the owner first**: Q1 async only, Q3 guest play, Q4 breached-password check, Q5 content licence,
+  Q7 player rating; and when `/build` gets its access control (#89) and a link from the landing page.
 
 ### What 7d left behind (worth knowing)
 

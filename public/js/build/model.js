@@ -110,6 +110,16 @@ export function updateZone(doc, id, patch) {
   if (!z) return false;
   if (typeof patch.name === 'string') z.name = patch.name.slice(0, 60);
   if (Number.isInteger(patch.ceil)) z.ceil = Math.min(CEIL_MAX, Math.max(CEIL_MIN, patch.ceil));
+  if (patch.tint === null) delete z.tint;
+  else if (patch.tint !== undefined) { if (!Array.isArray(patch.tint) || patch.tint.length !== 3 || !patch.tint.every((c) => Number.isInteger(c) && c >= 0 && c <= 255)) return false; z.tint = patch.tint.slice(); }
+  if (patch.walls === null) delete z.walls;
+  else if (patch.walls !== undefined) { if (patch.walls !== 'brick' && patch.walls !== 'shelves') return false; z.walls = patch.walls; }
+  if (patch.reach !== undefined) {
+    if (!z.checkpoint) return false;
+    if (patch.reach === null) delete z.checkpoint.reach;
+    else if (patch.reach === 'enter' || patch.reach === 'effect') z.checkpoint.reach = patch.reach;
+    else return false;
+  }
   if (patch.checkpoint === null) delete z.checkpoint;
   else if (patch.checkpoint) {
     const { cell, yaw = 0 } = patch.checkpoint;
@@ -132,6 +142,12 @@ export function setExit(doc, i, j) {
   return true;
 }
 export function clearExit(doc) { delete doc.gdf.exit; }
+/** What the exit needs: null (nothing), 'bossDefeated' or the id of an item. */
+export function setExitRequires(doc, value) {
+  if (!doc.gdf.exit) return false;
+  if (value === null || value === '') delete doc.gdf.exit.requires; else doc.gdf.exit.requires = String(value);
+  return true;
+}
 
 export function setTitle(doc, title) { doc.gdf.meta = { ...(doc.gdf.meta ?? { lang: 'en', authorId: 0 }), title: String(title).slice(0, 60) }; }
 

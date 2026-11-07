@@ -84,3 +84,4 @@ dialog menu{display:flex;gap:8px;justify-content:flex-end;padding:0;margin:12px 
 .frow2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0}
 .frow2 .msg{flex:1;min-width:14rem}
 button.small{padding:2px 8px;font-size:13px}
+.lnum{width:5rem}

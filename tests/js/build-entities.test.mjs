@@ -43,7 +43,7 @@ test('placing is refused where it cannot work, with a reason', () => {
   assert.match(E.place(doc, entry('door'), 2, 6), /start/);
   assert.match(E.place(doc, entry('slab'), 5, 5), /plate/);
   assert.match(E.place(doc, entry('alcove'), 12, 3), /door first/);
-  assert.match(E.place(doc, entry('chest'), 8, 6), /wall/);
+  assert.equal(typeof E.place(doc, entry('chest'), 8, 6), 'object', 'a chest needs no wall behind it');
   M.paint(doc, 10, 3, CELL.VENT);
   assert.match(E.place(doc, entry('vent'), 5, 5), /vent/);
   E.place(doc, entry('door'), 5, 5);

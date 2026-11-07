@@ -55,8 +55,8 @@ test('builder: paint, check, export, reopen, playtest', async ({ page }) => {
   await page.getByRole('button', { name: /Remove chamber/ }).click();
   await expect(page.locator('#problems')).toContainText('outside every chamber');
   await page.locator('#undoBtn').click();
-  await page.locator('#zones input[type=text]').fill('The Hall');
-  await page.locator('#zones input[type=text]').press('Enter');
+  await page.getByLabel('Chamber name').fill('The Hall');
+  await page.getByLabel('Chamber name').press('Enter');
   await page.locator('#title').fill('Test of the Builder');
   await page.locator('#title').press('Enter');
   expect(await page.evaluate(() => [window.__twBuild.doc.gdf.zones[0].name, window.__twBuild.doc.gdf.meta.title])).toEqual(['The Hall', 'Test of the Builder']);
@@ -123,8 +123,8 @@ test('builder: place things, name the loot, then play them', async ({ page }) =>
   await page.getByRole('radio', { name: 'Chest' }).click(); await click(3, 1);
   expect((await ents()).map((e) => e.type)).toEqual(['door', 'item', 'inscription', 'torch', 'chest']);
   // Refusals say why.
-  await page.getByRole('radio', { name: 'Chest' }).click(); await click(8, 6);
-  await expect(page.locator('#toast')).toContainText('against a wall');
+  await page.getByRole('radio', { name: 'Torch' }).click(); await click(8, 6);
+  await expect(page.locator('#toast')).toContainText('hangs on a wall');
 
   // The inspector edits the selected thing (the chest placed last is selected; pick the treasure by Select).
   await page.getByRole('radio', { name: 'Select / move' }).click(); await click(4, 5);
@@ -374,5 +374,40 @@ test('builder: a button opens a door and a lever turns, in the playtest', async 
   await page.evaluate(() => window.__wt.tick(3));
   expect(await page.evaluate(() => window.__wt.st().levers[0])).toEqual({ on: true, used: true });
   expect(await page.evaluate(([x, z]) => window.__wt.use(x, z), [cx(10), cx(1) - 1.1])).toBe('The lever is stuck');
+  expect(errors).toEqual([]);
+});
+
+test('builder: ids can be renamed (links follow), chambers get a look, the exit can need something', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.addInitScript(() => { window.__twTest = true; window.__twNoRender = true; });
+  await page.goto(BASE + '/build');
+  await page.waitForFunction(() => !!window.__twBuild);
+  const Z = 20, box = await page.locator('#grid').boundingBox();
+  const click = async (i, j) => { const x = box.x + (i + 0.5) * Z, y = box.y + (j + 0.5) * Z; await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.up(); };
+  await page.getByRole('radio', { name: 'Door', exact: true }).click(); await click(8, 6);
+  await page.getByRole('radio', { name: 'Treasure' }).click(); await click(4, 5);
+  await page.locator('#viewWiring').click();
+  await page.getByRole('button', { name: 'Add a link' }).click();
+  await expect(page.locator('article.link .lsum')).toContainText('door “door1”');
+  await page.locator('#viewPlan').click();
+  await page.getByRole('radio', { name: 'Select / move' }).click(); await click(8, 6);
+  await page.getByLabel('Id of door1').fill('grate_door'); await page.getByLabel('Id of door1').press('Enter');
+  await page.locator('#viewWiring').click();
+  await expect(page.locator('article.link .lsum')).toContainText('door “grate_door”');
+  await expect(page.locator('article.link .lsum')).not.toContainText('door1');
+  await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
+  // a bad id says why
+  await page.locator('#viewPlan').click();
+  await click(8, 6);
+  await page.getByLabel('Id of grate_door').fill('9lives'); await page.getByLabel('Id of grate_door').press('Enter');
+  await expect(page.locator('#toast')).toContainText('An id');
+  // the chamber's look and the exit's requirement
+  await page.getByLabel('Walls of The first chamber').selectOption('shelves');
+  await page.getByLabel('Facing at the checkpoint of The first chamber').fill('1024'); await page.getByLabel('Facing at the checkpoint of The first chamber').press('Enter');
+  expect(await page.evaluate(() => { const z = window.__twBuild.doc.gdf.zones[0]; return [z.walls, z.checkpoint.yaw]; })).toEqual(['shelves', 1024]);
+  await page.locator('#exitReq').selectOption('gem1');
+  expect(await page.evaluate(() => window.__twBuild.doc.gdf.exit.requires)).toBe('gem1');
+  await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
   expect(errors).toEqual([]);
 });
