@@ -92,6 +92,9 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 85 | 2026-11-07 | **Exit while building:** the editor follows the core loader (a tomb with no exit loads) and shows a warning; "exactly one start and one exit" (spec §7.3.4) is enforced by the publish validator in M3. | Owner |
 | 86 | 2026-11-07 | **Item names:** treasure and key items take an optional `name` (text, 1–40 code points, no control characters), display only, so a builder tomb can name its loot (spec §4.2). Core m0.16, R-ITEM-1. Flasks and rubble stay unnamed. | Owner |
 | 87 | 2026-11-07 | **Builder slices 2 and 3:** slice 2 places doors, slabs, vents, alcoves, eyes, chests, items, inscriptions, torches, props, decor and masons' marks; slice 3 braziers, bells, mirrors, the lamp hook, the crystal, foes, the boss and the threat budget. | Owner |
+| 88 | 2026-11-07 | **A way out of the tomb:** every card of the game page (title, pause menu, death, win) has a link out: "Leave the tomb" to the main page for an official tomb, "Back to the builder" (which keeps the tomb) for a playtest. | Owner |
+| 89 | 2026-11-07 | **No link to the builder from the landing page** until access control is in place; `/build` is reachable by its address only. | Owner |
+| 90 | 2026-11-07 | **Bell names:** a builder tomb's bells are named by their looks in the client ("the great bright bell", size × patina); no core key. Bosses are named by their kind. | Implementation (no owner question: client text only) |
 
 ## Still open (spec §17)
 

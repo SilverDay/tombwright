@@ -58,3 +58,5 @@ dialog menu{display:flex;gap:8px;justify-content:flex-end;padding:0;margin:12px 
 .frow textarea{font:inherit;color:var(--parch);background:#1d1a20;border:1px solid var(--line);border-radius:4px;padding:5px 8px;resize:vertical}
 .frow input[type=checkbox]{display:inline-block;width:auto}
 .pages button{margin:3px 6px 8px 0}
+#threat.bad{color:var(--bad)}
+#foeKind{width:100%;margin-top:3px}

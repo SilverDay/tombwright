@@ -56,10 +56,16 @@ Don't run the fuzzer beside the e2e walkthroughs: the walkthrough then hits its 
   wants exact key sets), unit-tested in `tests/js/build-entities.test.mjs`; the inspector, Select / move tool and
   the palette are in `main.js`. A vent cell without a vent entity is a load error (the loader says so; place the
   Fire vent tool on it). Doors that open on a trigger and hidden items warn until a link exists (slice 4).
-  Entities can't be renamed (links will refer to ids). **Next: slice 3** (braziers, bells, mirrors, the lamp hook,
-  the crystal, foes, the boss, the threat budget). The playtest page still has Gloamhollow's boss-frame text for
-  `test` tombs (it picks the Warden's or the Candle-Eater's name by kind); slice 3 should give bosses and bells their
-  own names the way #86 did for items (an owner question first).
+  Entities can't be renamed (links will refer to ids).
+  **Slice 3 is done** (decisions #88-#90): braziers, bells (a bell set is made by the Bell tool: the first bell starts
+  a set, later bells join the *selected* set or bell; the set's ring order is in its inspector), the lamp hook, mirrors,
+  crystals, foes (kind chosen in the list under Things; the threat counter shows tier² of 100, foes of 24, awake of 8)
+  and the boss (inside a chamber; the Warden's `summons` names a foe group). Foes or a boss add the top-level
+  `bestiary: 1`. Bells are named in the client by size and patina. The game page now has a way out on every card
+  (anchor `a.leave`: `/` for an official tomb, `/build` for a playtest). The landing page does **not** link to `/build`
+  (owner, #89) until access control exists. Dormant foes and trigger doors warn until a link wires them.
+  **Next: slice 4, the wiring view** (links: triggers, gates ALL/ANY/AT LEAST/SEQUENCE/NOT, effects, "would fire now"
+  highlighting in a playtest; spec §4.3, §7.1), then slice 5 (rebuild Gloamhollow and the four §4.3.6 examples).
 
 ### What 7d left behind (worth knowing)
 

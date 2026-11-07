@@ -23,16 +23,17 @@ const ok = (doc) => { const v = validate(doc); assert.equal(v.ok, true, v.error)
 test('every palette entry places an entity the loader accepts', () => {
   const doc = workshop();
   ok(doc);
-  const spots = { door: [5, 5], slab: [8, 3], vent: [10, 3], alcove: [12, 3], flask: [4, 7], rubble: [5, 7], treasure: [6, 7], key: [7, 7], chest: [3, 1], inscription: [6, 1], torch: [9, 1], marks: [4, 4], prop: [9, 8], decor: [11, 8] };
+  const spots = { door: [5, 5], slab: [8, 3], vent: [10, 3], alcove: [12, 3], flask: [4, 7], rubble: [5, 7], treasure: [6, 7], key: [7, 7], chest: [3, 1], inscription: [6, 1], torch: [9, 1], marks: [4, 4], prop: [9, 8], decor: [11, 8], brazier: [14, 8], bell: [15, 7], lampHook: [1, 9], mirror: [16, 9], crystal: [13, 1], foe: [14, 5], boss: [10, 9] };
   // the alcove wants a door and a key door wants a key: place doors first (palette order does that)
   for (const p of E.PALETTE) {
     const [i, j] = spots[p.id];
     if (p.id === 'vent') { M.paint(doc, 10, 3, CELL.VENT); M.paint(doc, 11, 3, CELL.VENT); assert.match(validate(doc).error, /vent cell/); }   // a vent cell needs its vent
     const r = E.place(doc, p, i, j);
     assert.equal(typeof r, 'object', `${p.id}: ${r}`);
+    if (p.id === 'bell') { assert.equal(validate(doc).ok, false, 'one bell is not a set'); E.place(doc, { ...p, selected: r.id }, 15, 9); }   // the second bell joins
     ok(doc);
   }
-  assert.equal(E.entities(doc).length, E.PALETTE.length);
+  assert.equal(E.entities(doc).length, E.PALETTE.length + 2, 'a bell set and a second bell came with the bell');
   assert.deepEqual(E.byId(doc, 'vent1').cells, [[10, 3], [11, 3]], 'a vent takes its connected vent cells');
 });
 
@@ -169,4 +170,124 @@ test('malformed entities from an imported file do not break placing', () => {
   E.place(doc, entry('door'), 6, 5);
   assert.match(String(E.place(doc, entry('alcove'), 12, 3)), /./);
   assert.deepEqual(E.entitiesAt(doc, 0, 0), []);
+});
+
+// ------------------------------------------------------------------ slice 3: light, bells, mirrors, foes, the boss
+import { readFileSync as readBest } from 'node:fs';
+E.setBestiary(JSON.parse(readBest(ROOT + 'public/js/sim/data/bestiary.v1.json', 'utf8')));
+
+test('light and puzzle pieces place and load', () => {
+  const doc = workshop();
+  E.place(doc, entry('brazier'), 4, 4); ok(doc);
+  E.place(doc, entry('mirror'), 6, 4); ok(doc);
+  assert.match(E.place(doc, entry('mirror'), 6, 4), /already/);
+  const hook = E.place(doc, entry('lampHook'), 1, 6);
+  assert.equal(hook.dir, 'e', 'the hook hangs on the west wall and shines east'); ok(doc);
+  E.place(doc, entry('crystal'), 13, 1); ok(doc);
+  assert.match(E.place(doc, entry('crystal'), 8, 6), /wall/);
+  const m = E.byId(doc, 'mirror1');
+  E.setField(doc, m, 'start', '\\'); assert.equal(m.start, '\\'); ok(doc);
+  E.setField(doc, E.byId(doc, 'brazier1'), 'lit', true); ok(doc);
+  E.setField(doc, hook, 'dir', 'n'); ok(doc);
+});
+
+test('bells: the first makes a set that needs a second; the set follows the selection; removing keeps sets whole', () => {
+  const doc = workshop();
+  const b1 = E.place(doc, entry('bell'), 5, 4);
+  const set = E.byId(doc, 'bells1');
+  assert.deepEqual(set.bells, [b1.id]); assert.equal(validate(doc).ok, false);
+  const b2 = E.place(doc, { ...entry('bell'), selected: set.id }, 7, 4);       // joins the selected set
+  assert.deepEqual(set.bells, [b1.id, b2.id]); ok(doc);
+  const b3 = E.place(doc, { ...entry('bell'), selected: b1.id }, 9, 4);        // a selected bell names its set
+  assert.deepEqual(set.bells, [b1.id, b2.id, b3.id]); ok(doc);
+  assert.equal(E.setField(doc, set, 'order', [2, 0, 1]), true); ok(doc);
+  assert.match(E.setField(doc, set, 'order', [0, 0, 1]), /exactly once/);
+  assert.equal(E.setField(doc, b2, 'size', 3), true); assert.equal(E.setField(doc, b2, 'patina', 2), true); assert.equal(E.setField(doc, b2, 'note', 98), true);
+  assert.match(E.setField(doc, b2, 'note', 5), /20/); ok(doc);
+  // clicking a bell offers the bell, then its set
+  assert.deepEqual(E.entitiesAt(doc, 7, 4).map((e) => e.type), ['bell', 'bellSet']);
+  // remove the middle-ringing bell: order is renumbered and stays a permutation
+  E.removeEntity(doc, b1.id);
+  assert.deepEqual(set.bells, [b2.id, b3.id]); assert.deepEqual([...set.order].sort(), [0, 1]); ok(doc);
+  // a new set when nothing is selected, and removing a set takes its bells
+  const c1 = E.place(doc, entry('bell'), 11, 4);
+  assert.equal(E.byId(doc, 'bells2').bells[0], c1.id);
+  E.removeEntity(doc, 'bells1');
+  assert.equal(E.byId(doc, b2.id), undefined); assert.equal(E.byId(doc, b3.id), undefined);
+  E.removeEntity(doc, c1.id); assert.equal(E.byId(doc, 'bells2'), undefined); ok(doc);
+  const first = E.place(doc, entry('bell'), 3, 8), mine = E.entities(doc).find((e) => e.type === 'bellSet' && e.bells.includes(first.id));
+  for (let n = 1; n < 5; n++) E.place(doc, { ...entry('bell'), selected: mine.id }, 3 + n, 8);
+  assert.equal(mine.bells.length, 5);
+  assert.match(E.place(doc, { ...entry('bell'), selected: mine.id }, 9, 8), /at most 5/);
+});
+
+test('foes: kinds, starts, groups, disguise and the threat counter', () => {
+  const doc = workshop();
+  const f = E.place(doc, { ...entry('foe'), kind: 'dragon' }, 6, 4);
+  assert.equal(f.kind, 'dragon'); ok(doc);
+  assert.deepEqual(E.threat(doc), { points: 25, foes: 1, awake: 0, over: false });
+  for (const [i, kind] of [[8, 'dragon'], [10, 'dragon'], [12, 'dragon']]) E.place(doc, { ...entry('foe'), kind }, i, 4);
+  assert.equal(E.threat(doc).points, 100); ok(doc);
+  E.place(doc, { ...entry('foe'), kind: 'bat' }, 14, 4);
+  assert.equal(E.threat(doc).over, true); assert.match(validate(doc).error, /foe limits/);
+  assert.equal(E.setField(doc, E.byId(doc, 'foe5'), 'kind', 'warden'), true);   // a bone gardener costs 4, still too many
+  E.removeEntity(doc, 'foe5'); ok(doc);
+  assert.equal(E.setField(doc, f, 'start', 'hunting'), true); ok(doc); assert.equal(E.threat(doc).awake, 1);
+  assert.equal(E.setField(doc, f, 'group', 'guards'), true); assert.deepEqual(E.groupIds(doc).includes('guards'), true); ok(doc);
+  assert.match(E.setField(doc, f, 'group', '9bad'), /group id/);
+  assert.equal(E.setField(doc, f, 'group', ''), true); assert.equal('group' in f, false);
+  // a xeroc can be disguised (which makes it start asleep); anything else cannot
+  E.removeEntity(doc, 'foe4');                                  // make room in the budget
+  const x = E.place(doc, { ...entry('foe'), kind: 'xeroc' }, 6, 7);
+  assert.match(E.setField(doc, f, 'disguise', 'chest'), /xeroc/);
+  assert.equal(E.setField(doc, x, 'start', 'idle'), true);
+  assert.equal(E.setField(doc, x, 'disguise', 'chest'), true); assert.equal(x.start, 'asleep'); ok(doc);
+  assert.equal(E.setField(doc, x, 'start', 'hunting'), true); assert.equal('disguise' in x, false);
+  assert.equal(E.setField(doc, x, 'disguise', 'treasure'), true);
+  assert.equal(E.setField(doc, x, 'kind', 'zombie'), true); assert.equal('disguise' in x, false); ok(doc);
+  assert.match(E.place(doc, { ...entry('foe'), kind: 'bat' }, 0, 0), /free room/);
+});
+
+test('the boss: one per tomb, inside a chamber, the Warden calls a group', () => {
+  const doc = workshop();
+  assert.match(E.place(doc, entry('boss'), 0, 0), /chamber/);
+  const b = E.place(doc, entry('boss'), 9, 6);
+  assert.equal(b.zone, 'z1'); ok(doc);
+  assert.match(E.place(doc, entry('boss'), 10, 6), /at most one/);
+  assert.equal(E.setField(doc, b, 'kind', 'deepWarden'), true); ok(doc);
+  E.place(doc, { ...entry('foe'), kind: 'zombie' }, 5, 7);
+  E.setField(doc, E.byId(doc, 'foe1'), 'group', 'crypt'); E.setField(doc, E.byId(doc, 'foe1'), 'start', 'dormant');
+  assert.equal(E.setField(doc, b, 'summons', 'crypt'), true); ok(doc);
+  assert.equal(E.setField(doc, b, 'kind', 'eater'), true); assert.equal('summons' in b, false); ok(doc);
+  assert.match(E.setField(doc, b, 'kind', 'nope'), /Unknown/);
+  assert.equal(E.move(doc, b, 12, 4), true); assert.deepEqual(b.pos, [12 * 2400 + 1200, 4 * 2400 + 1200]); ok(doc);
+  // a second chamber: moving her zone puts her in its middle
+  M.removeZone(doc, "z1");
+  const a = M.addZone(doc, 1, 1, 8, 10), c = M.addZone(doc, 9, 1, 18, 10);
+  M.updateZone(doc, a.id, { checkpoint: { cell: [2, 6], yaw: 0 } });
+  b.zone = a.id; b.pos = [3 * 2400 + 1200, 6 * 2400 + 1200];
+  assert.equal(E.setField(doc, b, 'zone', c.id), true); assert.equal(b.zone, c.id); ok(doc);
+  assert.match(E.move(doc, b, 3, 6), /inside her chamber/);
+  assert.match(E.setField(doc, b, 'zone', 'nope'), /No such/);
+});
+
+test('Gloamhollow: every bell, mirror, brazier, foe and the boss can be found and the tomb is unchanged by a no-op edit', () => {
+  const doc = M.fromBytes(new Uint8Array(readFileSync(ROOT + 'dungeons/gloamhollow.gdf.json')));
+  const before = M.toText(doc);
+  const types = new Set(E.entities(doc).map((e) => e.type));
+  for (const t of ['bell', 'bellSet', 'mirror', 'lampHook', 'crystal', 'brazier', 'foe', 'boss']) assert.ok(types.has(t), t);
+  assert.equal(E.threat(doc).over, false);
+  const boss = E.entities(doc).find((e) => e.type === 'boss');
+  E.setField(doc, boss, 'kind', 'eater');
+  const set = E.entities(doc).find((e) => e.type === 'bellSet');
+  E.setField(doc, set, 'order', [...set.order]);
+  assert.equal(M.toText(doc), before);
+});
+
+test('malformed bell sets from an imported file do not break removing', () => {
+  const doc = workshop();
+  doc.gdf.entities.push({ id: 'bellsX', type: 'bellSet', bells: 'oops', order: 7 }, { id: 'bellY', type: 'bell', cell: [5, 5], size: 2, patina: 0, note: 330 }, { id: 'bellsZ', type: 'bellSet', bells: ['bellY'], order: 'x' });
+  assert.equal(E.removeEntity(doc, 'bellY'), true);
+  assert.equal(E.removeEntity(doc, 'bellsX'), true);
+  assert.equal(E.byId(doc, 'bellsZ'), undefined, 'an emptied set goes');
 });

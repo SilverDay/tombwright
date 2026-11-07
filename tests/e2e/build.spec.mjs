@@ -166,3 +166,78 @@ test('builder: place things, name the loot, then play them', async ({ page }) =>
   expect(await page.evaluate(() => window.__wt.prompt())).toContain('Read');
   expect(errors).toEqual([]);
 });
+
+test('builder: bells, mirror, foes with the threat counter, and a boss', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.route(/^https?:\/\/(?!127\.0\.0\.1:8765)/, (r) => r.abort());
+  await page.addInitScript(() => { window.__twTest = true; window.__twNoRender = true; });
+  await page.goto(BASE + '/build');
+  await page.waitForFunction(() => !!window.__twBuild);
+  await expect(page.locator('#foeKind option')).toHaveCount(28);
+  const Z = 20, box = await page.locator('#grid').boundingBox();
+  const click = async (i, j) => { const x = box.x + (i + 0.5) * Z, y = box.y + (j + 0.5) * Z; await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.up(); };
+  const radio = (n) => page.getByRole('radio', { name: n });
+
+  // Two bells make a set (the first alone is not yet a valid set).
+  await radio('Bell (joins the selected set)').click(); await click(5, 3);
+  await expect(page.locator('#status')).not.toHaveText('The tomb loads and can be played.');
+  await click(7, 3);
+  await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
+  expect(await page.evaluate(() => window.__twBuild.doc.gdf.entities.map((e) => e.type))).toEqual(['bell', 'bellSet', 'bell']);
+  await radio('Mirror').click(); await click(9, 3);
+  await radio('Brazier').click(); await click(11, 3);
+
+  // Foes: pick a kind in the list, watch the budget; five dragons are too many.
+  await page.locator('#foeKind').selectOption('dragon');
+  await radio('Foe (kind below)').click();
+  for (const i of [3, 5, 7, 9]) await click(i, 9);
+  await expect(page.locator('#threat')).toContainText('Threat 100 / 100');
+  await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
+  await click(11, 9);
+  await expect(page.locator('#threat')).toContainText('Threat 125 / 100');
+  await expect(page.locator('#status')).toContainText(/foe limits|too many|threat/i);
+  await expect(page.locator('#playBtn')).toBeDisabled();
+  await page.locator('#undoBtn').click();
+  await expect(page.locator('#playBtn')).toBeEnabled();
+
+  // The boss, then her kind in the inspector.
+  await radio('Boss (inside a chamber)').click(); await click(12, 6);
+  await page.getByLabel('Kind').selectOption('deepWarden');
+  expect(await page.evaluate(() => window.__twBuild.doc.gdf.entities.find((e) => e.type === 'boss').kind)).toBe('deepWarden');
+  await expect(page.locator('#status')).toHaveText('The tomb loads and can be played.');
+
+  // Play: ring a bell by its derived name, turn the mirror; nothing breaks.
+  await page.locator('#playBtn').click();
+  await page.waitForURL(BASE + '/play/test');
+  await page.waitForFunction(() => !!window.__tw);
+  await page.evaluate(readFileSync(ROOT + 'tests/e2e/lib/tombwright-driver.js', 'utf8'));
+  await page.evaluate(() => window.__tw.start(5));
+  const S = 2.4, cx = (i) => (i + 0.5) * S;
+  const walk = (x, z) => page.evaluate(([a, b]) => window.__wt.walkTo(a, b, { tol: 0.4 }), [x, z]);
+  expect(await walk(cx(5), cx(4) - 0.4)).toBe('arrived');
+  expect(await page.evaluate(([x, z]) => window.__wt.use(x, z), [cx(5), cx(3)])).toBe('Ring the middling bright bell');
+  expect(await page.evaluate(() => window.__wt.st().bellSets[0].seq.length)).toBe(1);
+  expect(await page.evaluate(() => [window.__wt.st().boss.st, window.__wt.st().foes.length])).toEqual(['asleep', 4]);
+  // Every card has a way out: a playtest goes back to the builder, which still holds the tomb.
+  await expect(page.locator('a.leave')).toHaveCount(4);
+  for (const a of await page.locator('a.leave').all()) { await expect(a).toHaveAttribute('href', '/build'); await expect(a).toHaveText('Back to the builder'); }
+  await page.evaluate(() => window.__tw.game.ui.openMenu());
+  await page.locator('#menu a.leave').click();
+  await page.waitForURL(BASE + '/build');
+  await page.waitForFunction(() => !!window.__twBuild);
+  expect(await page.evaluate(() => window.__twBuild.doc.gdf.entities.filter((e) => e.type === 'foe').length)).toBe(4);
+  expect(errors).toEqual([]);
+});
+
+test('an official tomb has a way out to the main page', async ({ page }) => {
+  await page.addInitScript(() => { window.__twTest = true; window.__twNoRender = true; });
+  await page.goto(BASE + '/play/gloamhollow');
+  await page.waitForFunction(() => !!window.__tw);
+  const a = page.locator('#newBox a.leave');
+  await expect(a).toHaveAttribute('href', '/');
+  await expect(a).toHaveText('Leave the tomb');
+  await a.click();
+  await page.waitForURL(BASE + '/');
+});

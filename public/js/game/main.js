@@ -9,7 +9,7 @@ import { b64decode, rleDecode } from '../sim/world.js';
 import { audioInit } from './audio.js';
 import { TombView, yawRad } from './render.js';
 import { UI } from './ui.js';
-import { SAY, DEATHS, TOMB_TEXT, FOE_NAMES, FLASK_NAME, READ_LABEL, FACE_NAME, cap, itemName } from './text.js';
+import { SAY, DEATHS, TOMB_TEXT, FOE_NAMES, FLASK_NAME, READ_LABEL, FACE_NAME, cap, itemName, bellName } from './text.js';
 import { DELVE_NAMES } from './delve-art.js';
 
 const $ = (id) => document.getElementById(id);
@@ -79,7 +79,7 @@ function buildInteractions(T) {
     });
   });
   for (const b of ents.filter((e) => e.type === 'bell')) {
-    const name = T.text.bells?.[b.id]?.name ?? 'the bell';
+    const name = T.text.bells?.[b.id]?.name ?? bellName(b);
     IA.push({ n: num(b), pt: [cx(b.cell[0]), cx(b.cell[1])], r: [2420, 2600, 2780][b.size - 1], label: () => `Ring ${name}` });
   }
   ents.filter((e) => e.type === 'lampHook').forEach((hk, n) => {
@@ -311,7 +311,7 @@ class Game {
       }
       case 'bell': {
         if (events.some((x) => x.e === 'bellsWrong')) break;
-        const name = T.text.bells?.[ev.id]?.name ?? 'the bell';
+        const name = T.text.bells?.[ev.id]?.name ?? bellName(T.gdf.entities.find((x) => x.id === ev.id));
         const solvedBefore = this.prev.bellSets.some((s) => s.solved);
         this.say(solvedBefore ? SAY.bellQuiet(name) : SAY.bell(name));
         break;
@@ -554,6 +554,8 @@ async function boot() {
   try { game = new Game(T); } catch (e) { showError('This page needs WebGL to draw the tomb, and it is turned off or unavailable in this browser.'); console.error(e); return; }
   { const b = T.gdf.entities.find((e) => e.type === 'boss'); T.bestiaryBoss = b ? bossKind(b.kind) : null; }
   game.bindInput();
+  // A way out of every card: a playtest goes back to the builder (which keeps the tomb), an official tomb to the main page.
+  for (const a of document.querySelectorAll('a.leave')) { a.href = name === 'test' ? '/build' : '/'; a.textContent = name === 'test' ? 'Back to the builder' : 'Leave the tomb'; }
   if (name === 'test') {                                  // the builder's playtest: this tomb's own name, a fresh start every time
     game.ui.clearSave();
     const title = String(T.gdf.meta?.title ?? 'Test tomb');

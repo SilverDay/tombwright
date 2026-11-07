@@ -178,3 +178,5 @@ details[open] summary{margin-bottom:10px}
 @media (prefers-reduced-motion:reduce){#fade,#msg,#toast,#vig,#flash,#veil{transition:none}}
 .lede.small{font-size:15.5px}
 .cd{--cd:0}
+
+a.btn{display:inline-block;text-decoration:none}

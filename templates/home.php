@@ -37,7 +37,7 @@ $url = htmlspecialchars($siteUrl . '/', ENT_QUOTES | ENT_HTML5, 'UTF-8');
   <section class="soon">
     <h2>Coming</h2>
     <ul>
-      <li><b>The tomb builder</b>: lay out rooms, traps, puzzles and foes on a grid, wire them together, and playtest as you go. <a href="/build">A first preview is open</a>: draw the plan, name the chambers, place the start and the exit, and playtest. The rest follows.</li>
+      <li><b>The tomb builder</b>: lay out rooms, traps, puzzles and foes on a grid, wire them together, and playtest as you go.</li>
       <li><b>Publishing and challenges</b>: accounts, verified runs, leaderboards, and tombs you send to other players.</li>
     </ul>
   </section>

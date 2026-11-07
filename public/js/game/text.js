@@ -147,3 +147,9 @@ export function itemName(T, it, fallback) {
   if (typeof t === 'string') return t;
   return typeof it?.name === 'string' ? it.name : fallback;
 }
+
+/** A bell's name from its looks (size 1-3, patina 0-2), for tombs that don't carry a text table: 'the great bright bell'. */
+export function bellName(b) {
+  const size = ['small', 'middling', 'great'][(b?.size ?? 2) - 1] ?? 'middling', patina = ['bright', 'dull brown', 'green'][b?.patina ?? 0] ?? 'bright';
+  return `the ${size} ${patina} bell`;
+}

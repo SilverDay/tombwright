@@ -31,7 +31,41 @@ export const PALETTE = [
   { id: 'marks', label: "Masons' marks (click cells)", type: 'marks', group: 'Text and dressing' },
   { id: 'prop', label: 'Statue, stele, tree…', type: 'prop', group: 'Text and dressing' },
   { id: 'decor', label: 'Bones, scorch…', type: 'decor', group: 'Text and dressing' },
+  { id: 'brazier', label: 'Brazier', type: 'brazier', group: 'Light and puzzles' },
+  { id: 'bell', label: 'Bell (joins the selected set)', type: 'bell', group: 'Light and puzzles' },
+  { id: 'lampHook', label: 'Lamp hook', type: 'lampHook', group: 'Light and puzzles' },
+  { id: 'mirror', label: 'Mirror', type: 'mirror', group: 'Light and puzzles' },
+  { id: 'crystal', label: 'Crystal', type: 'crystal', group: 'Light and puzzles' },
+  { id: 'foe', label: 'Foe (kind below)', type: 'foe', group: 'Foes' },
+  { id: 'boss', label: 'Boss (inside a chamber)', type: 'boss', group: 'Foes' },
 ];
+
+// ------------------------------------------------------------------ the bestiary, for the foe list and the threat budget
+export const THREAT_BUDGET = 100, MAX_FOES = 24, MAX_AWAKE = 8;
+const FOE_LABEL = { warden: 'bone gardener', crawler: 'gloam crawler', ice: 'ice monster', flytrap: 'venus flytrap', unicorn: 'black unicorn' };
+let BEST = { foes: {}, bosses: {} };
+/** Give the entity layer the parsed bestiary (kinds, tiers, powers). */
+export function setBestiary(b) { BEST = { foes: b.foes ?? {}, bosses: b.bosses ?? {} }; }
+export const foeKinds = () => Object.keys(BEST.foes);
+export const bossKinds = () => Object.keys(BEST.bosses);
+export const foeLabel = (k) => FOE_LABEL[k] ?? k;
+export const foeCost = (k) => (BEST.foes[k] ? BEST.foes[k].tier ** 2 : 0);
+export const isMimic = (k) => BEST.foes[k]?.power === 'mimic';
+
+/** How much of the foe limits a tomb spends: threat points (tier², 100 at most), foes (24), those starting awake (8). */
+export function threat(doc) {
+  let points = 0, foes = 0, awake = 0;
+  for (const e of entities(doc)) {
+    if (e.type !== 'foe') continue;
+    foes++; points += foeCost(e.kind);
+    if (e.start === 'idle' || e.start === 'hunting') awake++;
+  }
+  return { points, foes, awake, over: points > THREAT_BUDGET || foes > MAX_FOES || awake > MAX_AWAKE };
+}
+/** The group ids foes use (a foe without `group` is its own group, named by its id). */
+export const groupIds = (doc) => [...new Set(ofType(doc, 'foe').map((f) => (typeof f.group === 'string' ? f.group : f.id)))];
+const GROUP_RE = /^[A-Za-z_][A-Za-z0-9_]{0,31}$/;
+const OPPOSITE = { n: 's', e: 'w', s: 'n', w: 'e' };
 
 // ------------------------------------------------------------------ small helpers
 export const entities = (doc) => (doc.gdf.entities ??= []);
@@ -73,11 +107,16 @@ export function sideOf(e) {
 
 /** Every entity that occupies cell (i, j), in entity order. */
 export function entitiesAt(doc, i, j) {
-  return entities(doc).filter((e) => {
+  const here = entities(doc).filter((e) => {
     if (Array.isArray(e.cells)) return e.cells.some((c) => Array.isArray(c) && c[0] === i && c[1] === j);
     const p = entityPoint(e);
     return p !== null && Math.floor(p[0]) === i && Math.floor(p[1]) === j;
   });
+  for (const b of here.filter((e) => e.type === 'bell')) {                  // click a bell again to reach its set
+    const set = ofType(doc, 'bellSet').find((x) => Array.isArray(x.bells) && x.bells.includes(b.id));
+    if (set && !here.includes(set)) here.splice(here.indexOf(b) + 1, 0, set);
+  }
+  return here;
 }
 
 // ------------------------------------------------------------------ placing
@@ -161,6 +200,49 @@ export function place(doc, entry, i, j) {
       return add({ id: freeId(doc, 'prop'), type: 'prop', kind: 'statue', pos: [center(i), center(j)], yaw: 0 });
     case 'decor':
       return add({ id: freeId(doc, 'decor'), type: 'decor', kind: 'bones', pos: [center(i), center(j)], yaw: 0 });
+    case 'brazier':
+      if (!isFloor(code) || cellTaken(doc, i, j)) return 'A brazier goes on a free room or corridor cell.';
+      return add({ id: freeId(doc, 'brazier'), type: 'brazier', cell: [i, j], lit: false });
+    case 'bell': {
+      if (!isFloor(code) || cellTaken(doc, i, j)) return 'A bell goes on a free room or corridor cell.';
+      const sel = entry.selected ? byId(doc, entry.selected) : undefined;
+      let set = sel?.type === 'bellSet' ? sel : sel?.type === 'bell' ? ofType(doc, 'bellSet').find((x) => x.bells?.includes(sel.id)) : undefined;
+      if (set && set.bells.length >= 5) return 'A bell set has at most 5 bells.';
+      const bell = add({ id: freeId(doc, 'bell'), type: 'bell', cell: [i, j], size: 2, patina: 0, note: 330 });
+      if (!set) set = add({ id: freeId(doc, 'bells'), type: 'bellSet', bells: [], order: [] });
+      set.bells.push(bell.id); set.order.push(set.bells.length - 1);
+      return bell;
+    }
+    case 'lampHook': {
+      if (!isFloor(code) || cellTaken(doc, i, j)) return 'A lamp hook goes on a free room or corridor cell.';
+      const behind = wallSide(doc, i, j);
+      return add({ id: freeId(doc, 'hook'), type: 'lampHook', cell: [i, j], dir: behind ? OPPOSITE[behind] : 'e' });
+    }
+    case 'mirror':
+      if (!isFloor(code) || cellTaken(doc, i, j)) return 'A mirror goes on a free room or corridor cell.';
+      if (ofType(doc, 'mirror').some((m) => Array.isArray(m.cell) && m.cell[0] === i && m.cell[1] === j)) return 'That cell already has a mirror.';
+      return add({ id: freeId(doc, 'mirror'), type: 'mirror', cell: [i, j], start: '/' });
+    case 'crystal': {
+      if (!isFloor(code) || cellTaken(doc, i, j)) return 'A crystal goes on a free room or corridor cell.';
+      const side = wallSide(doc, i, j);
+      if (!side) return 'A crystal is set in a wall: pick a cell next to one.';
+      return add({ id: freeId(doc, 'crystal'), type: 'crystal', cell: [i, j], wall: side });
+    }
+    case 'foe': {
+      if (!FLOOR_ITEM(code) || cellTaken(doc, i, j)) return 'A foe goes on a free room, corridor or bridge cell.';
+      if (ofType(doc, 'foe').length >= MAX_FOES) return 'At most 24 foes.';
+      const kind = entry.kind && BEST.foes[entry.kind] ? entry.kind : 'crawler';
+      doc.gdf.bestiary ??= 1;                                  // a GDF with foes names the bestiary version (R-FOE-2)
+      return add({ id: freeId(doc, 'foe'), type: 'foe', kind, cell: [i, j], start: 'asleep' });
+    }
+    case 'boss': {
+      if (ofType(doc, 'boss').length) return 'A tomb has at most one boss.';
+      const zi = (doc.gdf.zones ?? []).findIndex((z) => (z.rects ?? []).some(([x, y, w, h]) => i >= x && j >= y && i < x + w && j < y + h));
+      if (zi < 0) return 'The boss stays in a chamber: draw one and click inside it.';
+      if (!isFloor(code)) return 'A boss goes on a room or corridor cell.';
+      doc.gdf.bestiary ??= 1;
+      return add({ id: freeId(doc, 'boss'), type: 'boss', kind: 'eater', pos: [center(i), center(j)], zone: doc.gdf.zones[zi].id });
+    }
     default:
       return 'Not placeable yet.';
   }
@@ -169,7 +251,19 @@ export function place(doc, entry, i, j) {
 export function removeEntity(doc, id) {
   const list = entities(doc), n = list.findIndex((e) => e.id === id);
   if (n < 0) return false;
+  const e = list[n];
   list.splice(n, 1);
+  if (e.type === 'bell') {                                  // a bell leaves its set; an emptied set goes too
+    for (const set of ofType(doc, 'bellSet')) {
+      const at = Array.isArray(set.bells) ? set.bells.indexOf(id) : -1;
+      if (at < 0) continue;
+      set.bells.splice(at, 1);
+      set.order = (Array.isArray(set.order) ? set.order : []).filter((x) => x !== at).map((x) => (x > at ? x - 1 : x));
+      if (set.bells.length === 0) removeEntity(doc, set.id);
+    }
+  } else if (e.type === 'bellSet') {                        // every bell belongs to a set: they go with it
+    for (const b of Array.isArray(e.bells) ? e.bells : []) removeEntity(doc, b);
+  }
   return true;
 }
 
@@ -211,6 +305,23 @@ export function move(doc, e, i, j) {
     }
     case 'prop': case 'decor':
       e.pos = [center(i), center(j)]; return true;
+    case 'brazier': case 'bell': case 'mirror': case 'lampHook':
+      if (!isFloor(code) || cellTaken(doc, i, j)) return 'This goes on a free room or corridor cell.';
+      e.cell = [i, j]; return true;
+    case 'crystal': {
+      if (!isFloor(code) || cellTaken(doc, i, j)) return 'This goes on a free room or corridor cell.';
+      const side = wallSide(doc, i, j, e.wall);
+      if (!side) return 'A crystal is set in a wall: pick a cell next to one.';
+      e.cell = [i, j]; e.wall = side; return true;
+    }
+    case 'foe':
+      if (!FLOOR_ITEM(code) || cellTaken(doc, i, j)) return 'A foe goes on a free room, corridor or bridge cell.';
+      e.cell = [i, j]; return true;
+    case 'boss': {
+      const z = (doc.gdf.zones ?? []).find((q) => q.id === e.zone);
+      if (!z || !(z.rects ?? []).some(([x, y, w, h]) => i >= x && j >= y && i < x + w && j < y + h)) return 'The boss stays inside her chamber.';
+      e.pos = [center(i), center(j)]; return true;
+    }
     default:
       return 'This cannot be moved; remove it and place it again.';
   }
@@ -257,6 +368,27 @@ export const FIELDS = {
     { k: 'pages', label: 'Pages', t: 'pages' },
   ],
   marks: [],
+  brazier: [{ k: 'lit', label: 'Lit at the start', t: 'bool' }],
+  bell: [
+    { k: 'size', label: 'Size', t: 'select', o: [1, 2, 3], labels: { 1: 'small', 2: 'middling', 3: 'great' }, num: true },
+    { k: 'patina', label: 'Patina', t: 'select', o: [0, 1, 2], labels: { 0: 'bright', 1: 'dull brown', 2: 'green' }, num: true },
+    { k: 'note', label: 'Note (Hz)', t: 'int', min: 20, max: 20000 },
+  ],
+  bellSet: [{ k: 'order', label: 'Ring in this order', t: 'order' }],
+  lampHook: [{ k: 'dir', label: 'Beam shines to the', t: 'select', o: SIDES }],
+  mirror: [{ k: 'start', label: 'Starts as', t: 'select', o: ['/', '\\'] }],
+  crystal: [{ k: 'wall', label: 'Set in the wall to the', t: 'select', o: SIDES }],
+  foe: [
+    { k: 'kind', label: 'Kind', t: 'select', o: () => foeKinds(), text: (k) => `${foeLabel(k)} (cost ${foeCost(k)})` },
+    { k: 'start', label: 'Starts', t: 'select', o: ['asleep', 'idle', 'hunting', 'dormant'] },
+    { k: 'group', label: 'Group (optional)', t: 'text', max: 32, optional: true },
+    { k: 'disguise', label: 'Disguised as', t: 'select', o: ['', 'treasure', 'flask', 'chest'], labels: { '': '(not disguised)' }, show: (e) => isMimic(e.kind) },
+  ],
+  boss: [
+    { k: 'kind', label: 'Kind', t: 'select', o: () => bossKinds(), text: (k) => (k === 'eater' ? 'Ilvaris, the Candle-Eater' : k === 'deepWarden' ? 'The Warden of the Deep' : k) },
+    { k: 'zone', label: 'Chamber', t: 'ref', refs: (doc) => doc.gdf.zones ?? [] },
+    { k: 'summons', label: 'Calls up group', t: 'ref', refs: (doc) => groupIds(doc).map((id) => ({ id })), none: '(none)', show: (e) => e.kind === 'deepWarden' },
+  ],
   prop: [{ k: 'kind', label: 'Kind', t: 'select', o: PROP_KINDS }, { k: 'yaw', label: 'Facing (0-4095)', t: 'int', min: 0, max: 4095 }],
   decor: [{ k: 'kind', label: 'Kind', t: 'select', o: DECOR_KINDS }, { k: 'yaw', label: 'Facing (0-4095)', t: 'int', min: 0, max: 4095 }],
 };
@@ -267,6 +399,8 @@ export function getField(e, k) {
     if (k === 'where') return 'wall' in e ? 'wall' : 'pos' in e ? 'pos' : 'on';
     if (k === 'side') return sideOf(e);
   }
+  if (e.type === 'boss' && k === 'summons') return typeof e.summons === 'string' ? e.summons : '';
+  if (e.type === 'foe' && k === 'disguise') return typeof e.disguise === 'string' ? e.disguise : '';
   if (e.type === 'item' && k === 'in') return 'in' in e ? e.in : '';
   if (e.type === 'item' && k === 'hidden') return e.hidden === true;
   return e[k];
@@ -350,6 +484,68 @@ export function setField(doc, e, k, v) {
       if (k === 'side') return setSide(doc, e, v);
       if (k === 'on') { if (byId(doc, v)?.type !== 'chest') return 'That is not a chest.'; e.on = v; return true; }
       if (k === 'where') return setPlacement(doc, e, v);
+      break;
+    case 'brazier':
+      if (k === 'lit') { e.lit = Boolean(v); return true; }
+      break;
+    case 'bell':
+      if (k === 'size' && [1, 2, 3].includes(v)) { e.size = v; return true; }
+      if (k === 'patina' && [0, 1, 2].includes(v)) { e.patina = v; return true; }
+      if (k === 'note') { if (!Number.isInteger(v) || v < 20 || v > 20000) return 'A note from 20 to 20000 Hz.'; e.note = v; return true; }
+      break;
+    case 'bellSet':
+      if (k === 'order') {
+        if (!Array.isArray(v) || v.length !== e.bells.length || [...v].sort().some((x, n) => x !== n)) return 'The order must ring every bell exactly once.';
+        e.order = v.slice(); return true;
+      }
+      break;
+    case 'lampHook':
+      if (k === 'dir' && SIDES.includes(v)) { e.dir = v; return true; }
+      break;
+    case 'mirror':
+      if (k === 'start' && (v === '/' || v === '\\')) { e.start = v; return true; }
+      break;
+    case 'crystal':
+      if (k === 'wall') return setSide(doc, e, v);
+      break;
+    case 'foe':
+      if (k === 'kind') {
+        if (!BEST.foes[v]) return 'Unknown foe.';
+        e.kind = v; if (!isMimic(v)) dropKey(e, 'disguise'); return true;
+      }
+      if (k === 'start') {
+        if (!['asleep', 'idle', 'hunting', 'dormant'].includes(v)) return 'Unknown start.';
+        e.start = v; if (v !== 'asleep') dropKey(e, 'disguise'); return true;
+      }
+      if (k === 'group') {
+        const g = String(v ?? '');
+        if (g === '') { dropKey(e, 'group'); return true; }
+        if (!GROUP_RE.test(g)) return 'A group id: letters, digits and _, starting with a letter, at most 32.';
+        e.group = g; return true;
+      }
+      if (k === 'disguise') {
+        if (v === '' || v === null) { dropKey(e, 'disguise'); return true; }
+        if (!isMimic(e.kind)) return 'Only a xeroc can pose as loot.';
+        if (!['treasure', 'flask', 'chest'].includes(v)) return 'Unknown disguise.';
+        e.disguise = v; e.start = 'asleep'; return true;
+      }
+      break;
+    case 'boss':
+      if (k === 'kind') {
+        if (!BEST.bosses[v]) return 'Unknown boss.';
+        e.kind = v; if (v !== 'deepWarden') dropKey(e, 'summons'); return true;
+      }
+      if (k === 'zone') {
+        const z = (doc.gdf.zones ?? []).find((q) => q.id === v);
+        if (!z) return 'No such chamber.';
+        const [x, y, w, h] = z.rects[0];
+        e.zone = v; e.pos = [center(x + (w >> 1)), center(y + (h >> 1))]; return true;      // she moves to the middle of the new chamber
+      }
+      if (k === 'summons') {
+        if (e.kind !== 'deepWarden') return 'Only the Warden calls up foes.';
+        if (v === '' || v === null) { dropKey(e, 'summons'); return true; }
+        e.summons = v; return true;
+      }
       break;
     case 'prop': case 'decor':
       if (k === 'kind') {

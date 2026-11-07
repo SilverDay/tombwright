@@ -89,6 +89,7 @@ declare(strict_types=1);
       <button class="btn primary" id="resumeBtn" type="button">Resume</button>
       <button class="btn" id="soundBtn" type="button">Sound: on</button>
       <button class="btn danger" id="restartBtn" type="button">Restart the tomb</button>
+      <a class="btn leave" href="/">Leave the tomb</a>
     </div>
     <p class="note" id="restartNote" hidden>Press again to wipe this delve and start over at the stair.</p>
     <details id="menuKeys"><summary>Controls</summary><div class="keysHost"></div></details>
@@ -102,7 +103,7 @@ declare(strict_types=1);
     <p class="lede" id="deathCause"></p>
     <p class="note" id="deathLesson"></p>
     <dl class="summary" id="deathSum"></dl>
-    <div class="row"><button class="btn primary" id="riseBtn" type="button">Rise again</button><button class="btn" id="deathRestart" type="button">Restart the tomb</button></div>
+    <div class="row"><button class="btn primary" id="riseBtn" type="button">Rise again</button><button class="btn" id="deathRestart" type="button">Restart the tomb</button><a class="btn leave" href="/">Leave the tomb</a></div>
   </div>
 </div>
 
@@ -115,7 +116,7 @@ declare(strict_types=1);
     <h2 id="winTitle">You climb into daylight</h2>
     <p class="lede" id="winLede"></p>
     <dl class="summary" id="winSum"></dl>
-    <div class="row"><button class="btn primary" id="winNew" type="button">Delve again</button></div>
+    <div class="row"><button class="btn primary" id="winNew" type="button">Delve again</button><a class="btn leave" href="/">Leave the tomb</a></div>
   </div>
 </div>
 
@@ -131,7 +132,7 @@ declare(strict_types=1);
       <p id="contTxt"></p>
       <div class="row"><button class="btn primary" id="contBtn" type="button">Continue</button><button class="btn" id="newBtn2" type="button">Start over</button></div>
     </div>
-    <div class="row" id="newBox"><button class="btn primary" id="goBtn" type="button">Enter the tomb</button></div>
+    <div class="row" id="newBox"><button class="btn primary" id="goBtn" type="button">Enter the tomb</button><a class="btn leave" href="/">Leave the tomb</a></div>
     <details id="introKeys"><summary>Controls</summary><div class="keysHost"></div></details>
     <p class="err" id="err" hidden></p>
   </div>

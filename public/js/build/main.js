@@ -152,6 +152,9 @@ function panels() {
   $('playBtn').disabled = !v.ok || !S.core;
   const s = M.summary(S.doc);
   $('summary').textContent = `${s.w} × ${s.h} cells, ${s.floor} walkable, ${s.zones} chambers, ${s.entities} things placed, ${s.links} links.`;
+  const t = E.threat(S.doc), tl = $('threat');
+  tl.textContent = `Threat ${t.points} / ${E.THREAT_BUDGET} · foes ${t.foes} / ${E.MAX_FOES} · awake at the start ${t.awake} / ${E.MAX_AWAKE}`;
+  tl.className = t.over ? 'bad' : '';
   if (document.activeElement !== $('title')) $('title').value = S.doc.gdf.meta?.title ?? '';
   $('undoBtn').disabled = !S.undo.length; $('redoBtn').disabled = !S.redo.length;
   $('zoomLabel').textContent = S.zoom + ' px';
@@ -228,11 +231,12 @@ function inspectorPanel() {
     let ctl;
     if (f.t === 'select' || f.t === 'ref') {
       ctl = document.createElement('select');
-      const opts = f.t === 'select' ? f.o.map((o) => [o, o]) : f.refs(S.doc).map((x) => [x.id, x.id]);
+      const list = typeof f.o === 'function' ? f.o() : f.o;
+      const opts = f.t === 'select' ? list.map((o) => [String(o), f.text ? f.text(o) : f.labels?.[o] ?? String(o)]) : f.refs(S.doc).map((x) => [x.id, x.name ? `${x.id} (${x.name})` : x.id]);
       if (f.t === 'ref' && f.none) opts.unshift(['', f.none]);
       for (const [val, text] of opts) { const o = document.createElement('option'); o.value = val; o.textContent = text; ctl.appendChild(o); }
-      ctl.value = cur ?? '';
-      ctl.addEventListener('change', () => applyField(e, f.k, ctl.value));
+      ctl.value = cur === undefined || cur === null ? '' : String(cur);
+      ctl.addEventListener('change', () => applyField(e, f.k, f.num ? Number(ctl.value) : ctl.value));
     } else if (f.t === 'int') {
       ctl = document.createElement('input'); ctl.type = 'number'; ctl.min = String(f.min); ctl.max = String(f.max); ctl.value = String(cur ?? '');
       ctl.addEventListener('change', () => applyField(e, f.k, ctl.value === '' ? NaN : Number(ctl.value)));
@@ -242,6 +246,21 @@ function inspectorPanel() {
     } else if (f.t === 'bool') {
       ctl = document.createElement('input'); ctl.type = 'checkbox'; ctl.checked = Boolean(cur);
       ctl.addEventListener('change', () => applyField(e, f.k, ctl.checked));
+    } else if (f.t === 'order') {
+      const box = document.createElement('div'), order = Array.isArray(cur) ? cur : []; box.className = 'pages';
+      order.forEach((idx, pos) => {
+        const sel = document.createElement('select'); sel.setAttribute('aria-label', 'Bell number ' + (pos + 1) + ' to ring');
+        (Array.isArray(e.bells) ? e.bells : []).forEach((id, n) => { const o = document.createElement('option'); o.value = String(n); o.textContent = id; sel.appendChild(o); });
+        sel.value = String(idx);
+        sel.addEventListener('change', () => {                      // swap with whoever rang this bell, so it stays a permutation
+          const next = order.slice(), other = next.indexOf(Number(sel.value));
+          if (other >= 0) next[other] = next[pos];
+          next[pos] = Number(sel.value); applyField(e, 'order', next);
+        });
+        const lab = document.createElement('div'); lab.append(document.createTextNode(`${pos + 1}. `), sel); box.appendChild(lab);
+      });
+      const hint = document.createElement('p'); hint.className = 'hint'; hint.textContent = 'Add bells with the Bell tool while this set is selected (2 to 5).'; box.appendChild(hint);
+      ctl = box;
     } else if (f.t === 'pages') {
       const box = document.createElement('div'); box.className = 'pages';
       const pages = Array.isArray(cur) ? cur : [];
@@ -306,7 +325,8 @@ cv.addEventListener('pointerup', (ev) => {
     if (d.moving && (i !== d.i0 || j !== d.j0)) { const e = E.byId(S.doc, d.moving), r = e ? E.move(S.doc, e, i, j) : 'Gone.'; if (r !== true) toast(r); }
   }
   else if (k === 'thing') {
-    const r = E.place(S.doc, S.tool.entry, i, j);
+    const entry = { ...S.tool.entry, selected: S.ent, kind: S.tool.entry.type === 'foe' ? $('foeKind').value : S.tool.entry.kind };
+    const r = E.place(S.doc, entry, i, j);
     if (typeof r === 'string') toast(r); else { S.ent = r.id; }
   }
   else if (k === 'start') { if (!M.setStart(S.doc, i, j)) toast('The start goes on a room or corridor cell.'); }
@@ -369,6 +389,12 @@ addEventListener('keydown', (ev) => {
 
 addEventListener('pagehide', () => { clearTimeout(S.saveTimer); store(STORE, snap()); });   // don't lose the last 400 ms
 
+function fillFoeKinds() {
+  const sel = $('foeKind'); sel.replaceChildren();
+  for (const k of E.foeKinds()) { const o = document.createElement('option'); o.value = k; o.textContent = `${E.foeLabel(k)} (cost ${E.foeCost(k)})`; sel.appendChild(o); }
+  sel.value = 'crawler';
+}
+
 // ------------------------------------------------------------------ boot
 async function boot() {
   buildTools();
@@ -381,6 +407,7 @@ async function boot() {
     const get = async (u) => { const r = await fetch(u, { credentials: 'same-origin' }); if (!r.ok) throw new Error(u); return new Uint8Array(await r.arrayBuffer()); };
     const [sine, best] = await Promise.all([get('/js/sim/data/sine4096.bin'), get('/js/sim/data/bestiary.v1.json')]);
     loadSineTable(sine); loadBestiary(best); S.core = true;
+    E.setBestiary(JSON.parse(new TextDecoder().decode(best))); fillFoeKinds();
   } catch (e) { toast('The rules could not be loaded, so the tomb cannot be checked. Reload the page.'); console.error(e); }
   refresh();
   if (window.__twTest === true) window.__twBuild = {

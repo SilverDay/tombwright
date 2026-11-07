@@ -48,6 +48,11 @@ function warn(doc, warnings) {
   const effects = (g.links ?? []).flatMap((l) => (Array.isArray(l.do) ? l.do : []).concat(Array.isArray(l.undo) ? l.undo : []));
   for (const e of g.entities ?? []) {
     if (e.type === 'door' && e.opens === 'trigger' && !effects.some((x) => x.openDoor === e.id)) warnings.push(`Door “${e.id}” opens on a trigger, but no link opens it yet.`);
+    if (e.type === 'foe' && e.start === 'dormant') {
+      const grp = typeof e.group === 'string' ? e.group : e.id;
+      const spawned = effects.some((x) => x.spawnFoes === grp) || (g.entities ?? []).some((b) => b.type === 'boss' && b.summons === grp);
+      if (!spawned) warnings.push(`Foe “${e.id}” is dormant, but no link spawns its group and no boss calls it yet.`);
+    }
     if (e.type === 'item' && e.hidden === true && !effects.some((x) => x.reveal === e.id)) warnings.push(`Item “${e.id}” is hidden, but no link reveals it yet.`);
   }
 }
