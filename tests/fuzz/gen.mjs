@@ -105,7 +105,9 @@ function randomTomb(r) {
   let boss = null;
   if (g.zones.length && chance(30)) {
     const z = pick(g.zones), [x, y, zw, zh] = z.rects[0];
-    const b = { id: id('boss'), type: 'boss', kind: 'eater', pos: [x * 2400 + below(zw * 2400 + 1), y * 2400 + below(zh * 2400 + 1)], zone: z.id };
+    const kind = chance(50) ? 'eater' : 'deepWarden';   // R-BOSS-1, R-WARDEN-*
+    const b = { id: id('boss'), type: 'boss', kind, pos: [x * 2400 + below(zw * 2400 + 1), y * 2400 + below(zh * 2400 + 1)], zone: z.id };
+    if (kind === 'deepWarden' && groups.length && chance(70)) b.summons = pick(groups); // R-WARDEN-3
     add(b); if (ents.at(-1)?.id === b.id) boss = b.id;
   }
   if (chance(50)) { const ex = { cell: floor(), ...(chance(50) && itemIds.length ? { requires: pick(itemIds) } : boss && chance(50) ? { requires: 'bossDefeated' } : {}) }; keep(() => { g.exit = ex; }, () => { delete g.exit; }); }

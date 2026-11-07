@@ -4,7 +4,7 @@ Server-based successor to *Gloamhollow*: players build trap-filled tombs in a br
 
 - Spec: `docs/spec.md` (v0.3). Decisions taken since then: `docs/decisions.md`. Normative game rules: `docs/sim-rules.md`.
 - Porting reference: `reference/gloamhollow/Gloamhollow.html` (the original single-file game); checklist in `docs/gloamhollow-port-notes.md`.
-- Current milestone: **M1, PHP core** (spec §16). M0 (engine split) is done: Gloamhollow plays on the sim core and its walkthrough passes.
+- Current milestone: **M2, the builder** (spec §16). M0 (engine split) and M1 (PHP core) are done: Gloamhollow plays on the sim core, both cores agree on the golden vectors and over 10,000 fuzz cases, and Lantern Delve's 26 foes and the Warden of the Deep are ported.
 
 ## Ground rules
 

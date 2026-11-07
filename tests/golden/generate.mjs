@@ -575,6 +575,40 @@ export function trickRoom() {
   });
 }
 
+// The dragon's fire breath (R-BREATH-1, R-SHOT-*, step 7d): a hall split by a chasm the walking dragon can't cross
+// but its breath can, a statue in the line of fire, and a kestrel that flies over; budget 25 + 1.
+export function dragonRoom(start = [6, 4]) {
+  const w = 16, h = 9, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  for (let j = 1; j < h - 1; j++) set(8, j, 5);          // the chasm: the dragon can't cross it, its breath can
+  return JSON.stringify({
+    gdf: 1, bestiary: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: start },
+    zones: [{ id: 'h', name: 'H', rects: [[1, 1, 14, 7]], ceil: 6000, checkpoint: { cell: [2, 4], yaw: 1024 } }],
+    entities: [
+      { id: 'dra', type: 'foe', kind: 'dragon', cell: [10, 4], start: 'hunting' },
+      { id: 'kes', type: 'foe', kind: 'kestrel', cell: [13, 7], start: 'asleep' },
+      { id: 'st1', type: 'prop', kind: 'statue', pos: [15600, 8400], yaw: 0 },
+    ],
+  });
+}
+
+// The Warden of the Deep (R-WARDEN-*, step 7d): she stands in a one-cell chamber, so her box pins her down and the
+// player can strike her from outside her reach; four dormant zombies in group `crypt` are hers to call.
+export function wardenRoom(start = [4, 4]) {
+  const w = 14, h = 9, cells = new Uint8Array(w * h), set = (i, j, c) => { cells[j * w + i] = c; };
+  for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) set(i, j, 1);
+  return JSON.stringify({
+    gdf: 1, bestiary: 1, grid: { w, h, cells: b64encode(rleEncode(cells)) }, start: { cell: start },
+    zones: [{ id: 'c', name: 'C', rects: [[1, 1, 6, 7], [8, 1, 5, 7]], ceil: 5200, checkpoint: { cell: [2, 4], yaw: 1024 } },
+      { id: 'd', name: 'D', rects: [[7, 4, 1, 1]], ceil: 5200 }],
+    entities: [
+      { id: 'wd', type: 'boss', kind: 'deepWarden', pos: [18000, 10800], zone: 'd', summons: 'crypt' },
+      ...[[10, 2], [11, 5], [3, 2], [3, 6]].map(([i, j], k) => ({ id: 'z' + k, type: 'foe', kind: 'zombie', cell: [i, j], start: 'dormant', group: 'crypt' })),
+    ],
+    links: [{ id: 1, when: { inZone: 'c' }, do: [{ wakeBoss: 'wd' }] }],
+  });
+}
+
 // Inputs chosen while the case plays (tests/fuzz/driver.mjs), recorded in the vector like any other.
 function driven(gdf, seed, mode, ticks, rseed) {
   const world = Sim.load(utf8(gdf)), st = Sim.init(world, seed, mode), drive = makeDriver(rngSeed(rseed), gdf), rle = [];
@@ -717,6 +751,17 @@ const VECTORS = {
   '0045-thieves-fuzz': { gdf: thiefRoom(), seed: 45, mode: 'practice', inputs: fuzz(0x7E21, 9000, 14, 60) },
   '0046-tricks': { gdf: trickRoom(), seed: 46, mode: 'practice', inputs: [[1, I([0, 0], 3072, B.probe)], [25, I([0, 0], 3072)], [1, I([0, 0], 3072, B.probe)], [25, I([0, 0], 3072)],
     [1, I([0, 0], 2048, B.probe)], [30, I([0, 0], 2048)], [900, I([0, 0], 2048)], [1, I([0, 0], 2048, B.rise)], [600, I([0, 0], 0, B.strike)]] },
+  // The dragon across the chasm (R-BREATH-1, R-SHOT-*): stand and burn, rise, then strafe to dodge the breath.
+  '0047-breath': { gdf: dragonRoom(), seed: 47, mode: 'practice', inputs: [[300, I([0, 0], 1024)], [1, I([0, 0], 1024, B.rise)],
+    ...Array.from({ length: 8 }, (_, k) => [67, I([0, k % 2 ? 127 : -127], 1024, B.run)]), [200, I([0, 0], 1024)]] },
+  '0048-breath-fuzz': { gdf: dragonRoom(), seed: 48, mode: 'delve', inputs: fuzz(0xD6A6, 9000, 5) },
+  // The Warden (R-WARDEN-*): step to the edge of her reach and strike, hold off while the bolts fly, then finish her.
+  '0049-warden': { gdf: wardenRoom(), seed: 49, mode: 'practice', inputs: [[38, I([127, 0], 3072)], [260, I([0, 0], 3072, B.strike)],
+    [400, I([0, 0], 3072)], [600, I([0, 0], 3072, B.strike)], [1, I([0, 0], 3072, B.rise)], [300, I([0, 0], 3072, B.strike)]] },
+  '0050-warden-kill': { gdf: wardenRoom(), seed: 50, mode: 'practice', inputs: [[38, I([127, 0], 3072)], [900, I([0, 0], 3072, B.strike)],
+    [1, I([0, 0], 3072, B.rise)], [300, I([127, 0], 3072, B.strike)]] },
+  '0051-warden-driven': { gdf: wardenRoom(), seed: 51, mode: 'practice', inputs: driven(wardenRoom(), 51, 'practice', 6000, 0x7A2D) },
+  '0052-warden-fuzz': { gdf: wardenRoom([6, 4]), seed: 52, mode: 'delve', inputs: fuzz(0x7A2E, 9000, 8, 60) },
   '0022-mirrors-practice-fuzz': { gdf: mirrorRoom([1, 3]), seed: 22, mode: 'practice', inputs: fuzz(0x3171, 9000, 4, 30) }, // slow, near the hook
 };
 

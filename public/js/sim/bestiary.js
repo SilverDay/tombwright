@@ -3,13 +3,20 @@
 import { sha256Hex } from './sha256.js';
 
 export const BESTIARY_VERSION = 1;
-export const BESTIARY_SHA256 = 'e839ddb77abda655bed53ccc5ba67a4ac2a082f6c8988d68821c28f4e2cf55fe';
+export const BESTIARY_SHA256 = '3b84575fd64dd61b57e65413827298837c0dd199e96a80163deb863961abe1c7';
 const FIELDS = ['tier', 'strikes', 'damage', 'speed', 'radius', 'reach', 'wind', 'cooldown', 'rise', 'firstAttack', 'regen', 'flit'];
 
 // R-FOE-1, R-POW-*: the powers the cores know.
 export const POWERS = ['', 'douse', 'freeze', 'seize', 'confuse', 'poison', 'drain', 'steal', 'pilfer', 'guard', 'forget', 'invisible', 'mimic'];
-const BOSS_FIELDS = ['strikes', 'damage', 'oilHit', 'radius', 'speed', 'speed2', 'wakeAtk', 'wind', 'hitRange', 'windRange', 'seekWindRange',
-  'stop', 'reel', 'feed', 'feed2', 'feedReach', 'feedCd', 'phase2Atk', 'phase2FeedCd', 'atk', 'atk2', 'tearWind', 'solidRange', 'drainRange', 'drain', 'drain2'];
+// R-BREATH-1: the ranged block a kind may carry, and the shots the cores know (R-SHOT-1).
+const RANGED_FIELDS = ['cd', 'dmg', 'speed', 'range', 'min', 'r', 'off'];
+export const SHOT_KINDS = ['fire', 'bolt'];
+// R-BOSS-1: the fields every boss kind has, then the ones its behaviour adds.
+const BOSS_FIELDS = ['strikes', 'damage', 'radius', 'speed', 'wakeAtk', 'wind', 'hitRange', 'windRange', 'stop', 'atk'];
+const BOSS_BEHAVIOURS = {
+  eater: ['oilHit', 'speed2', 'seekWindRange', 'reel', 'feed', 'feed2', 'feedReach', 'feedCd', 'phase2Atk', 'phase2FeedCd', 'atk2', 'tearWind', 'solidRange', 'drainRange', 'drain', 'drain2'],
+  warden: ['summonCd', 'summonFirst', 'summonPer', 'summonMax', 'ring', 'volleyCd', 'volleyFirst', 'volleyBolts', 'volleySpread', 'volleyDmg', 'volleySpeed', 'volleyR', 'volleyOff', 'volleyMin'],
+};
 
 let kinds = null, bosses = null;
 
@@ -23,12 +30,20 @@ export function loadBestiary(bytes) {
   for (const [kind, f] of Object.entries(b.foes)) {
     for (const k of FIELDS) if (!Number.isSafeInteger(f[k])) throw new Error('bestiary: ' + kind + '.' + k);
     if (!POWERS.includes(f.power)) throw new Error('bestiary: ' + kind + '.power'); // R-FOE-1
-    m.set(kind, Object.freeze({ ...f, fly: f.mover === 'fly' }));
+    let ranged = null;
+    if (Object.hasOwn(f, 'ranged')) {                    // R-BREATH-1
+      for (const k of RANGED_FIELDS) if (!Number.isSafeInteger(f.ranged[k])) throw new Error('bestiary: ' + kind + '.ranged.' + k);
+      if (!SHOT_KINDS.includes(f.ranged.kind)) throw new Error('bestiary: ' + kind + '.ranged.kind');
+      ranged = Object.freeze({ ...f.ranged });
+    }
+    m.set(kind, Object.freeze({ ...f, ranged, fly: f.mover === 'fly' }));
   }
   kinds = m;
   const bm = new Map();
   for (const [kind, f] of Object.entries(b.bosses)) {
-    for (const k of BOSS_FIELDS) if (!Number.isSafeInteger(f[k])) throw new Error('bestiary: boss ' + kind + '.' + k);
+    const extra = BOSS_BEHAVIOURS[f.behaviour];          // R-BOSS-1
+    if (extra === undefined) throw new Error('bestiary: boss ' + kind + '.behaviour');
+    for (const k of [...BOSS_FIELDS, ...extra]) if (!Number.isSafeInteger(f[k])) throw new Error('bestiary: boss ' + kind + '.' + k);
     bm.set(kind, Object.freeze({ ...f }));
   }
   bosses = bm;

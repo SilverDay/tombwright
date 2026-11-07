@@ -101,6 +101,9 @@ export const DEATHS = {
   beast: { cause: 'You were struck down by {who}.', lesson: 'Rest between fights: you heal while nothing is hurting you.' },
   damage: { cause: 'You were struck down by {who}.', lesson: 'Rest between fights: you heal while nothing is hurting you.' },
   eater: { cause: 'The Candle-Eater drank your light, and then the rest of you.', lesson: 'In the dark she is smoke. Lit braziers make her solid.' },
+  fire: { cause: 'The dragon breathed, and the fire found you.', lesson: 'The breath comes every few seconds and flies straight. Step out of its line.' },
+  bolt: { cause: 'The Warden\'s bolts came in a fan, and one of them was yours.', lesson: 'Hurt, she fires from across the chamber. Close on her or keep something solid between you.' },
+  warden: { cause: 'The Warden of the Deep struck you down.', lesson: 'She calls the dead to rise. Fight her where they cannot all reach you at once.' },
 };
 export const EPITAPHS = ['HERE LIES A THIEF', 'SHE WAS HUNGRY', 'BROUGHT A LIGHT', 'NOT FIRST, NOT LAST', 'THE TOMB REMEMBERS'];
 

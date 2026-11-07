@@ -76,6 +76,13 @@ Add a row whenever something is decided; never edit an old row, supersede it.
 | 69 | 2026-11-04 | **No second theft:** a thief already carrying loot doesn't steal again; kill it to get the first loot back. | Owner |
 | 70 | 2026-11-04 | **Thieves' loot and checkpoints:** the checkpoint's life records what each thief carries; after a rise the thief is back at its spawn still carrying it. | Owner |
 | 71 | 2026-11-04 | **Xeroc and the awake cap:** a xeroc that is found out while 8 foes are awake counts as revealed at once (no more free hits or reveal events) and joins the wake queue, waking when a slot frees. | Owner |
+| 72 | 2026-11-06 | **Projectiles** (new sim state `state.shots`) move in three substeps a tick, as Lantern Delve does; a shot dies on a solid cell or on a prop, bell, mirror, brazier or chest it touches, hits the player within 360 mm + its radius for its damage, never hits foes or the boss, lives 3 s, and a rise clears the list. | Owner |
+| 73 | 2026-11-06 | **The dragon breathes straight** at the player's position of that tick: no spread, no random draw. | Owner |
+| 74 | 2026-11-06 | **When the dragon breathes:** a hunting dragon breathes instead of moving when its breath is off cooldown (4.5 s), the player is more than 3 m and less than 10 m away, with line of sight, and it isn't winding up a bite. The first breath waits out `firstAttack`; a rise resets the cooldown. | Owner |
+| 75 | 2026-11-06 | **The Warden of the Deep** is a second boss branch: states `stalk` and `wind` only (no braziers, no oil drinking, no smoke, no reel, no knock-back), always a strike target, woken by `wakeBoss` like Ilvaris. | Owner |
+| 76 | 2026-11-06 | **The Warden's volley:** five bolts, 0.16 rad apart, 8 m/s, 15 damage each, every 4.5 s, while her strikes are below half, the player is more than 2.5 m away and there is line of sight. | Owner |
+| 77 | 2026-11-06 | **The Warden calls placed foes, not new ones:** the boss entity gets an optional `summons` key naming a group; every 11 s she calls the first two still-dormant foes of that group, in entity order, while fewer than four of the group are awake. The 8-awake cap still applies (R-FOE-4's wake queue). | Owner |
+| 78 | 2026-11-06 | **A called foe comes up at her feet:** it is moved to the first free spot of a ring of 8 fixed angles 2,000 mm from the Warden (a cell a walker may enter, clear of other foes), without a random draw. No free spot: it isn't called, and the 11 s timer still resets. | Owner |
 
 ## Still open (spec §17)
 

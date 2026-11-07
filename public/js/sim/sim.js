@@ -13,7 +13,7 @@ import {
 } from './world.js';
 import { runLinks, initLinkState, copyLinkState } from './links.js';
 
-export const CORE_VERSION = 'm0.14';
+export const CORE_VERSION = 'm0.15';
 export const TICK_HZ = 30;
 export const CELL_MM = 2400;
 
@@ -41,6 +41,8 @@ export const HP_UNIT = 30, HP_FULL = 100 * HP_UNIT, HP_REGEN = 4, CALM_MAX = 151
 // R-STRIKE-*: swing cooldown and blow delay (Gloamhollow 0.45 s, 110 ms), reach, knock-back, stun. R-FOE-7: ranges.
 export const STRIKE_CD = 14, BLOW_DELAY = 3, STRIKE_REACH = 2250, KNOCKBACK = 500, STUN = 9;
 const SIGHT_LIT = 6 * 2400, SIGHT_DARK = 3 * 2400, NOISE_RUN = 4 * 2400, NOISE_SWING = 3 * 2400, NOISE_PEBBLE = 3 * 2400;
+// R-SHOT-1/2: a shot flies for 3 s and moves in three substeps a tick (Lantern Delve's `steps`).
+const SHOT_TICKS = 90, SHOT_STEPS = 3;
 
 export const BTN = Object.freeze({
   strike: 1 << 0, hood: 1 << 1, probe: 1 << 2, pebble: 1 << 3,
@@ -105,6 +107,7 @@ export function init(world, seed, mode) {
     foes: worldFoes(world).map((f) => freshFoe(f, f.start)), // R-FOE-3
     groups: worldGroups(world).map((g) => (g.dormant ? 'dormant' : 'awake')),
     blows: [],               // R-STRIKE-1: { foe, at } (foe -1: the boss)
+    shots: [],               // R-SHOT-1: projectiles in flight, { x, z, dx, dz, sp, dmg, r, t, k }
     braziers: worldBraziers(world).map((b) => b.lit),         // R-BRAZIER-1
     boss: worldBoss(world) === null ? null : freshBoss(worldBoss(world)), // R-BOSS-2
     won: null,               // R-EXIT-1: the tick the run was won
@@ -139,13 +142,13 @@ function lifeOf(state) {
 
 /** R-BOSS-2: the boss as she starts (and comes back, R-BOSS-6). */
 function freshBoss(def) {
-  return { st: 'asleep', x: def.x, z: def.z, hp: def.kind.strikes, phase: 1, t: 0, atk: 0, feedCd: 0, target: -1, feedHits: 0 };
+  return { st: 'asleep', x: def.x, z: def.z, hp: def.kind.strikes, phase: 1, t: 0, atk: 0, feedCd: 0, target: -1, feedHits: 0, sum: 0, vol: 0 };
 }
 
 /** R-FOE-3: a foe as it starts (or comes back, R-FOE-8). */
 function freshFoe(def, st) {
   if (st === 'asleep' && def.disguise !== null) st = 'disguised'; // R-MIMIC-1
-  return { st, x: def.x, z: def.z, hp: def.kind.strikes, t: 0, atk: def.kind.firstAttack, stun: 0, wake: false, gx: -1, gz: -1, rg: 0, ft: 0, fa: 0, loot: 0, lf: 0, lp: 0 };
+  return { st, x: def.x, z: def.z, hp: def.kind.strikes, t: 0, atk: def.kind.firstAttack, stun: 0, wake: false, gx: -1, gz: -1, rg: 0, ft: 0, fa: 0, sc: def.kind.firstAttack, loot: 0, lf: 0, lp: 0 };
 }
 
 function copyBellSets(b) { return b.map((x) => ({ seq: x.seq.slice(), solved: x.solved })); }
@@ -173,6 +176,7 @@ export function step(world, state, input) {
     const on = () => state.dead === null && state.won === null;
     if (on()) updateFoes(world, state, input, events, batch, wasBusy); // R-FOE-6
     if (on()) updateBoss(world, state, events, batch);       // R-BOSS-4
+    if (on()) updateShots(world, state, events);            // R-SHOT-2
     landPebbles(world, state, events);
     if (on()) links(world, state, batch, events); // R-LINK-7
     if (on()) regenerate(state.player);             // R-HP-1
@@ -220,7 +224,12 @@ function links(world, state, batch, events) {
       for (const fx of list) {
         if (fx.kind === 'message') { events.push({ e: 'message', text: fx.text }); continue; }
         if (fx.kind === 'wakeBoss') {                      // R-BOSS-3
-          if (state.boss.st === 'asleep') { state.boss.st = 'stalk'; state.boss.atk = worldBoss(world).kind.wakeAtk; changed = true; events.push({ e: 'boss', st: 'stalk' }); }
+          if (state.boss.st === 'asleep') {
+            const K = worldBoss(world).kind;
+            state.boss.st = 'stalk'; state.boss.atk = K.wakeAtk;
+            if (K.behaviour === 'warden') { state.boss.sum = K.summonFirst; state.boss.vol = K.volleyFirst; } // R-WARDEN-1
+            changed = true; events.push({ e: 'boss', st: 'stalk' });
+          }
           continue;
         }
         if (fx.kind === 'lightOn' || fx.kind === 'lightOff') {
@@ -661,12 +670,12 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
     const f = state.foes[n], kind = defs[n].kind;
     if (f.st === 'gone') {                              // R-THIEF-3: back after 20 s, idle at its cell
       if (f.t > 1) f.t -= 1;
-      else if (awakeCount(state) < MAX_AWAKE) { f.st = 'idle'; f.t = 0; f.x = defs[n].x; f.z = defs[n].z; f.atk = kind.firstAttack; f.stun = 0; f.gx = -1; f.gz = -1; foeEvent(world, n, 'idle', events); }
+      else if (awakeCount(state) < MAX_AWAKE) { f.st = 'idle'; f.t = 0; f.x = defs[n].x; f.z = defs[n].z; f.atk = kind.firstAttack; f.sc = kind.firstAttack; f.stun = 0; f.gx = -1; f.gz = -1; foeEvent(world, n, 'idle', events); }
       continue;
     }
     if (f.st === 'dormant' || f.st === 'dead' || f.st === 'asleep' || f.st === 'disguised') continue;
     if (f.st === 'rising') { f.t -= 1; if (f.t === 0) { f.st = 'hunting'; foeEvent(world, n, 'hunting', events); } continue; }
-    f.stun = Math.max(0, f.stun - 1); f.atk = Math.max(0, f.atk - 1);
+    f.stun = Math.max(0, f.stun - 1); f.atk = Math.max(0, f.atk - 1); f.sc = Math.max(0, f.sc - 1); // R-BREATH-1
     const dx = p.x - f.x, dz = p.z - f.z;                // squares < 2^36
     if (f.st === 'hunting' && f.t > 0) {
       f.t -= 1;
@@ -690,7 +699,12 @@ function updateFoes(world, state, input, events, batch, wasBusy) {
     const still = kind.speed === 0;                       // R-FOE-6: the flytrap never moves
     if (f.st === 'hunting') {
       const d = Math.max(1, isqrt(dx * dx + dz * dz));
-      if (d < kind.reach && f.atk === 0) { f.t = kind.wind; wound = true; }
+      const R = kind.ranged;                             // R-BREATH-1: the breath takes the whole tick
+      if (R !== null && f.sc === 0 && d > R.min && d < R.range && losFrom(world, state, f.x, f.z, p.x, p.z)) {
+        fireShots(state, f.x, f.z, [0], R.dmg, R.speed, R.r, R.off, R.kind);
+        f.sc = R.cd;
+        events.push({ e: 'shot', k: R.kind, id: defs[n].id });
+      } else if (d < kind.reach && f.atk === 0) { f.t = kind.wind; wound = true; }
       else if (d > idiv(3 * kind.reach, 4)) {
         const fi = fdiv(f.x, CELL_MM), fj = fdiv(f.z, CELL_MM);
         let gx = -1, gz = -1;
@@ -936,6 +950,7 @@ function rise(world, state, target, events) {
   state.flying = [];
   state.groups = life.groups.slice();
   state.blows = [];
+  state.shots = [];                                     // R-SHOT-1
   state.braziers = life.braziers.slice();
   if (state.boss !== null && life.boss !== 'dead') state.boss = freshBoss(worldBoss(world)); // R-BOSS-6
   else if (state.boss !== null) state.boss.st = 'dead';
@@ -997,12 +1012,70 @@ function useBrazier(world, state, n, bi, events, batch) {
   else events.push({ e: 'msg', k: 'needLight' });
 }
 
-/** R-BOSS-4: one tick of the boss. */
+// ---------------------------------------------------------------- shots (R-SHOT-*, R-BREATH-1)
+
+/** R-SHOT-3: put one shot per angle in the air, aimed at the player from (sx, sz). */
+function fireShots(state, sx, sz, angles, dmg, sp, r, off, k) {
+  const p = state.player, ex = p.x - sx, ez = p.z - sz, e = Math.max(1, isqrt(ex * ex + ez * ez)); // squares < 2^36
+  const bx = idiv(ex * TRIG_ONE, e), bz = idiv(ez * TRIG_ONE, e);                // |ex·2^14| < 2^32
+  for (const a of angles) {
+    const c = icos(a), si = isin(a);                                             // |bx·c| <= 2^14·2^14
+    const dx = idiv(bx * c - bz * si, TRIG_ONE), dz = idiv(bx * si + bz * c, TRIG_ONE);
+    state.shots.push({ x: sx + idiv(dx * off, TRIG_ONE), z: sz + idiv(dz * off, TRIG_ONE), dx, dz, sp, dmg, r, t: SHOT_TICKS, k });
+  }
+}
+
+/** R-SHOT-2: the shots fly, three substeps a tick; the first thing one touches stops it. */
+function updateShots(world, state, events) {
+  if (state.shots.length === 0) return;
+  const p = state.player, props = worldProps(world), keep = [], list = state.shots;
+  state.shots = [];                                      // the list of this tick, as the PHP core's copy
+  let stopped = false;                                   // R-SHOT-2: a shot that kills ends the update
+  for (const sh of list) {
+    if (stopped) { keep.push(sh); continue; }
+    let spent = false;
+    for (let step = 0; step < SHOT_STEPS && !spent; step++) {
+      sh.x += idiv(sh.dx * sh.sp, SHOT_STEPS * 30 * TRIG_ONE); // |dx·sp| <= 2^14·11000 < 2^28
+      sh.z += idiv(sh.dz * sh.sp, SHOT_STEPS * 30 * TRIG_ONE);
+      if (solidCell(world, state, fdiv(sh.x, CELL_MM), fdiv(sh.z, CELL_MM))) { spent = true; break; }
+      for (const o of props) {                            // R-MOVE-4's props, in entity order
+        if (o.circle) {
+          const dx = sh.x - o.x, dz = sh.z - o.z, rr = sh.r + o.r;               // squares < 2^36
+          if (dx * dx + dz * dz < rr * rr) { spent = true; break; }
+        } else {
+          const qx = clamp(sh.x, o.x0, o.x1), qz = clamp(sh.z, o.z0, o.z1), dx = sh.x - qx, dz = sh.z - qz;
+          if (dx * dx + dz * dz < sh.r * sh.r) { spent = true; break; }
+        }
+      }
+      if (spent) break;
+      const hx = sh.x - p.x, hz = sh.z - p.z, hr = PLAYER_R_MM + sh.r;
+      if (hx * hx + hz * hz < hr * hr) {
+        spent = true;
+        hurt(state, sh.dmg, events, sh.k);                // R-HP-2: the cause is the sort of shot
+        if (state.dead !== null) stopped = true;
+      }
+    }
+    if (!spent) { sh.t -= 1; if (sh.t === 0) spent = true; }
+    if (spent) events.push({ e: 'shotEnd', k: sh.k, x: sh.x, z: sh.z }); else keep.push(sh);
+  }
+  state.shots = keep;
+}
+
+// ---------------------------------------------------------------- the bosses (R-BOSS-*, R-WARDEN-*)
+
+/** R-BOSS-4: one tick of the boss, by her kind's behaviour. */
 function updateBoss(world, state, events, batch) {
   const B = state.boss;
   if (B === null || B.st === 'asleep' || B.st === 'dead') return;
   const def = worldBoss(world), K = def.kind, p = state.player, box = worldBossBox(world), braziers = worldBraziers(world);
   const dx = p.x - B.x, dz = p.z - B.z, d = Math.max(1, isqrt(dx * dx + dz * dz)); // squares < 2^36
+  const move = (gx, gz, spd) => {
+    const ex = gx - B.x, ez = gz - B.z, e = Math.max(1, isqrt(ex * ex + ez * ez));
+    B.x += idiv(ex * spd, 30 * e); B.z += idiv(ez * spd, 30 * e);
+    pushOut(world, state, B, K.radius, B.x, B.z, false);
+    B.x = clamp(B.x, box.x0, box.x1); B.z = clamp(B.z, box.z0, box.z1);
+  };
+  if (K.behaviour === 'warden') { wardenTick(world, state, def, K, d, move, events); return; } // R-WARDEN-2
   B.atk = Math.max(0, B.atk - 1); B.feedCd = Math.max(0, B.feedCd - 1);
   if (d < K.drainRange && p.oil > 0 && p.hung < 0) {
     const drain = B.phase === 2 ? K.drain2 : K.drain;
@@ -1010,12 +1083,6 @@ function updateBoss(world, state, events, batch) {
     if (p.oil === 0) { p.hooded = false; events.push({ e: 'msg', k: 'lanternOut' }); }
   }
   const speed = B.phase === 2 ? K.speed2 : K.speed;
-  const move = (gx, gz, spd) => {
-    const ex = gx - B.x, ez = gz - B.z, e = Math.max(1, isqrt(ex * ex + ez * ez));
-    B.x += idiv(ex * spd, 30 * e); B.z += idiv(ez * spd, 30 * e);
-    pushOut(world, state, B, K.radius, B.x, B.z, false);
-    B.x = clamp(B.x, box.x0, box.x1); B.z = clamp(B.z, box.z0, box.z1);
-  };
   if (B.st === 'stalk') {
     let tgt = -1, td = 0;
     if (B.feedCd === 0) braziers.forEach((b, n) => {
@@ -1053,6 +1120,78 @@ function updateBoss(world, state, events, batch) {
   }
 }
 
+/** R-WARDEN-2: one tick of the Warden of the Deep. */
+function wardenTick(world, state, def, K, d, move, events) {
+  const B = state.boss, p = state.player;
+  B.atk = Math.max(0, B.atk - 1); B.sum = Math.max(0, B.sum - 1);
+  wardenCall(world, state, def, K, events);             // R-WARDEN-3
+  wardenVolley(world, state, def, K, d, events);        // R-WARDEN-4
+  if (B.st === 'stalk') {
+    if (d < K.windRange && B.atk === 0) { B.st = 'wind'; B.t = K.wind; }
+    else if (d > K.stop) move(p.x, p.z, K.speed);
+  } else if (B.st === 'wind') {
+    B.t -= 1;
+    if (B.t === 0) {
+      if (d < K.hitRange) hurt(state, K.damage, events, 'warden');
+      B.st = 'stalk'; B.atk = K.atk;
+    }
+  }
+}
+
+/** R-WARDEN-3: she calls the dormant foes of her `summons` group up at her feet (decisions #77, #78). */
+function wardenCall(world, state, def, K, events) {
+  const B = state.boss;
+  if (B.sum > 0 || def.summons < 0) return;
+  B.sum = K.summonCd;                                   // the timer resets whether or not anyone comes
+  const defs = worldFoes(world), members = worldGroups(world)[def.summons].foes;
+  const waiting = (n) => state.foes[n].st === 'dormant' && !state.foes[n].wake;
+  let called = 0;
+  for (const n of members) if (state.foes[n].st !== 'dead' && !waiting(n)) called += 1;
+  if (called >= K.summonMax) return;
+  let came = 0;
+  for (const n of members) {
+    if (came >= K.summonPer) break;
+    if (!waiting(n)) continue;
+    const spot = ringSpot(world, state, B, K.ring, defs[n].kind);
+    if (spot === null) break;                           // no room left on the ring: nobody else comes this tick
+    state.foes[n].x = spot[0]; state.foes[n].z = spot[1];
+    requestWake(world, state, n, events);               // R-FOE-4: the cap of 8 awake still holds
+    came += 1;
+  }
+  if (came > 0) events.push({ e: 'boss', summon: came });
+}
+
+/** R-WARDEN-3: the first free spot of the ring around the boss, or null. */
+function ringSpot(world, state, B, ring, kind) {
+  const defs = worldFoes(world);
+  for (let a = 0; a < 4096; a += 512) {
+    const x = B.x + idiv(icos(a) * ring, TRIG_ONE), z = B.z + idiv(isin(a) * ring, TRIG_ONE); // |cos·ring| < 2^14·2^12
+    if (!enterable(world, state, fdiv(x, CELL_MM), fdiv(z, CELL_MM), kind.fly)) continue;
+    let taken = false;
+    for (let m = 0; m < defs.length && !taken; m++) {
+      const o = state.foes[m];
+      if (o.st === 'dormant' || o.st === 'dead' || o.st === 'gone' || o.st === 'disguised') continue;
+      const ox = x - o.x, oz = z - o.z, rr = kind.radius + defs[m].kind.radius; // squares < 2^36
+      if (ox * ox + oz * oz < rr * rr) taken = true;
+    }
+    if (!taken) return [x, z];
+  }
+  return null;
+}
+
+/** R-WARDEN-4: below half her strikes she fires a fan of bolts (decision #76). */
+function wardenVolley(world, state, def, K, d, events) {
+  const B = state.boss, p = state.player;
+  if (2 * B.hp >= K.strikes) return;
+  B.vol = Math.max(0, B.vol - 1);
+  if (B.vol > 0 || d <= K.volleyMin || !losFrom(world, state, B.x, B.z, p.x, p.z)) return;
+  const angles = [];
+  for (let k = 0; k < K.volleyBolts; k++) angles.push((k - idiv(K.volleyBolts, 2)) * K.volleySpread);
+  fireShots(state, B.x, B.z, angles, K.volleyDmg, K.volleySpeed, K.volleyR, K.volleyOff, 'bolt');
+  B.vol = K.volleyCd;
+  events.push({ e: 'shot', k: 'bolt', id: def.id });
+}
+
 /** R-BOSS-4: is a lit brazier within her solid range? */
 function bossSolid(world, state) {
   const B = state.boss, r = worldBoss(world).kind.solidRange;
@@ -1063,6 +1202,12 @@ function bossSolid(world, state) {
 function bossBlow(world, state, events, batch) {
   const B = state.boss, def = worldBoss(world), K = def.kind;
   if (B.st === 'dead' || B.st === 'asleep') return;
+  if (K.behaviour === 'warden') {                       // R-BOSS-5: every blow lands, and nothing else changes
+    B.hp -= 1;
+    events.push({ e: 'hit', id: def.id, hp: B.hp });
+    if (B.hp === 0) { B.st = 'dead'; batch.push(['bossDefeated', 0]); events.push({ e: 'bossDead' }); }
+    return;
+  }
   if (!bossSolid(world, state)) { events.push({ e: 'boss', smoke: true }); return; }
   B.hp -= 1;
   events.push({ e: 'hit', id: def.id, hp: B.hp });

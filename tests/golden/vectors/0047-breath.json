@@ -1,0 +1,322 @@
+{
+ "name": "0047-breath",
+ "core": "m0.15",
+ "seed": 47,
+ "mode": "practice",
+ "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":9,\"cells\":\"EQAHAQEFBgECAAcBAQUGAQIABwEBBQYBAgAHAQEFBgECAAcBAQUGAQIABwEBBQYBAgAHAQEFBgERAA==\"},\"start\":{\"cell\":[6,4]},\"zones\":[{\"id\":\"h\",\"name\":\"H\",\"rects\":[[1,1,14,7]],\"ceil\":6000,\"checkpoint\":{\"cell\":[2,4],\"yaw\":1024}}],\"entities\":[{\"id\":\"dra\",\"type\":\"foe\",\"kind\":\"dragon\",\"cell\":[10,4],\"start\":\"hunting\"},{\"id\":\"kes\",\"type\":\"foe\",\"kind\":\"kestrel\",\"cell\":[13,7],\"start\":\"asleep\"},{\"id\":\"st1\",\"type\":\"prop\",\"kind\":\"statue\",\"pos\":[15600,8400],\"yaw\":0}]}",
+ "inputs": [
+  [
+   300,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ],
+  [
+   1,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 128,
+    "target": 0
+   }
+  ],
+  [
+   67,
+   {
+    "move": [
+     0,
+     -127
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   67,
+   {
+    "move": [
+     0,
+     127
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   67,
+   {
+    "move": [
+     0,
+     -127
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   67,
+   {
+    "move": [
+     0,
+     127
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   67,
+   {
+    "move": [
+     0,
+     -127
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   67,
+   {
+    "move": [
+     0,
+     127
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   67,
+   {
+    "move": [
+     0,
+     -127
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   67,
+   {
+    "move": [
+     0,
+     127
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 64,
+    "target": 0
+   }
+  ],
+  [
+   200,
+   {
+    "move": [
+     0,
+     0
+    ],
+    "yaw": 1024,
+    "pitch": 0,
+    "buttons": 0,
+    "target": 0
+   }
+  ]
+ ],
+ "ticks": 1037,
+ "hashEvery": 300,
+ "hashes": {
+  "0": "9cf39ccc9e4c911f2b2692d0a5b64e99",
+  "300": "543d2d231ea9bbdd03f1c8a77fd3d344",
+  "600": "8890292cbb8ce807c1abb5ca7df2bf24",
+  "900": "c06d923e2b164c26edb7fe51b4325524"
+ },
+ "final": "e7717dff0f17805bfbadae937343fa03",
+ "finalState": {
+  "v": 1,
+  "core": "m0.15",
+  "world": "5f7c3b9f8485651ce90bbd0accb40d40",
+  "mode": "practice",
+  "tick": 1037,
+  "rng": [
+   4183134927,
+   49482207,
+   3298954719,
+   2328056283
+  ],
+  "player": {
+   "x": 15600,
+   "z": 10204,
+   "vx": 0,
+   "vz": 0,
+   "rx": 0,
+   "rz": 0,
+   "yaw": 1024,
+   "pitch": 0,
+   "hp": 0,
+   "calm": 0,
+   "oil": 2953840,
+   "hooded": false,
+   "hung": -1,
+   "flasks": 1,
+   "pebbles": 10,
+   "probeCd": 0,
+   "pebbleCd": 0,
+   "strikeCd": 0,
+   "busy": 0,
+   "busyOn": -1,
+   "doused": false,
+   "frozen": 0,
+   "freezeImm": 0,
+   "held": -1,
+   "heldT": 0,
+   "holdImm": 0,
+   "confused": 0,
+   "poison": 0,
+   "maxHp": 3000
+  },
+  "doors": [],
+  "deaths": 1,
+  "dead": {
+   "cause": "fire",
+   "at": 576
+  },
+  "sprung": [],
+  "pits": [],
+  "marked": [],
+  "bridge": [],
+  "floor": [],
+  "loot": [],
+  "flying": [],
+  "taken": [],
+  "eyes": [],
+  "zone": 0,
+  "sealed": [],
+  "revealed": [],
+  "mirrors": [],
+  "chests": [],
+  "sealing": [],
+  "foes": [
+   {
+    "st": "hunting",
+    "x": 25200,
+    "z": 10800,
+    "hp": 14,
+    "t": 0,
+    "atk": 0,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0,
+    "sc": 113,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
+   },
+   {
+    "st": "asleep",
+    "x": 32400,
+    "z": 18000,
+    "hp": 1,
+    "t": 0,
+    "atk": 15,
+    "stun": 0,
+    "wake": false,
+    "gx": -1,
+    "gz": -1,
+    "rg": 0,
+    "ft": 0,
+    "fa": 0,
+    "sc": 15,
+    "loot": 0,
+    "lf": 0,
+    "lp": 0
+   }
+  ],
+  "groups": [
+   "awake",
+   "awake"
+  ],
+  "blows": [],
+  "shots": [],
+  "braziers": [],
+  "boss": null,
+  "won": null,
+  "bellSets": [],
+  "links": [],
+  "checkpoints": [
+   {
+    "zone": 0,
+    "x": 15600,
+    "z": 10800,
+    "yaw": 0,
+    "life": {
+     "hp": 3000,
+     "oil": 3000000,
+     "hooded": false,
+     "hung": -1,
+     "flasks": 1,
+     "pebbles": 10,
+     "revealed": [],
+     "mirrors": [],
+     "chests": [],
+     "groups": [
+      "awake",
+      "awake"
+     ],
+     "braziers": [],
+     "boss": null,
+     "doors": [],
+     "floor": [],
+     "loot": [],
+     "taken": [],
+     "bellSets": [],
+     "links": [],
+     "foes": [
+      [
+       0,
+       0,
+       0
+      ],
+      [
+       0,
+       0,
+       0
+      ]
+     ]
+    }
+   }
+  ],
+  "cp": 0,
+  "prevButtons": 0
+ }
+}

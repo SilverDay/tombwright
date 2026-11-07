@@ -1,6 +1,6 @@
 {
  "name": "0028-foes-death",
- "core": "m0.14",
+ "core": "m0.15",
  "seed": 28,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":16,\"h\":10,\"cells\":\"EQAHAQEABgECAAcBAQAGAQIABwEBAAIBAQMDAQIABwEBAAYBAgAEAQIEAQEBAAYBAgAHAQEABgECAA4BAgAOAREA\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"w\",\"name\":\"W\",\"rects\":[[1,1,7,8]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[8,7,1,2]],\"ceil\":3000},{\"id\":\"e\",\"name\":\"E\",\"rects\":[[9,1,6,8]],\"ceil\":4200,\"checkpoint\":{\"cell\":[10,6],\"yaw\":1024}}],\"entities\":[{\"id\":\"f1\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[12,2],\"start\":\"hunting\",\"group\":\"east\"},{\"id\":\"f2\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[13,7],\"start\":\"idle\",\"group\":\"east\"},{\"id\":\"f3\",\"type\":\"foe\",\"kind\":\"warden\",\"cell\":[3,7],\"start\":\"asleep\",\"group\":\"sleepy\"},{\"id\":\"f4\",\"type\":\"foe\",\"kind\":\"crawler\",\"cell\":[2,2],\"start\":\"dormant\",\"group\":\"late\"}],\"links\":[{\"id\":1,\"when\":{\"enterZone\":\"e\"},\"do\":[{\"spawnFoes\":\"late\"},{\"message\":\"late\"}]},{\"id\":2,\"when\":{\"foesDefeated\":\"east\"},\"do\":[{\"message\":\"east clear\"}]},{\"id\":3,\"when\":{\"not\":{\"foesAlive\":\"sleepy\"}},\"repeat\":true,\"do\":[{\"message\":\"sleepy gone\"}]}]}",
@@ -48,18 +48,18 @@
  "ticks": 1801,
  "hashEvery": 300,
  "hashes": {
-  "0": "59fe7179ff650a7352a875c2eef70556",
-  "300": "0c191bb94d56f617de4463b57ead2a61",
-  "600": "3b66183d4f6eeec9b45428241d972054",
-  "900": "a7c92a398c5d9158509468dcdf9d036f",
-  "1200": "5eea138c25850ae25f0af3515fb75170",
-  "1500": "4b5a241b678683c3984f0653786401f4",
-  "1800": "a2ff28c213edb81aeed8411eee340ae2"
+  "0": "7e38142d063a0be485f5027c0373ed4b",
+  "300": "7eb94229d194642dc37be3d7ec2ec557",
+  "600": "95b5acea7415a87960d8cfebe544b7aa",
+  "900": "4fb92562ed27de3a1c99633ee24f6396",
+  "1200": "abeca7a6dd453fbb9f22d8afdfcbb818",
+  "1500": "f33a31234be928d43302080f0d24ba8e",
+  "1800": "a2db477a66786c433677868ead927c4d"
  },
- "final": "2ec46f7758d67a1326082bbbe17fcfb3",
+ "final": "6c3b0d80b6c254412f2e05e1c36342bf",
  "finalState": {
   "v": 1,
-  "core": "m0.14",
+  "core": "m0.15",
   "world": "048035ae47f4729f40c65d9e91cfaca9",
   "mode": "delve",
   "tick": 1801,
@@ -133,6 +133,7 @@
     "rg": 0,
     "ft": 0,
     "fa": 0,
+    "sc": 0,
     "loot": 0,
     "lf": 0,
     "lp": 0
@@ -151,6 +152,7 @@
     "rg": 0,
     "ft": 0,
     "fa": 0,
+    "sc": 0,
     "loot": 0,
     "lf": 0,
     "lp": 0
@@ -169,6 +171,7 @@
     "rg": 0,
     "ft": 0,
     "fa": 0,
+    "sc": 18,
     "loot": 0,
     "lf": 0,
     "lp": 0
@@ -187,6 +190,7 @@
     "rg": 0,
     "ft": 0,
     "fa": 0,
+    "sc": 18,
     "loot": 0,
     "lf": 0,
     "lp": 0
@@ -198,6 +202,7 @@
    "dormant"
   ],
   "blows": [],
+  "shots": [],
   "braziers": [],
   "boss": null,
   "won": null,

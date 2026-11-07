@@ -68,7 +68,8 @@ export class UI {
         case 'eyes': sfx.wake(); break;
         case 'alcove': { const a = ents.find((e) => e.id === ev.id); if (a.kind === 'drown') sfx.water(); else sfx.laugh(); break; }
         case 'brazier': if (ev.lit) sfx.ignite(); else sfx.gulp(); break;
-        case 'boss': if (ev.smoke) sfx.smoke(); else if (ev.phase === 2) sfx.shriek(); else if (ev.st === 'feed') sfx.gulp(); break;
+        case 'boss': if (ev.smoke) sfx.smoke(); else if (ev.phase === 2) sfx.shriek(); else if (ev.st === 'feed') sfx.gulp(); else if (ev.summon) sfx.boss(); break;
+        case 'shot': if (ev.k === 'fire') sfx.fire(); else sfx.dart(); break; // R-SHOT-3
         case 'bossDead': sfx.shriek(); sfx.win(); break;
         case 'checkpoint': sfx.checkpoint(); this.toast('Checkpoint', 'You will rise here if you die'); this.save(); break;
         case 'death': this.onDeath(ev.cause); break;

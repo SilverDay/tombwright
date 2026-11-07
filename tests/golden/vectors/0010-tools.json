@@ -1,6 +1,6 @@
 {
  "name": "0010-tools",
- "core": "m0.14",
+ "core": "m0.15",
  "seed": 10,
  "mode": "delve",
  "gdf": "{\"gdf\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAFAQEABgECAAMBAQMBAQEAAQEBBgEFAQECAwIABQEBAAYBAgAFAQECBgECAAUBAQAGAQIAAwEBBAEBAQABAQEEAQEBBwEBAQgCAAUBAQAGAQ8A\"},\"start\":{\"cell\":[2,4]},\"zones\":[{\"id\":\"a\",\"name\":\"A\",\"rects\":[[1,1,5,7]],\"ceil\":4200},{\"id\":\"g\",\"name\":\"G\",\"rects\":[[7,1,6,7]],\"ceil\":3600,\"checkpoint\":{\"cell\":[7,4],\"yaw\":3072}}],\"entities\":[{\"id\":\"d1\",\"type\":\"door\",\"cell\":[6,4],\"style\":\"stone\",\"opens\":\"interact\"},{\"id\":\"f1\",\"type\":\"item\",\"kind\":\"flask\",\"cell\":[3,3]},{\"id\":\"r1\",\"type\":\"item\",\"kind\":\"rubble\",\"cell\":[2,6]},{\"id\":\"t1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[1,1],\"value\":100},{\"id\":\"t2\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[12,4],\"value\":250},{\"id\":\"b1\",\"type\":\"item\",\"kind\":\"treasure\",\"cell\":[8,2],\"value\":7},{\"id\":\"e1\",\"type\":\"eyes\",\"zone\":\"g\",\"wake\":18},{\"id\":\"v1\",\"type\":\"vent\",\"cells\":[[10,6]],\"period\":90,\"phase\":0,\"warn\":20,\"fire\":30},{\"id\":\"s1\",\"type\":\"slab\",\"cell\":[12,2]}]}",
@@ -399,13 +399,13 @@
  "ticks": 529,
  "hashEvery": 300,
  "hashes": {
-  "0": "c32d4f193646e52c3c530a88a33f575c",
-  "300": "7504880b5a89411cabd18d5cb9cc898a"
+  "0": "1368091d5c9e7634777f9867c7a0f2d4",
+  "300": "3d46474c9f1524d450f59852b1e7209d"
  },
- "final": "767db3f057b262234f7395d133ce6b96",
+ "final": "86373cdd384170835cd7a11f8ba587cb",
  "finalState": {
   "v": 1,
-  "core": "m0.14",
+  "core": "m0.15",
   "world": "ed07117ae227eea674dbae0f20b67882",
   "mode": "delve",
   "tick": 529,
@@ -478,6 +478,7 @@
   "foes": [],
   "groups": [],
   "blows": [],
+  "shots": [],
   "braziers": [],
   "boss": null,
   "won": null,

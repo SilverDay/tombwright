@@ -413,7 +413,10 @@ class Game {
       tf.hidden = !(z === bzi || (z >= 0 && T.gdf.zones[z].rects.every(([, , rw, rh]) => rw === 1 || rh === 1)));
       tf.querySelector('.tf-name').textContent = T.text.boss?.name ?? 'The keeper of the tomb';
       $('tfBar').style.setProperty('--v', String(bs.hp / (T.bestiaryBoss?.strikes ?? 6)));
-      $('tfState').textContent = this.info().bossSolid ? 'Solid in the firelight: strike now' : 'Smoke: your blade will pass through her';
+      // R-BOSS-5: only the Candle-Eater turns to smoke; the Warden is always there to be struck.
+      $('tfState').textContent = T.bestiaryBoss?.behaviour === 'warden'
+        ? (2 * bs.hp < T.bestiaryBoss.strikes ? 'Hurt, and calling the dead: watch for the bolts' : 'Solid, and she calls the dead to rise')
+        : this.info().bossSolid ? 'Solid in the firelight: strike now' : 'Smoke: your blade will pass through her';
     } else tf.hidden = true;
   }
 
@@ -439,7 +442,8 @@ class Game {
     const b = st.boss;
     let bossSolid = false, bossNear = 0;
     if (b && b.st !== 'asleep' && b.st !== 'dead') {
-      bossSolid = braziers.some((q, n) => { if (!st.braziers[n]) return false; const dx = q.cell[0] * S + S / 2 - b.x, dz = q.cell[1] * S + S / 2 - b.z; return dx * dx + dz * dz < 3600 * 3600; });
+      bossSolid = this.T.bestiaryBoss?.behaviour === 'warden'   // R-BOSS-5: she is never smoke
+        || braziers.some((q, n) => { if (!st.braziers[n]) return false; const dx = q.cell[0] * S + S / 2 - b.x, dz = q.cell[1] * S + S / 2 - b.z; return dx * dx + dz * dz < 3600 * 3600; });
       bossNear = clamp(1 - Math.hypot(b.x - P.x, b.z - P.z) / 5500, 0, 1);
     }
     const ex = this.T.gdf.exit;

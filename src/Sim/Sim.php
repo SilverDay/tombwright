@@ -10,7 +10,7 @@ namespace Tombwright\Sim;
  */
 final class Sim
 {
-    public const CORE_VERSION = 'm0.14';
+    public const CORE_VERSION = 'm0.15';
     public const TICK_HZ = 30;
     public const CELL_MM = 2400;
     public const WALK_MM_S = 3200;
@@ -40,6 +40,9 @@ final class Sim
     /** R-STRIKE-*, R-FOE-7 */
     public const STRIKE_CD = 14;
     public const BLOW_DELAY = 3;
+    /** R-SHOT-1/2: a shot flies for 3 s and moves in three substeps a tick (Lantern Delve's `steps`). */
+    public const SHOT_TICKS = 90;
+    public const SHOT_STEPS = 3;
     public const STRIKE_REACH = 2250;
     public const KNOCKBACK = 500;
     public const STUN = 9;
@@ -141,6 +144,7 @@ final class Sim
             'foes' => array_map(static fn (array $f): array => self::freshFoe($f, $f['start']), $world->foes), // R-FOE-3
             'groups' => array_map(static fn (array $g): string => $g['dormant'] ? 'dormant' : 'awake', $world->groups),
             'blows' => [],        // R-STRIKE-1 (foe -1: the boss)
+            'shots' => [],        // R-SHOT-1: projectiles in flight
             'braziers' => array_map(static fn (array $b): bool => $b['lit'], $world->braziers), // R-BRAZIER-1
             'boss' => $world->boss === null ? null : self::freshBoss($world->boss), // R-BOSS-2
             'won' => null,        // R-EXIT-1
@@ -217,6 +221,9 @@ final class Sim
             }
             if ($state['dead'] === null && $state['won'] === null) {
                 self::updateBoss($world, $state, $events); // R-BOSS-4
+            }
+            if ($state['dead'] === null && $state['won'] === null) {
+                self::updateShots($world, $state, $events); // R-SHOT-2
             }
             self::landPebbles($world, $state, $events);
             if ($state['dead'] === null && $state['won'] === null) {
@@ -303,8 +310,13 @@ final class Sim
             }
             if ($fx['kind'] === 'wakeBoss') { // R-BOSS-3
                 if ($state['boss']['st'] === 'asleep') {
+                    $K = $world->boss['kind'];
                     $state['boss']['st'] = 'stalk';
-                    $state['boss']['atk'] = $world->boss['kind']['wakeAtk'];
+                    $state['boss']['atk'] = $K['wakeAtk'];
+                    if ($K['behaviour'] === 'warden') { // R-WARDEN-1
+                        $state['boss']['sum'] = $K['summonFirst'];
+                        $state['boss']['vol'] = $K['volleyFirst'];
+                    }
                     $changed = true;
                     $events[] = ['e' => 'boss', 'st' => 'stalk'];
                 }
@@ -1266,6 +1278,7 @@ final class Sim
         $state['flying'] = [];
         $state['groups'] = $life['groups'];
         $state['blows'] = [];
+        $state['shots'] = [];                             // R-SHOT-1
         $state['braziers'] = $life['braziers'];
         if ($state['boss'] !== null && $life['boss'] !== 'dead') { // R-BOSS-6
             $state['boss'] = self::freshBoss($world->boss);
@@ -1602,7 +1615,7 @@ final class Sim
         if ($st === 'asleep' && $def['disguise'] !== null) {
             $st = 'disguised'; // R-MIMIC-1
         }
-        return ['st' => $st, 'x' => $def['x'], 'z' => $def['z'], 'hp' => $def['kind']['strikes'], 't' => 0, 'atk' => $def['kind']['firstAttack'], 'stun' => 0, 'wake' => false, 'gx' => -1, 'gz' => -1, 'rg' => 0, 'ft' => 0, 'fa' => 0, 'loot' => 0, 'lf' => 0, 'lp' => 0];
+        return ['st' => $st, 'x' => $def['x'], 'z' => $def['z'], 'hp' => $def['kind']['strikes'], 't' => 0, 'atk' => $def['kind']['firstAttack'], 'stun' => 0, 'wake' => false, 'gx' => -1, 'gz' => -1, 'rg' => 0, 'ft' => 0, 'fa' => 0, 'sc' => $def['kind']['firstAttack'], 'loot' => 0, 'lf' => 0, 'lp' => 0];
     }
 
     private static function isAwake(string $st): bool
@@ -1745,7 +1758,7 @@ final class Sim
      */
     private static function freshBoss(array $def): array
     {
-        return ['st' => 'asleep', 'x' => $def['x'], 'z' => $def['z'], 'hp' => $def['kind']['strikes'], 'phase' => 1, 't' => 0, 'atk' => 0, 'feedCd' => 0, 'target' => -1, 'feedHits' => 0];
+        return ['st' => 'asleep', 'x' => $def['x'], 'z' => $def['z'], 'hp' => $def['kind']['strikes'], 'phase' => 1, 't' => 0, 'atk' => 0, 'feedCd' => 0, 'target' => -1, 'feedHits' => 0, 'sum' => 0, 'vol' => 0];
     }
 
     /**
@@ -1794,6 +1807,20 @@ final class Sim
         $dx = $p['x'] - $B['x'];
         $dz = $p['z'] - $B['z'];
         $d = max(1, IntMath::isqrt($dx * $dx + $dz * $dz));
+        $move = static function (array &$B, int $gx, int $gz, int $spd) use ($world, &$state, $K, $box): void {
+            $ex = $gx - $B['x'];
+            $ez = $gz - $B['z'];
+            $e = max(1, IntMath::isqrt($ex * $ex + $ez * $ez));
+            $B['x'] += IntMath::idiv($ex * $spd, 30 * $e);
+            $B['z'] += IntMath::idiv($ez * $spd, 30 * $e);
+            self::pushOut($world, $state, $B, $K['radius'], $B['x'], $B['z'], false);
+            $B['x'] = IntMath::clamp($B['x'], $box['x0'], $box['x1']);
+            $B['z'] = IntMath::clamp($B['z'], $box['z0'], $box['z1']);
+        };
+        if ($K['behaviour'] === 'warden') { // R-WARDEN-2
+            self::wardenTick($world, $state, $K, $d, $move, $events);
+            return;
+        }
         $B['atk'] = max(0, $B['atk'] - 1);
         $B['feedCd'] = max(0, $B['feedCd'] - 1);
         if ($d < $K['drainRange'] && $p['oil'] > 0 && $p['hung'] < 0) {
@@ -1805,16 +1832,6 @@ final class Sim
             }
         }
         $speed = $B['phase'] === 2 ? $K['speed2'] : $K['speed'];
-        $move = static function (array &$B, int $gx, int $gz, int $spd) use ($world, &$state, $K, $box): void {
-            $ex = $gx - $B['x'];
-            $ez = $gz - $B['z'];
-            $e = max(1, IntMath::isqrt($ex * $ex + $ez * $ez));
-            $B['x'] += IntMath::idiv($ex * $spd, 30 * $e);
-            $B['z'] += IntMath::idiv($ez * $spd, 30 * $e);
-            self::pushOut($world, $state, $B, $K['radius'], $B['x'], $B['z'], false);
-            $B['x'] = IntMath::clamp($B['x'], $box['x0'], $box['x1']);
-            $B['z'] = IntMath::clamp($B['z'], $box['z0'], $box['z1']);
-        };
         if ($B['st'] === 'stalk') {
             $tgt = -1;
             $td = 0;
@@ -1896,6 +1913,258 @@ final class Sim
     }
 
     /**
+     * R-SHOT-3: put one shot per angle in the air, aimed at the player from (sx, sz).
+     *
+     * @param array<string,mixed> $state
+     * @param list<int> $angles
+     */
+    private static function fireShots(array &$state, int $sx, int $sz, array $angles, int $dmg, int $sp, int $r, int $off, string $k): void
+    {
+        $p = $state['player'];
+        $ex = $p['x'] - $sx;
+        $ez = $p['z'] - $sz;
+        $e = max(1, IntMath::isqrt($ex * $ex + $ez * $ez)); // squares < 2^36
+        $bx = IntMath::idiv($ex * SineTable::TRIG_ONE, $e);      // |ex·2^14| < 2^32
+        $bz = IntMath::idiv($ez * SineTable::TRIG_ONE, $e);
+        foreach ($angles as $a) {
+            $c = SineTable::cos($a);                        // |bx·c| <= 2^14·2^14
+            $si = SineTable::sin($a);
+            $dx = IntMath::idiv($bx * $c - $bz * $si, SineTable::TRIG_ONE);
+            $dz = IntMath::idiv($bx * $si + $bz * $c, SineTable::TRIG_ONE);
+            $state['shots'][] = ['x' => $sx + IntMath::idiv($dx * $off, SineTable::TRIG_ONE), 'z' => $sz + IntMath::idiv($dz * $off, SineTable::TRIG_ONE),
+                'dx' => $dx, 'dz' => $dz, 'sp' => $sp, 'dmg' => $dmg, 'r' => $r, 't' => self::SHOT_TICKS, 'k' => $k];
+        }
+    }
+
+    /**
+     * R-SHOT-2: the shots fly, three substeps a tick; the first thing one touches stops it.
+     *
+     * @param array<string,mixed> $state
+     * @param list<array<string,mixed>> $events
+     */
+    private static function updateShots(World $world, array &$state, array &$events): void
+    {
+        if ($state['shots'] === []) {
+            return;
+        }
+        $props = $world->props;
+        $keep = [];
+        $stopped = false;                                   // R-SHOT-2: a shot that kills ends the update
+        foreach ($state['shots'] as $sh) {
+            if ($stopped) {
+                $keep[] = $sh;
+                continue;
+            }
+            $p = $state['player'];
+            $spent = false;
+            for ($step = 0; $step < self::SHOT_STEPS && !$spent; $step++) {
+                $sh['x'] += IntMath::idiv($sh['dx'] * $sh['sp'], self::SHOT_STEPS * 30 * SineTable::TRIG_ONE); // |dx·sp| <= 2^14·11000 < 2^28
+                $sh['z'] += IntMath::idiv($sh['dz'] * $sh['sp'], self::SHOT_STEPS * 30 * SineTable::TRIG_ONE);
+                if ($world->solidCell($state, IntMath::fdiv($sh['x'], self::CELL_MM), IntMath::fdiv($sh['z'], self::CELL_MM))) {
+                    $spent = true;
+                    break;
+                }
+                foreach ($props as $o) {                    // R-MOVE-4's props, in entity order
+                    if ($o['circle']) {
+                        $dx = $sh['x'] - $o['x'];
+                        $dz = $sh['z'] - $o['z'];
+                        $rr = $sh['r'] + $o['r'];           // squares < 2^36
+                        if ($dx * $dx + $dz * $dz < $rr * $rr) {
+                            $spent = true;
+                            break;
+                        }
+                    } else {
+                        $qx = IntMath::clamp($sh['x'], $o['x0'], $o['x1']);
+                        $qz = IntMath::clamp($sh['z'], $o['z0'], $o['z1']);
+                        $dx = $sh['x'] - $qx;
+                        $dz = $sh['z'] - $qz;
+                        if ($dx * $dx + $dz * $dz < $sh['r'] * $sh['r']) {
+                            $spent = true;
+                            break;
+                        }
+                    }
+                }
+                if ($spent) {
+                    break;
+                }
+                $hx = $sh['x'] - $p['x'];
+                $hz = $sh['z'] - $p['z'];
+                $hr = self::PLAYER_R_MM + $sh['r'];
+                if ($hx * $hx + $hz * $hz < $hr * $hr) {
+                    $spent = true;
+                    self::hurt($state, $sh['dmg'], $events, $sh['k']); // R-HP-2: the cause is the sort of shot
+                    if ($state['dead'] !== null) {
+                        $stopped = true;
+                    }
+                }
+            }
+            if (!$spent) {
+                $sh['t'] -= 1;
+                if ($sh['t'] === 0) {
+                    $spent = true;
+                }
+            }
+            if ($spent) {
+                $events[] = ['e' => 'shotEnd', 'k' => $sh['k'], 'x' => $sh['x'], 'z' => $sh['z']];
+            } else {
+                $keep[] = $sh;
+            }
+        }
+        $state['shots'] = $keep;
+    }
+
+    /**
+     * R-WARDEN-2: one tick of the Warden of the Deep.
+     *
+     * @param array<string,mixed> $state
+     * @param array<string,mixed> $K
+     * @param list<array<string,mixed>> $events
+     */
+    private static function wardenTick(World $world, array &$state, array $K, int $d, callable $move, array &$events): void
+    {
+        $B = $state['boss'];
+        $B['atk'] = max(0, $B['atk'] - 1);
+        $B['sum'] = max(0, $B['sum'] - 1);
+        $state['boss'] = $B;
+        self::wardenCall($world, $state, $K, $events);      // R-WARDEN-3
+        self::wardenVolley($world, $state, $K, $d, $events); // R-WARDEN-4
+        $B = $state['boss'];
+        $p = $state['player'];
+        if ($B['st'] === 'stalk') {
+            if ($d < $K['windRange'] && $B['atk'] === 0) {
+                $B['st'] = 'wind';
+                $B['t'] = $K['wind'];
+            } elseif ($d > $K['stop']) {
+                $move($B, $p['x'], $p['z'], $K['speed']);
+            }
+        } elseif ($B['st'] === 'wind') {
+            $B['t'] -= 1;
+            if ($B['t'] === 0) {
+                $B['st'] = 'stalk';
+                $B['atk'] = $K['atk'];
+                $state['boss'] = $B;
+                if ($d < $K['hitRange']) {
+                    self::hurt($state, $K['damage'], $events, 'warden'); // R-WARDEN-2, in the JS core's order
+                }
+                return;
+            }
+        }
+        $state['boss'] = $B;
+    }
+
+    /**
+     * R-WARDEN-3: she calls the dormant foes of her `summons` group up at her feet (decisions #77, #78).
+     *
+     * @param array<string,mixed> $state
+     * @param array<string,mixed> $K
+     * @param list<array<string,mixed>> $events
+     */
+    private static function wardenCall(World $world, array &$state, array $K, array &$events): void
+    {
+        $B = $state['boss'];
+        $summons = $world->boss['summons'];
+        if ($B['sum'] > 0 || $summons < 0) {
+            return;
+        }
+        $state['boss']['sum'] = $K['summonCd'];             // the timer resets whether or not anyone comes
+        $members = $world->groups[$summons]['foes'];
+        $waiting = static fn (array $f): bool => $f['st'] === 'dormant' && !$f['wake'];
+        $called = 0;
+        foreach ($members as $n) {
+            if ($state['foes'][$n]['st'] !== 'dead' && !$waiting($state['foes'][$n])) {
+                $called += 1;
+            }
+        }
+        if ($called >= $K['summonMax']) {
+            return;
+        }
+        $came = 0;
+        foreach ($members as $n) {
+            if ($came >= $K['summonPer']) {
+                break;
+            }
+            if (!$waiting($state['foes'][$n])) {
+                continue;
+            }
+            $spot = self::ringSpot($world, $state, $K['ring'], $world->foes[$n]['kind']);
+            if ($spot === null) {
+                break;                                      // no room left on the ring: nobody else comes this tick
+            }
+            $state['foes'][$n]['x'] = $spot[0];
+            $state['foes'][$n]['z'] = $spot[1];
+            self::requestWake($world, $state, $n, $events); // R-FOE-4: the cap of 8 awake still holds
+            $came += 1;
+        }
+        if ($came > 0) {
+            $events[] = ['e' => 'boss', 'summon' => $came];
+        }
+    }
+
+    /**
+     * R-WARDEN-3: the first free spot of the ring around the boss, or null.
+     *
+     * @param array<string,mixed> $state
+     * @param array<string,mixed> $kind
+     * @return list<int>|null
+     */
+    private static function ringSpot(World $world, array $state, int $ring, array $kind): ?array
+    {
+        $B = $state['boss'];
+        for ($a = 0; $a < 4096; $a += 512) {
+            $x = $B['x'] + IntMath::idiv(SineTable::cos($a) * $ring, SineTable::TRIG_ONE); // |cos·ring| < 2^14·2^12
+            $z = $B['z'] + IntMath::idiv(SineTable::sin($a) * $ring, SineTable::TRIG_ONE);
+            if (!self::enterable($world, $state, IntMath::fdiv($x, self::CELL_MM), IntMath::fdiv($z, self::CELL_MM), $kind['fly'])) {
+                continue;
+            }
+            $taken = false;
+            foreach ($world->foes as $m => $other) {
+                $o = $state['foes'][$m];
+                if ($o['st'] === 'dormant' || $o['st'] === 'dead' || $o['st'] === 'gone' || $o['st'] === 'disguised') {
+                    continue;
+                }
+                $ox = $x - $o['x'];
+                $oz = $z - $o['z'];
+                $rr = $kind['radius'] + $other['kind']['radius']; // squares < 2^36
+                if ($ox * $ox + $oz * $oz < $rr * $rr) {
+                    $taken = true;
+                    break;
+                }
+            }
+            if (!$taken) {
+                return [$x, $z];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * R-WARDEN-4: below half her strikes she fires a fan of bolts (decision #76).
+     *
+     * @param array<string,mixed> $state
+     * @param array<string,mixed> $K
+     * @param list<array<string,mixed>> $events
+     */
+    private static function wardenVolley(World $world, array &$state, array $K, int $d, array &$events): void
+    {
+        $B = $state['boss'];
+        if (2 * $B['hp'] >= $K['strikes']) {
+            return;
+        }
+        $state['boss']['vol'] = max(0, $B['vol'] - 1);
+        $p = $state['player'];
+        if ($state['boss']['vol'] > 0 || $d <= $K['volleyMin'] || !self::losFrom($world, $state, $B['x'], $B['z'], $p['x'], $p['z'])) {
+            return;
+        }
+        $angles = [];
+        for ($k = 0; $k < $K['volleyBolts']; $k++) {
+            $angles[] = ($k - intdiv($K['volleyBolts'], 2)) * $K['volleySpread'];
+        }
+        self::fireShots($state, $B['x'], $B['z'], $angles, $K['volleyDmg'], $K['volleySpeed'], $K['volleyR'], $K['volleyOff'], 'bolt');
+        $state['boss']['vol'] = $K['volleyCd'];
+        $events[] = ['e' => 'shot', 'k' => 'bolt', 'id' => $world->boss['id']];
+    }
+
+    /**
      * R-BOSS-4: is a lit brazier within her solid range?
      *
      * @param array<string,mixed> $state
@@ -1925,6 +2194,16 @@ final class Sim
         $K = $world->boss['kind'];
         $st = $state['boss']['st'];
         if ($st === 'dead' || $st === 'asleep') {
+            return;
+        }
+        if ($K['behaviour'] === 'warden') { // R-BOSS-5: every blow lands, and nothing else changes
+            $state['boss']['hp'] -= 1;
+            $events[] = ['e' => 'hit', 'id' => $world->boss['id'], 'hp' => $state['boss']['hp']];
+            if ($state['boss']['hp'] === 0) {
+                $state['boss']['st'] = 'dead';
+                $batch[] = ['bossDefeated', 0];
+                $events[] = ['e' => 'bossDead'];
+            }
             return;
         }
         if (!self::bossSolid($world, $state)) {
@@ -2463,7 +2742,7 @@ final class Sim
                 if ($f['t'] > 1) {
                     $state['foes'][$n]['t'] -= 1;
                 } elseif (self::awakeCount($state) < World::MAX_AWAKE) {
-                    $state['foes'][$n] = ['st' => 'idle', 't' => 0, 'x' => $def['x'], 'z' => $def['z'], 'atk' => $kind['firstAttack'], 'stun' => 0, 'gx' => -1, 'gz' => -1] + $f;
+                    $state['foes'][$n] = ['st' => 'idle', 't' => 0, 'x' => $def['x'], 'z' => $def['z'], 'atk' => $kind['firstAttack'], 'sc' => $kind['firstAttack'], 'stun' => 0, 'gx' => -1, 'gz' => -1] + $f;
                     $events[] = ['e' => 'foe', 'id' => $def['id'], 'st' => 'idle'];
                 }
                 continue;
@@ -2482,6 +2761,7 @@ final class Sim
             }
             $f['stun'] = max(0, $f['stun'] - 1);
             $f['atk'] = max(0, $f['atk'] - 1);
+            $f['sc'] = max(0, $f['sc'] - 1); // R-BREATH-1
             $dx = $p['x'] - $f['x'];
             $dz = $p['z'] - $f['z'];
             if ($f['st'] === 'hunting' && $f['t'] > 0) {
@@ -2524,7 +2804,12 @@ final class Sim
             $still = $kind['speed'] === 0; // R-FOE-6: the flytrap never moves
             if ($f['st'] === 'hunting') {
                 $d = max(1, IntMath::isqrt($dx * $dx + $dz * $dz));
-                if ($d < $kind['reach'] && $f['atk'] === 0) {
+                $R = $kind['ranged']; // R-BREATH-1: the breath takes the whole tick
+                if ($R !== null && $f['sc'] === 0 && $d > $R['min'] && $d < $R['range'] && self::losFrom($world, $state, $f['x'], $f['z'], $p['x'], $p['z'])) {
+                    self::fireShots($state, $f['x'], $f['z'], [0], $R['dmg'], $R['speed'], $R['r'], $R['off'], $R['kind']);
+                    $f['sc'] = $R['cd'];
+                    $events[] = ['e' => 'shot', 'k' => $R['kind'], 'id' => $def['id']];
+                } elseif ($d < $kind['reach'] && $f['atk'] === 0) {
                     $f['t'] = $kind['wind'];
                     $wound = true;
                 } elseif ($d > intdiv(3 * $kind['reach'], 4)) {

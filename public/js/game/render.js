@@ -73,7 +73,7 @@ export class TombView {
     this.world = new THREE.Group(); scene.add(this.world);
     this.ents = new THREE.Group(); scene.add(this.ents);
     this.time = 0; this.hoodMix = 0; this.starve = 0; this.shake = 0; this.sink = 0; this.fallV = 0;
-    this.litSprites = []; this.slabMeshes = new Map(); this.xMeshes = new Map(); this.pebbles = []; this.flyers = [];
+    this.litSprites = []; this.slabMeshes = new Map(); this.xMeshes = new Map(); this.pebbles = []; this.flyers = []; this.shotSprites = [];
     this.makeMaterials();
     this.index();
     this.buildStatic();
@@ -445,8 +445,12 @@ export class TombView {
     }
     const bd = this.byType('boss')[0];
     if (bd) {
-      const s = this.makeSprite(this.TEXS.eater, 3.1); s.material.transparent = true; s.material.alphaTest = 0.02; s.material.depthWrite = false;
-      E.boss = { def: bd, s, op: 0.2, flash: 0, hp: -1, deadT: -1 };
+      // R-WARDEN-1: the Warden of the Deep comes with Lantern Delve's art; Ilvaris has her own.
+      const warden = this.T.bestiaryBoss?.behaviour === 'warden';
+      const hgt = warden ? DELVE_H.warden : 3.1;
+      const s = this.makeSprite(warden ? this.tex(DELVE_ART.warden, true, true) : this.TEXS.eater, hgt);
+      s.material.transparent = true; s.material.alphaTest = 0.02; s.material.depthWrite = false;
+      E.boss = { def: bd, s, h: hgt, op: warden ? 1 : 0.2, flash: 0, hp: -1, deadT: -1 };
     }
     // torches: captive flames in iron cups
     const tor = this.byType('torch');
@@ -563,6 +567,7 @@ export class TombView {
     }
     // pebbles on the floor and in flight
     this.syncPebbles(st, prev, alpha);
+    this.syncShots(st, alpha);
     this.syncLoot(st);
     // the mirror beam
     this.syncBeam(info.beam);
@@ -661,6 +666,23 @@ export class TombView {
     void prev;
   }
 
+  /** R-SHOT-1: the shots in flight, drawn where they are between the last tick and this one. */
+  syncShots(st, alpha) {
+    const want = st.shots.length;
+    while (this.shotSprites.length < want) {
+      const sp = new THREE.Sprite(this.M.flame.clone());
+      sp.material.opacity = 0.95; this.ents.add(sp); this.shotSprites.push(sp);
+    }
+    while (this.shotSprites.length > want) this.ents.remove(this.shotSprites.pop());
+    st.shots.forEach((sh, n) => {
+      const sp = this.shotSprites[n], back = (1 - alpha) * sh.sp / 30 * MM;      // it was a tick's flight behind
+      const dx = sh.dx / 16384, dz = sh.dz / 16384, r = sh.r * MM;
+      if (sp.userData.k !== sh.k) { sp.material.map = sh.k === 'fire' ? this.glowFlame : this.M.cold.map; sp.material.needsUpdate = true; sp.userData.k = sh.k; }
+      sp.scale.set(r * 3.4, r * 3.4, 1);
+      sp.position.set(sh.x * MM - dx * back, sh.k === 'fire' ? 1.5 : 1.6, sh.z * MM - dz * back);
+    });
+  }
+
   syncBeam(beam) {
     const E = this.E, key = beam ? beam.pts.map((p) => p.join(',')).join(';') : '';
     if (key === E.beamKey) return;
@@ -719,13 +741,13 @@ export class TombView {
     }
     B.deadT = -1; s.visible = true;
     const x = (q.x + (b.x - q.x) * alpha) * MM, z = (q.z + (b.z - q.z) * alpha) * MM;
-    if (b.st === 'asleep') { s.material.opacity = 0.18 + 0.05 * Math.sin(t * 1.3); s.material.color.setScalar(0.5); s.position.set(x, -1.2, z); s.scale.set(3.1 * ar * 0.9, 3.1 * 0.9, 1); return; }
+    if (b.st === 'asleep') { s.material.opacity = 0.18 + 0.05 * Math.sin(t * 1.3); s.material.color.setScalar(0.5); s.position.set(x, -1.2, z); s.scale.set(B.h * ar * 0.9, B.h * 0.9, 1); return; }
     B.flash = Math.max(0, B.flash - dt);
     const goal = info.bossSolid ? 1 : 0.4 + 0.08 * Math.sin(t * 7) + 0.05 * Math.sin(t * 13.1);
     B.op += (goal - B.op) * Math.min(1, dt * 6); s.material.opacity = B.op;
     const dx = px - x, dz = pz - z, d = Math.hypot(dx, dz) || 1;
-    const lunge = b.st === 'wind' ? (1 - b.t / 21) * 0.35 : 0;
-    s.position.set(x + dx / d * lunge, 0.05 * Math.sin(t * 2), z + dz / d * lunge); s.scale.set(3.1 * ar, 3.1, 1);
+    const lunge = b.st === 'wind' ? (1 - b.t / Math.max(1, this.T.bestiaryBoss?.wind ?? 21)) * 0.35 : 0;
+    s.position.set(x + dx / d * lunge, 0.05 * Math.sin(t * 2), z + dz / d * lunge); s.scale.set(B.h * ar, B.h, 1);
     const lb = Math.max(0.35, this.lightAt(x, 1.6, z));
     if (B.flash > 0) s.material.color.setRGB(2.4, 1.2, 0.9); else if (b.st === 'feed') s.material.color.setRGB(lb * 1.3, lb * 1.05, lb * 0.9); else s.material.color.setScalar(lb);
   }
@@ -753,6 +775,7 @@ export class TombView {
     for (const c of this.E.crystals) if (info.beam?.hits === c.def.id) add(c.x, 1.7, c.z, 0xffd890, 1.8, 10);
     if (info.beam) { const e = info.beam.pts[info.beam.pts.length - 1]; add(e[0], 1.6, e[1], 0xffd890, 0.9, 4.5); }
     const b = st.boss; if (b && b.st !== 'asleep' && b.st !== 'dead') add(b.x * MM, 2.3, b.z * MM, 0xff8a3a, b.st === 'feed' ? 1.0 : 0.45, 5);
+    const fs = st.shots.find((q) => q.k === 'fire'); if (fs) add(fs.x * MM, 1.5, fs.z * MM, 0xff8a3a, 1.4, 6); // R-SHOT-1: the breath lights the hall
     if (info.exitOpen && this.E.day) add(this.E.exitX, 4.5, this.E.exitZ, 0xfff2d8, 2.8, 16);
     C.sort((a, c) => a.d - c.d);
     this.fxPool.forEach((l, n) => { const c = C[n]; if (!c || c.d > 26) { l.intensity = 0; return; } l.position.set(c.x, c.y, c.z); l.color.setHex(c.col); l.intensity = c.int * PI_L; l.distance = c.dist; });

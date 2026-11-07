@@ -1,6 +1,6 @@
 {
  "name": "0039-powers",
- "core": "m0.14",
+ "core": "m0.15",
  "seed": 39,
  "mode": "practice",
  "gdf": "{\"gdf\":1,\"bestiary\":1,\"grid\":{\"w\":14,\"h\":9,\"cells\":\"DwAMAQIADAECAAwBAgAMAQIADAECAAwBAgAMAQ8A\"},\"start\":{\"cell\":[4,4]},\"zones\":[{\"id\":\"p\",\"name\":\"P\",\"rects\":[[1,1,8,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[2,2],\"yaw\":0}},{\"id\":\"q\",\"name\":\"Q\",\"rects\":[[9,1,4,7]],\"ceil\":4200,\"checkpoint\":{\"cell\":[11,4],\"yaw\":0}}],\"entities\":[{\"id\":\"aqu\",\"type\":\"foe\",\"kind\":\"aquator\",\"cell\":[6,4],\"start\":\"hunting\"},{\"id\":\"ice\",\"type\":\"foe\",\"kind\":\"ice\",\"cell\":[4,6],\"start\":\"hunting\"},{\"id\":\"fly\",\"type\":\"foe\",\"kind\":\"flytrap\",\"cell\":[5,3],\"start\":\"idle\"},{\"id\":\"med\",\"type\":\"foe\",\"kind\":\"medusa\",\"cell\":[2,6],\"start\":\"hunting\"},{\"id\":\"rat\",\"type\":\"foe\",\"kind\":\"rattlesnake\",\"cell\":[7,2],\"start\":\"hunting\"},{\"id\":\"vam\",\"type\":\"foe\",\"kind\":\"vampire\",\"cell\":[11,6],\"start\":\"asleep\"},{\"id\":\"br\",\"type\":\"brazier\",\"cell\":[3,2],\"lit\":false},{\"id\":\"eye\",\"type\":\"eyes\",\"zone\":\"q\",\"wake\":60}]}",
@@ -139,16 +139,16 @@
  "ticks": 1303,
  "hashEvery": 300,
  "hashes": {
-  "0": "73745559f7646148f369dad5d45ed8fe",
-  "300": "7f32ee107c97e1b13bd61b7401949027",
-  "600": "863748dd95fe564fe3bbfc274cf823e9",
-  "900": "79631e8de858782111bfe841ffc4c05a",
-  "1200": "f5c257c17b4d5e4d03b3b998b74564c6"
+  "0": "78784231bc0c62404b4b81a4ba771374",
+  "300": "37962c65bca39815421c0ddd319ff319",
+  "600": "ba4316d9f9a5f38ca5eed8921ed6c89a",
+  "900": "0c7831b617020e7fb07c71a05426c564",
+  "1200": "f10381f6e8c3a8b6f5789891127353ef"
  },
- "final": "04a38f3baab908e8e0560a058b5bc68b",
+ "final": "05446137d0c0cde76bc97f4203479972",
  "finalState": {
   "v": 1,
-  "core": "m0.14",
+  "core": "m0.15",
   "world": "33fa41360a2431760f4ab42e04b20fe9",
   "mode": "practice",
   "tick": 1303,
@@ -227,6 +227,7 @@
     "rg": 0,
     "ft": 0,
     "fa": 0,
+    "sc": 0,
     "loot": 0,
     "lf": 0,
     "lp": 0
@@ -245,6 +246,7 @@
     "rg": 0,
     "ft": 0,
     "fa": 0,
+    "sc": 0,
     "loot": 0,
     "lf": 0,
     "lp": 0
@@ -263,6 +265,7 @@
     "rg": 0,
     "ft": 0,
     "fa": 0,
+    "sc": 0,
     "loot": 0,
     "lf": 0,
     "lp": 0
@@ -281,6 +284,7 @@
     "rg": 0,
     "ft": 0,
     "fa": 0,
+    "sc": 0,
     "loot": 0,
     "lf": 0,
     "lp": 0
@@ -299,6 +303,7 @@
     "rg": 0,
     "ft": 0,
     "fa": 0,
+    "sc": 0,
     "loot": 0,
     "lf": 0,
     "lp": 0
@@ -317,6 +322,7 @@
     "rg": 0,
     "ft": 0,
     "fa": 0,
+    "sc": 0,
     "loot": 0,
     "lf": 0,
     "lp": 0
@@ -331,6 +337,7 @@
    "awake"
   ],
   "blows": [],
+  "shots": [],
   "braziers": [
    false
   ],

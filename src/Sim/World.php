@@ -871,7 +871,8 @@ final class World
                 $refs[] = ['type' => 'brazier', 'brazier' => count($braziers)];
                 $braziers[] = ['id' => $e['id'], 'k' => $k, 'x' => $x, 'z' => $z, 'reach' => 2300, 'lit' => $e['lit']];
             } elseif ($type === 'boss') {
-                if (!self::hasExactKeys($e, self::KEYS_BOSS)) {
+                $calls = array_key_exists('summons', $e);   // R-WARDEN-3 (decision #77)
+                if (!self::hasExactKeys($e, $calls ? [...self::KEYS_BOSS, 'summons'] : self::KEYS_BOSS)) {
                     throw new \RangeException('boss keys');
                 }
                 $kind = Bestiary::boss($e['kind']);
@@ -886,8 +887,12 @@ final class World
                 if ($zi === false || $bosses !== []) {
                     throw new \RangeException('boss zone / count');
                 }
+                if ($calls && ($kind['behaviour'] !== 'warden' || !is_string($e['summons']) || preg_match(self::ID_RE, $e['summons']) !== 1)) {
+                    throw new \RangeException('boss summons');
+                }
                 $refs[] = ['type' => 'boss'];
-                $bosses[] = ['id' => $e['id'], 'kind' => $kind, 'x' => $pos[0], 'z' => $pos[1], 'zone' => $zi];
+                $bosses[] = ['id' => $e['id'], 'kind' => $kind, 'x' => $pos[0], 'z' => $pos[1], 'zone' => $zi,
+                    'summonsName' => $calls ? $e['summons'] : null, 'summons' => -1];
             } elseif ($type === 'alcove') {
                 if (!self::hasExactKeys($e, self::KEYS_ALCOVE)) {
                     throw new \RangeException('alcove keys');
@@ -1130,6 +1135,17 @@ final class World
             unset($a['doorName']);
         }
         unset($a);
+        // R-WARDEN-3: the group a boss calls is resolved after the loop, so it may be named before its foes appear.
+        foreach ($bosses as &$bs) {
+            if ($bs['summonsName'] !== null) {
+                if (!array_key_exists($bs['summonsName'], $groupIds)) {
+                    throw new \RangeException('boss summons group');
+                }
+                $bs['summons'] = $groupIds[$bs['summonsName']];
+            }
+            unset($bs['summonsName']);
+        }
+        unset($bs);
         foreach ($chests as $c) {
             if (isset($doorAt[$c['k']]) || isset($slab[$c['k']])) {
                 throw new \RangeException('chest cell taken');

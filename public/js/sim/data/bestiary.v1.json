@@ -6,7 +6,8 @@
   "aquator": { "tier": 2, "strikes": 2, "damage": 0, "speed": 2800, "radius": 420, "reach": 1630, "wind": 12, "cooldown": 33, "rise": 0, "firstAttack": 15, "mover": "walk", "regen": 0, "flit": 0, "power": "douse" },
   "bat": { "tier": 1, "strikes": 1, "damage": 5, "speed": 4400, "radius": 300, "reach": 1480, "wind": 8, "cooldown": 24, "rise": 0, "firstAttack": 15, "mover": "fly", "regen": 0, "flit": 1, "power": "" },
   "centaur": { "tier": 3, "strikes": 3, "damage": 15, "speed": 3800, "radius": 500, "reach": 1830, "wind": 14, "cooldown": 36, "rise": 0, "firstAttack": 15, "mover": "walk", "regen": 0, "flit": 0, "power": "" },
-  "dragon": { "tier": 5, "strikes": 14, "damage": 31, "speed": 2600, "radius": 850, "reach": 2280, "wind": 18, "cooldown": 48, "rise": 0, "firstAttack": 15, "mover": "walk", "regen": 0, "flit": 0, "power": "" },
+  "dragon": { "tier": 5, "strikes": 14, "damage": 31, "speed": 2600, "radius": 850, "reach": 2280, "wind": 18, "cooldown": 48, "rise": 0, "firstAttack": 15, "mover": "walk", "regen": 0, "flit": 0, "power": "",
+   "ranged": { "cd": 135, "dmg": 36, "speed": 11000, "range": 10000, "min": 3000, "r": 350, "off": 800, "kind": "fire" } },
   "emu": { "tier": 1, "strikes": 1, "damage": 5, "speed": 3800, "radius": 380, "reach": 1580, "wind": 11, "cooldown": 30, "rise": 0, "firstAttack": 15, "mover": "walk", "regen": 0, "flit": 0, "power": "" },
   "flytrap": { "tier": 4, "strikes": 7, "damage": 18, "speed": 0, "radius": 500, "reach": 1980, "wind": 14, "cooldown": 39, "rise": 0, "firstAttack": 15, "mover": "walk", "regen": 0, "flit": 0, "power": "seize" },
   "griffin": { "tier": 5, "strikes": 12, "damage": 28, "speed": 3900, "radius": 700, "reach": 1980, "wind": 14, "cooldown": 39, "rise": 0, "firstAttack": 15, "mover": "fly", "regen": 210, "flit": 0, "power": "" },
@@ -31,6 +32,9 @@
   "zombie": { "tier": 2, "strikes": 2, "damage": 10, "speed": 2200, "radius": 400, "reach": 1680, "wind": 15, "cooldown": 39, "rise": 0, "firstAttack": 15, "mover": "walk", "regen": 0, "flit": 0, "power": "" }
  },
  "bosses": {
-  "eater": { "strikes": 6, "damage": 20, "oilHit": 240000, "radius": 600, "speed": 1750, "speed2": 2350, "wakeAtk": 45, "wind": 21, "hitRange": 2200, "windRange": 1700, "seekWindRange": 1450, "stop": 1200, "reel": 9, "feed": 69, "feed2": 51, "feedReach": 1300, "feedCd": 42, "phase2Atk": 27, "phase2FeedCd": 45, "atk": 48, "atk2": 36, "tearWind": 18, "solidRange": 3600, "drainRange": 5500, "drain": 3000, "drain2": 4500 }
+  "eater": { "behaviour": "eater", "strikes": 6, "damage": 20, "oilHit": 240000, "radius": 600, "speed": 1750, "speed2": 2350, "wakeAtk": 45, "wind": 21, "hitRange": 2200, "windRange": 1700, "seekWindRange": 1450, "stop": 1200, "reel": 9, "feed": 69, "feed2": 51, "feedReach": 1300, "feedCd": 42, "phase2Atk": 27, "phase2FeedCd": 45, "atk": 48, "atk2": 36, "tearWind": 18, "solidRange": 3600, "drainRange": 5500, "drain": 3000, "drain2": 4500 },
+  "deepWarden": { "behaviour": "warden", "strikes": 30, "damage": 30, "radius": 800, "speed": 2600, "wakeAtk": 45, "wind": 18, "hitRange": 2730, "windRange": 2280, "stop": 1710, "atk": 48,
+   "summonCd": 330, "summonFirst": 210, "summonPer": 2, "summonMax": 4, "ring": 2000,
+   "volleyCd": 135, "volleyFirst": 120, "volleyBolts": 5, "volleySpread": 104, "volleyDmg": 15, "volleySpeed": 8000, "volleyR": 250, "volleyOff": 900, "volleyMin": 2500 }
  }
 }

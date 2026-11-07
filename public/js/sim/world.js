@@ -432,14 +432,16 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
       refs.push({ type: 'brazier', brazier: braziers.length });
       braziers.push({ id: e.id, k, x, z, reach: 2300, lit: e.lit });
     } else if (e.type === 'boss') {
-      if (!hasExactKeys(e, KEYS.boss)) throw new RangeError('boss keys');
+      const calls = Object.hasOwn(e, 'summons');          // R-WARDEN-3 (decision #77)
+      if (!hasExactKeys(e, [...KEYS.boss, ...(calls ? ['summons'] : [])])) throw new RangeError('boss keys');
       const kind = bossKind(e.kind);
       if (kind === undefined) throw new RangeError('boss kind');
       if (!Array.isArray(e.pos) || e.pos.length !== 2 || !e.pos.every(isInt)) throw new RangeError('boss pos');
       const zi = typeof e.zone === 'string' ? zoneIds.indexOf(e.zone) : -1;
       if (zi < 0 || bosses.length > 0) throw new RangeError('boss zone / count');
+      if (calls && (kind.behaviour !== 'warden' || typeof e.summons !== 'string' || !ID_RE.test(e.summons))) throw new RangeError('boss summons');
       refs.push({ type: 'boss' });
-      bosses.push({ id: e.id, kind, x: e.pos[0], z: e.pos[1], zone: zi });
+      bosses.push({ id: e.id, kind, x: e.pos[0], z: e.pos[1], zone: zi, summonsName: calls ? e.summons : null, summons: -1 });
     } else if (e.type === 'alcove') {
       if (!hasExactKeys(e, KEYS.alcove)) throw new RangeError('alcove keys');
       if (e.kind !== 'drown' && e.kind !== 'tip') throw new RangeError('alcove kind');
@@ -556,6 +558,11 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
     if (r === undefined || r.type !== 'door') throw new RangeError('alcove door');
     a.door = r.door;
   }
+  // R-WARDEN-3: the group a boss calls is resolved after the loop, so it may be named before its foes appear.
+  for (const b of bosses) if (b.summonsName !== null) {
+    if (!groupIds.has(b.summonsName)) throw new RangeError('boss summons group');
+    b.summons = groupIds.get(b.summonsName);
+  }
   for (const c of chests) if (doorAt[c.k] >= 0 || slab[c.k]) throw new RangeError('chest cell taken');
   for (const b of braziers) if (doorAt[b.k] >= 0 || slab[b.k]) throw new RangeError('brazier cell taken');
   // R-FOE-2: foes on free cells (walkers not on lethal ones), the caps and the threat budget.
@@ -585,7 +592,7 @@ function loadEntities(list, grid, w, h, startK, cpCells, zoneIds) {
     hooks: Object.freeze(hooks), mirrors: Object.freeze(mirrors), crystals: Object.freeze(crystals),
     chests: Object.freeze(chests.map((c) => Object.freeze({ ...c, contents: Object.freeze(c.contents) }))),
     alcoves: Object.freeze(alcoves.map((a) => Object.freeze({ id: a.id, k: a.k, drown: a.drown, door: a.door }))), alcoveAt,
-    braziers: Object.freeze(braziers.map(Object.freeze)), boss: bosses.length > 0 ? Object.freeze(bosses[0]) : null,
+    braziers: Object.freeze(braziers.map(Object.freeze)), boss: bosses.length > 0 ? Object.freeze({ id: bosses[0].id, kind: bosses[0].kind, x: bosses[0].x, z: bosses[0].z, zone: bosses[0].zone, summons: bosses[0].summons }) : null,
     foes: Object.freeze(foes.map(Object.freeze)), groups: Object.freeze(groups.map((g) => Object.freeze({ id: g.id, foes: Object.freeze(g.foes), dormant: g.dormant }))), groupIds,
     bellSets: Object.freeze(bellSets.map((b) => Object.freeze({ id: b.id, bells: Object.freeze(b.bells), order: b.order }))),
     doorAt, slab, ventAt, vents: Object.freeze(vents), items: Object.freeze(items.map(Object.freeze)), eyes: Object.freeze(eyes), doors: Object.freeze(doors.map((d) => Object.freeze({ id: d.id, k: d.k, cx: d.cx, cz: d.cz, interact: d.interact, key: d.key }))), props: Object.freeze(props), refs: Object.freeze(refs.map(Object.freeze)) };
